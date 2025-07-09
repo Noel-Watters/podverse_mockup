@@ -1,4 +1,4 @@
-// components/admin/Sidebar.tsx
+//Used on every page
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";

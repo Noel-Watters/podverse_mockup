@@ -8,9 +8,11 @@
 
 import { NextRequest, NextResponse } from "next/server"
 
-// Use Docker Compose service name for backend URL
+
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
+
+//Fetch All Channels
 export async function GET(req: NextRequest) {
   const query = req.nextUrl.searchParams.toString();
   const url = `${BACKEND_URL}/admin/channels${query ? `?${query}` : ""}`;

@@ -1,7 +1,8 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Sidebar from "../../components/Sidebar";
-import {Feed, FeedLog, RecentLog} from "@/types/feed";
+import {Feed, FeedLog} from "@/types/feed";
+import AdminLayout from "@/layouts/AdminLayout";
 
 
 export default function AdminFeedsPage() {
@@ -78,20 +79,7 @@ export default function AdminFeedsPage() {
   );
 
   return (
-    <div className="flex min-h-screen bg-podverse-background text-podverse-text">
-      <Sidebar />
-      <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold mb-4 text-podverse-text">
-          RSS Feed Dashboard
-        </h1>
-
-        <input
-          type="text"
-          placeholder="Search feeds..."
-          className="border border-podverse-border px-3 py-2 rounded mb-4 w-full max-w-md bg-podverse-surface text-podverse-text placeholder-podverse-muted"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+    <AdminLayout>
 
         {error && (
           <div className="text-red-500 font-semibold mb-4">{error}</div>
@@ -228,7 +216,6 @@ export default function AdminFeedsPage() {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+    </AdminLayout>
   );
 }

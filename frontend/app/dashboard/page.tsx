@@ -1,13 +1,10 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import Sidebar from "../../components/Sidebar";
-import { useRouter } from "next/navigation";
-import { BellIcon } from "@heroicons/react/24/outline";
 import { Feed, RecentLog } from "@/types/feed";
 import FeedStatsChart from "../../components/FeedStatsChart";
+import AdminLayout from "@/layouts/AdminLayout";
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [error, setError] = useState<string>("");
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
@@ -60,10 +57,6 @@ export default function DashboardPage() {
     }
   }, [feeds, selectedFeedId]);
 
-  // Logout handler
-  const handleLogout = () => {
-    router.push("/auth/logout");
-  };
 
   // --- Stats calculations ---
   const totalFeeds = feeds.length;
@@ -72,34 +65,10 @@ export default function DashboardPage() {
   const flaggedPercent = totalFeeds > 0 ? Math.round((flaggedFeeds / totalFeeds) * 100) : 0;
 
   return (
-    <div className="flex min-h-screen bg-gray-100 text-black">
-      <Sidebar />
+    <AdminLayout>
 
       <main className="flex-1  space-y-8">
-        {/* Top bar */}
-        <header className="flex justify-between p-2 pr-4 bg-podverse-surface items-center mb-8">
-          <div className="flex-1 flex justify-center">
-            <input
-              type="search"
-              placeholder="Search"
-              className="rounded-full px-5 py-2 w-1/2 bg-white text-black placeholder-gray-400 focus:outline-none border border-gray-300"
-            />
-          </div>
-          <div className="flex items-center space-x-4 ml-4">
-            <button
-              aria-label="Notifications"
-              className="p-2 rounded hover:bg-gray-200 transition"
-            >
-              <BellIcon className="w-6 h-6 text-black" />
-            </button>
-            <button
-              onClick={handleLogout}
-              className="py-2 px-6 bg-podverse-accent hover:bg-podverse-accent text-white rounded-md transition"
-            >
-              Logout
-            </button>
-          </div>
-        </header>
+  
 
         {/* Show feed fetch error if any */}
         {error && (
@@ -221,6 +190,6 @@ export default function DashboardPage() {
           </div>
         </section>
       </main>
-    </div>
+  </AdminLayout>
   );
 }

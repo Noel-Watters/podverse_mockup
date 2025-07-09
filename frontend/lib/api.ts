@@ -1,5 +1,6 @@
 // File: frontend/lib/api.ts
 
+//get all channels - Replaced
 export async function fetchChannels(params = {}) {
   const query = new URLSearchParams(params).toString();
   const res = await fetch(`http://localhost:8000/admin/channels?${query}`, {
@@ -9,6 +10,7 @@ export async function fetchChannels(params = {}) {
   return res.json();
 }
 
+//fetch all feeds - Replaced
 export async function fetchFeeds(params = {}) {
   const query = new URLSearchParams(params).toString();
   const res = await fetch(`http://localhost:8000/admin/feeds?${query}`, {
@@ -18,6 +20,7 @@ export async function fetchFeeds(params = {}) {
   return res.json();
 }
 
+// fetch a specific feed by ID- Replaced
 export async function fetchFeedLogs(feedId: number) {
   const res = await fetch(`http://localhost:8000/admin/feeds/${feedId}/logs`, {
     next: { revalidate: 10 },

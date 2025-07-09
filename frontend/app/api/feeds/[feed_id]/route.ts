@@ -5,7 +5,7 @@ import { auth0 } from "@/lib/auth0";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
-// GET /feeds/:feed_id
+//Fetch a specific feed by ID
 export async function GET(_request: Request, context: any) {
 
   const { feed_id } = context.params;
@@ -23,7 +23,7 @@ export async function GET(_request: Request, context: any) {
   }
 }
 
-// PUT /feeds/:feed_id
+//Update a specific feed by ID
 export async function PUT(request: Request, context: any) {
   const { feed_id } = context.params;
   const session = await auth0.getSession();
@@ -39,7 +39,7 @@ export async function PUT(request: Request, context: any) {
   }
 }
 
-// DELETE /feeds/:feed_id
+//Delete a specific feed by ID
 export async function DELETE(_request: Request, context: any) {
   const { feed_id } = context.params;
   const session = await auth0.getSession();

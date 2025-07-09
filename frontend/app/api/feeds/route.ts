@@ -5,6 +5,7 @@ import { auth0 } from "@/lib/auth0";
 // Use Docker Compose service name for backend URL
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
+//Fetch all Feeds
 export async function GET(req: NextRequest) {
   const query = req.nextUrl.searchParams.toString();
   const url = `${BACKEND_URL}/admin/feeds${query ? `?${query}` : ""}`;
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /feeds — Create a new feed
+//Create a new feed
 export async function POST(req: NextRequest) {
   const session = await auth0.getSession();
   const data = await req.json();
