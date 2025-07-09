@@ -200,8 +200,6 @@ docker compose up --build
 
 ## 🛠️ Helpful Commands
 
-### ![Don't be a Dumbass](https://media.giphy.com/media/l2JhOVyjSHGejoXXq/giphy.gif)
-
 Just use docker desktop. It simplifies all of these tips.
 
 ### View logs for a container:
@@ -233,9 +231,4 @@ docker inspect --format='{{json .State.Health}}' <container-name>
 ## 📝 Notes
 
 * Make sure your line endings for `entrypoint.sh` or seed scripts use **LF**, not **CRLF**, especially if editing on Windows.
-* Port conflicts? Double-check nothing else is running on 3000/5000/5432.
-* For any issues with Docker please contact Mike for assistance. 😹
-
----
-
-🎧 Happy coding, and may your containers always be green.
+* Port conflicts? Double-check nothing else is running on 3000/8000/5432.

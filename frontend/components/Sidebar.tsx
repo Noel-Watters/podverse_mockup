@@ -39,11 +39,6 @@ const navLinks = [
     icon: <SwatchIcon className="w-6 h-6" />,
   },
   {
-    href: "/channels",
-    label: "Channels",
-    icon: <RssIcon className="w-6 h-6" />,
-  },
-  {
     href: "/reports",
     label: "Reports",
     icon: <ChartBarIcon className="w-6 h-6" />, // You can change this to a different icon if desired

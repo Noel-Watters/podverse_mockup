@@ -3,14 +3,17 @@ import React, { useState, useEffect } from "react";
 import { Feed, RecentLog } from "@/types/feed";
 import FeedStatsChart from "../../components/FeedStatsChart";
 import AdminLayout from "@/layouts/AdminLayout";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [error, setError] = useState<string>("");
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
   const [selectedFeedLogs, setSelectedFeedLogs] = useState<RecentLog[]>([]);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
   // Fetch feeds on mount
   useEffect(() => {
@@ -57,6 +60,11 @@ export default function DashboardPage() {
     }
   }, [feeds, selectedFeedId]);
 
+const handleSearch = () => {
+  setTimeout(() => {
+    router.push(`/rssfeed?search=${encodeURIComponent(searchTerm)}`);
+  }, 200); // 200ms delay
+};
 
   // --- Stats calculations ---
   const totalFeeds = feeds.length;
@@ -65,7 +73,11 @@ export default function DashboardPage() {
   const flaggedPercent = totalFeeds > 0 ? Math.round((flaggedFeeds / totalFeeds) * 100) : 0;
 
   return (
-    <AdminLayout>
+    <AdminLayout
+      searchValue={searchTerm}
+      onSearchChange={(e) => setSearchTerm(e.target.value)}
+      onSearchSubmit={handleSearch}
+      >
 
       <main className="flex-1  space-y-8">
   

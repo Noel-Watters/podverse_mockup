@@ -7,9 +7,11 @@ interface TopBarProps {
   onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onLogout: () => void;
   onNotificationsClick?: () => void;
+  placeholder?: string;
+  onSearchSubmit?: () => void;
 }
 
-function TopBar({ searchValue, onSearchChange, onLogout, onNotificationsClick, }: TopBarProps) {
+function TopBar({ searchValue, onSearchChange, onLogout, onNotificationsClick, placeholder, onSearchSubmit }: TopBarProps) {
 
 
   return (
@@ -18,6 +20,8 @@ function TopBar({ searchValue, onSearchChange, onLogout, onNotificationsClick, }
         <SearchFeeds
           searchTerm={searchValue}
           onSearchChange={onSearchChange}
+          placeholder={placeholder || "Search feeds..."}
+          onSearchSubmit={onSearchSubmit}
         />
       </div>
       <div className="flex items-center space-x-4 ml-4">

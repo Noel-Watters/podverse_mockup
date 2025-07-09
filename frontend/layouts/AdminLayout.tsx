@@ -1,5 +1,5 @@
 // layouts/AdminLayout.tsx
-import { ReactNode, useState} from "react";
+import React, { ReactNode} from "react";
 import {useRouter} from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
@@ -7,23 +7,28 @@ import TopBar from "@/components/TopBar";
 
 type Props = {
   children: ReactNode;
+  searchValue: string;
+  onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSearchSubmit?: () => void; 
 };
 
-export default function AdminLayout({ children }: Props) {
+export default function AdminLayout({ children, searchValue, onSearchChange, onSearchSubmit }: Props) {
   const router = useRouter();
-  const [searchTerm, setSearchTerm] = useState<string>("");
 
   // Logout handler 
   const handleLogout = () => {
     router.push("/auth/logout");
+
+
   };
   return (
     <div className="flex h-screen bg-podverse-background text-white">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <TopBar
-          searchValue={searchTerm}
-          onSearchChange={(e) => setSearchTerm(e.target.value)}
+          searchValue={searchValue}
+          onSearchChange={onSearchChange}
+          onSearchSubmit={onSearchSubmit}
           onLogout={handleLogout}
           onNotificationsClick={() => console.log("Notifications clicked")}
         />
