@@ -511,12 +511,12 @@ CREATE INDEX stats_aggregated_item_week_current_count_idx ON stats_aggregated_it
 CREATE INDEX stats_aggregated_item_month_current_count_idx ON stats_aggregated_item(month_current_count);
 CREATE INDEX stats_aggregated_item_all_time_count_idx ON stats_aggregated_item(all_time_count);
 
--- 0002 migration - Add new_feed_log and account_location
+-- 0002 migration - Add new feed_log and account_location
 
--- Replace old feed_log with new_feed_log
+-- Replace old feed_log with new updated feed_log
 DROP TABLE IF EXISTS feed_log CASCADE;
 
-CREATE TABLE new_feed_log (
+CREATE TABLE feed_log (
     id SERIAL PRIMARY KEY,
     feed_id INTEGER NOT NULL REFERENCES feed(id) ON DELETE CASCADE,
     http_status INTEGER,
@@ -528,7 +528,7 @@ CREATE TABLE new_feed_log (
     parsed_by varchar_normal -- This should be an Auth0 ID
 );
 
-CREATE INDEX idx_new_feed_log_feed_id ON new_feed_log(feed_id);
+CREATE INDEX idx_feed_log_feed_id ON feed_log(feed_id);
 
 -- Location data for accounts
 -- Location data is saved a ISO 3166-1 Alpha-2 format

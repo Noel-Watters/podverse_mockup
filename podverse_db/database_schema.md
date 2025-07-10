@@ -42,7 +42,7 @@
 
 ---
 
-### **Table: `new_feed_log`**
+### **Table: `feed_log`**
 | Field | Type |
 |-------|------|
 | id | SERIAL PRIMARY |
