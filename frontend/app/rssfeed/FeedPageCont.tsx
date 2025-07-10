@@ -4,9 +4,9 @@ import { Feed, FeedLog } from "@/types/feed";
 import AdminLayout from "@/layouts/AdminLayout";
 import { useSearchParams } from "next/navigation";
 import AddRssFeedModal from "@/components/AddRssFeedModal";
-import { PlusIcon } from "@heroicons/react/24/outline";
 import FeedTable from "@/components/rssfeed/FeedTable";
 import ReparseNotify from "@/components/reparsefeed/ReparseNotify";
+import FeedToolBar from "@/components/rssfeed/FeedToolbar";
 
 export default function FeedsPageContent() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
@@ -19,16 +19,15 @@ export default function FeedsPageContent() {
   const [searchTerm, setSearchTerm] = useState<string>(initialSearch);
   const [modalOpen, setModalOpen] = useState(false);
 
-
-const [notifies, setNotifies] = useState<
-  {
-    id: string; // unique id for each toast
-    type: "success" | "error";
-    message: string;
-    duration?: number;
-    details?: string[];
-  }[]
->([]);
+  const [notifies, setNotifies] = useState<
+    {
+      id: string; // unique id for each toast
+      type: "success" | "error";
+      message: string;
+      duration?: number;
+      details?: string[];
+    }[]
+  >([]);
 
   useEffect(() => {
     const loadFeeds = async () => {
@@ -114,17 +113,8 @@ const [notifies, setNotifies] = useState<
       )}
 
       <div className="overflow-x-auto">
-        {/* Bulk Operation Buttons, Add new RSS Feed, Filtering & Sort Bar */}
-        <div className="flex justify-end py-2">
-          <button
-            type="button"
-            className="border border-black rounded-md p-1 bg-white hover:bg-gray-100 transition flex items-center justify-center"
-            onClick={() => setModalOpen(true)}
-            aria-label="Add New RSS Feed"
-          >
-            <PlusIcon className="h-5 w-5 text-black" />
-          </button>
-        </div>
+        {/* Toolbar for bulk actions, add, sort, filter */}
+        <FeedToolBar onAddFeed={() => setModalOpen(true)} />
         <FeedTable
           feeds={filteredFeeds}
           expandedFeedId={expandedFeedId}

@@ -33,7 +33,7 @@ export default function AdminLayout({ children, searchValue, onSearchChange, onS
           onLogout={handleLogout}
           onNotificationsClick={() => console.log("Notifications clicked")}
         />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-2">
           {children}
         </main>
       </div>
