@@ -4,6 +4,7 @@ import {Feed, FeedLog} from "@/types/feed";
 import AdminLayout from "@/layouts/AdminLayout";
 import {useSearchParams} from "next/navigation";
 import AddRssFeedModal from "@/components/AddRssFeedModal";
+import { PlusIcon } from "@heroicons/react/24/outline";
 
 
 
@@ -96,11 +97,14 @@ export default function FeedsPageContent() {
 
         <div className="overflow-x-auto">
             {/*Bulk Operation Buttons, Add new RSS Feed, Filtering & Sort Bar */}
-            <div>
-                <button className= "bg-podverse-primary hover:bg-podverse-accent text-white text-sm px-3 py-1 rounded"
+            <div className="flex justify-end py-2">
+                <button
+                type = "button" 
+                className= "border border-black rounded-md p-1 bg-white hover:bg-gray-100 transition flex items-center justify-center"
                 onClick={() => setModalOpen(true)}
+                aria-label="Add New RSS Feed"
                 >
-                    + Add New RSS Feed
+                    <PlusIcon className="h-5 w-5 text-black" />
                 </button>
             </div>
           <table className="min-w-full bg-podverse-surface rounded shadow text-podverse-text text-sm">
