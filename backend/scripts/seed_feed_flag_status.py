@@ -19,10 +19,10 @@ def seed_feed_flag_status():
             entry = FeedFlagStatus(status=status)
             session.add(entry)
         session.commit()
-        print("✅ Feed flag statuses seeded successfully")
+        print("Feed flag statuses seeded successfully")
     except IntegrityError as e:
         session.rollback()
-        print("⚠️  Integrity error:", str(e))
+        print("Integrity error:", str(e))
     finally:
         session.close()
 

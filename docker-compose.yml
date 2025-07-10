@@ -38,6 +38,7 @@ services:
     volumes:
       - ./backend/scripts:/app/scripts
       - ./backend/app:/app/app
+      - ./podverse_db:/podverse_db
     depends_on:
       - database
     networks:
