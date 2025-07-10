@@ -25,7 +25,7 @@ class Feed(Base):
         "FeedLog",
         back_populates="feed",
         cascade="all, delete-orphan",
-        order_by="desc(FeedLog.last_finished_parse_time)"
+        order_by="desc(FeedLog.finished_at)"
     )
 
     @property
@@ -47,10 +47,12 @@ class FeedLog(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     feed_id: Mapped[int] = mapped_column(db.ForeignKey("feed.id"))
-    last_http_status: Mapped[Optional[int]] = mapped_column(db.Integer)
-    last_good_http_status_time: Mapped[Optional[DateTime]] = mapped_column(DateTime)
-    last_finished_parse_time: Mapped[Optional[DateTime]] = mapped_column(DateTime)
+    http_status: Mapped[Optional[int]] = mapped_column(db.Integer) # HTTP status based on result of parse
+    is_success: Mapped[Optional[bool]] = mapped_column(db.Boolean) # T or F based on the Reparse Result
     parse_errors: Mapped[Optional[int]] = mapped_column(db.Integer, default=0)
-    message: Mapped[Optional[str]] = mapped_column(String(512))
+    parse_error_message: Mapped[Optional[str]] = mapped_column(String(255)) # new field to hold message
+    started_at: Mapped[Optional[DateTime]] = mapped_column(DateTime)
+    finished_at: Mapped[Optional[DateTime]] = mapped_column(DateTime)
+    parsed_by: Mapped[Optional[str]] = mapped_column(String(255)) # This will come as an Auth0 ID
 
     feed = relationship("Feed", back_populates="logs")

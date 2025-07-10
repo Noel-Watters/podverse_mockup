@@ -1,6 +1,7 @@
 from seed_utils import get_db_session
 from app.models.feed import FeedFlagStatus
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy import exists
 
 feed_flag_statuses = [
     "active",
@@ -16,13 +17,20 @@ def seed_feed_flag_status():
     session = get_db_session()
     try:
         for status in feed_flag_statuses:
-            entry = FeedFlagStatus(status=status)
-            session.add(entry)
+            
+            #Check if feed_flag_statuses exist
+            exists_query = session.query(
+                exists().where(FeedFlagStatus.status == status)
+            ).scalar()
+            if not exists_query:
+                entry = FeedFlagStatus(status=status)
+                session.add(entry)
+
         session.commit()
-        print("✅ Feed flag statuses seeded successfully")
+        print("Feed flag statuses seeded successfully")
     except IntegrityError as e:
         session.rollback()
-        print("⚠️  Integrity error:", str(e))
+        print("Integrity error:", str(e))
     finally:
         session.close()
 
