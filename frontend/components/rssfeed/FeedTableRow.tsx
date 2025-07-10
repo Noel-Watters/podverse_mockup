@@ -9,12 +9,19 @@ interface FeedTableRowProps {
   feed: Feed;
   expanded: boolean;
   onExpand: () => void;
+  onNotify: (n: {
+    type: "success" | "error";
+    message: string;
+    duration?: number;
+    details?: string[];
+  }) => void;
 }
 
 const FeedTableRow: React.FC<FeedTableRowProps> = ({
   feed,
   expanded,
   onExpand,
+  onNotify,
 }) => (
   <tr className="border-t border-podverse-border hover:bg-podverse-highlight transition">
     <td className="px-4 py-2 font-medium">{feed.id}</td>
@@ -38,7 +45,7 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
       </button>
     </td>
     <td className="px-4 py-2">
-      <ReparseFeed feedId={feed.id.toString()}>
+      <ReparseFeed feedId={feed.id.toString()} onNotify={onNotify}>
         {({ onReparse, loading, status }) => (
           <ReparseButton
             onClick={onReparse}

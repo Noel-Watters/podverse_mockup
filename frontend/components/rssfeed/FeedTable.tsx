@@ -12,6 +12,12 @@ interface FeedTableProps {
   logError: string | null;
   handleCopyLogs: (logs: FeedLog[]) => void;
   handleDownloadLogs: (logs: FeedLog[], title: string) => void;
+  onNotify: (n: {
+    type: "success" | "error";
+    message: string;
+    duration?: number;
+    details?: string[];
+  }) => void;
 }
 
 const FeedTable: React.FC<FeedTableProps> = ({
@@ -22,6 +28,7 @@ const FeedTable: React.FC<FeedTableProps> = ({
   logError,
   handleCopyLogs,
   handleDownloadLogs,
+  onNotify,
 }) => (
   <table className="min-w-full bg-podverse-surface rounded shadow text-podverse-text text-sm">
     <thead className="bg-podverse-accent text-black">
@@ -40,6 +47,7 @@ const FeedTable: React.FC<FeedTableProps> = ({
             feed={feed}
             expanded={expandedFeedId === feed.id}
             onExpand={() => toggleExpand(feed.id)}
+            onNotify={onNotify}
           />
           {expandedFeedId === feed.id && (
             <FeedAuditLogRow

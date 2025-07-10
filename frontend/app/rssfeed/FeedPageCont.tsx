@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import AddRssFeedModal from "@/components/AddRssFeedModal";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import FeedTable from "@/components/rssfeed/FeedTable";
+import ReparseNotify from "@/components/reparsefeed/ReparseNotify";
 
 export default function FeedsPageContent() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
@@ -17,6 +18,17 @@ export default function FeedsPageContent() {
   const initialSearch = searchParams.get("search") || "";
   const [searchTerm, setSearchTerm] = useState<string>(initialSearch);
   const [modalOpen, setModalOpen] = useState(false);
+
+
+const [notifies, setNotifies] = useState<
+  {
+    id: string; // unique id for each toast
+    type: "success" | "error";
+    message: string;
+    duration?: number;
+    details?: string[];
+  }[]
+>([]);
 
   useEffect(() => {
     const loadFeeds = async () => {
@@ -84,6 +96,17 @@ export default function FeedsPageContent() {
       searchValue={searchTerm}
       onSearchChange={(e) => setSearchTerm(e.target.value)}
     >
+      {notifies.map((notify) => (
+        <ReparseNotify
+          key={notify.id}
+          type={notify.type}
+          message={notify.message}
+          duration={notify.duration}
+          details={notify.details}
+          onClose={() => setNotifies(notifies.filter(n => n.id !== notify.id))}
+        />
+      ))}
+
       <AddRssFeedModal open={modalOpen} onClose={() => setModalOpen(false)} />
 
       {error && (
@@ -110,6 +133,12 @@ export default function FeedsPageContent() {
           logError={logError}
           handleCopyLogs={handleCopyLogs}
           handleDownloadLogs={handleDownloadLogs}
+          onNotify={(n) =>
+            setNotifies((prev) => [
+              ...prev,
+              { ...n, id: crypto.randomUUID() },
+            ])
+          }
         />
       </div>
     </AdminLayout>
