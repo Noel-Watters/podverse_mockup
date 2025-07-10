@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const session = await auth0.getSession();
   const data = await req.json();
   try {
-    const response = await axios.post(`${BACKEND_URL}/feeds`, data);
+    const response = await axios.post(`${BACKEND_URL}/admin/feeds`, data);
     return NextResponse.json(response.data, { status: response.status });
   } catch (error: any) {
     return NextResponse.json(

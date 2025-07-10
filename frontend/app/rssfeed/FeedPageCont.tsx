@@ -1,8 +1,10 @@
 "use client";
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect } from "react";
 import {Feed, FeedLog} from "@/types/feed";
 import AdminLayout from "@/layouts/AdminLayout";
 import {useSearchParams} from "next/navigation";
+import AddRssFeedModal from "@/components/AddRssFeedModal";
+
 
 
 export default function FeedsPageContent() {
@@ -14,6 +16,7 @@ export default function FeedsPageContent() {
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
   const [searchTerm, setSearchTerm] = useState<string>(initialSearch);
+  const [modalOpen, setModalOpen] = useState(false);
 
 
   //updated with new API
@@ -85,12 +88,21 @@ export default function FeedsPageContent() {
       searchValue={searchTerm}
       onSearchChange={(e) => setSearchTerm(e.target.value)}
       >
+        <AddRssFeedModal open = {modalOpen} onClose={()=> setModalOpen(false)} />
 
         {error && (
           <div className="text-red-500 font-semibold mb-4">{error}</div>
         )}
 
         <div className="overflow-x-auto">
+            {/*Bulk Operation Buttons, Add new RSS Feed, Filtering & Sort Bar */}
+            <div>
+                <button className= "bg-podverse-primary hover:bg-podverse-accent text-white text-sm px-3 py-1 rounded"
+                onClick={() => setModalOpen(true)}
+                >
+                    + Add New RSS Feed
+                </button>
+            </div>
           <table className="min-w-full bg-podverse-surface rounded shadow text-podverse-text text-sm">
             <thead className="bg-podverse-accent text-black">
               <tr>
