@@ -1,6 +1,9 @@
 from seed_utils import get_db_session
 from app.models.feed import FeedFlagStatus
 from sqlalchemy.exc import IntegrityError
+from backend.app.utils.request_logger import get_logger
+
+logger = get_logger(__name__)
 
 feed_flag_statuses = [
     "active",

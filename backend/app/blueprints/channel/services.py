@@ -26,6 +26,7 @@ def channel_eagerload_options():
         joinedload(Channel.stats),
         joinedload(Channel.categories).joinedload(ChannelCategory.category)
     )
+    
 
 def get_channels_list(search, sort_by, sort_order, page, limit):
     """
@@ -52,6 +53,7 @@ def get_channels_list(search, sort_by, sort_order, page, limit):
     except Exception as e:
         logger.error(f"Error retrieving channels list: {str(e)}")
         raise DatabaseError(f"Failed to retrieve channels: {str(e)}")
+
 
 def get_channels_for_export(search=None, sort_by='id', sort_order='asc', max_rows=10000):
     """

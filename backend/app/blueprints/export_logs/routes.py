@@ -25,6 +25,7 @@ def get_export_logs():
         page, per_page = get_pagination_params(request)
         sort_by, sort_order = get_sorting_params(
             request,
+            request,
             ['created_at', 'completed_at', 'status', 'export_type'],
             default_field='created_at'
         )
@@ -68,6 +69,7 @@ def get_export_logs():
     except Exception as e:
         logger.error(f"Error retrieving export logs: {str(e)}")
         raise ValidationError(f"Failed to retrieve export logs: {str(e)}")
+
 
 
 @export_logs_bp.route('/<int:log_id>/download', methods=['GET'])

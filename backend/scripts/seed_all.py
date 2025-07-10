@@ -1,5 +1,7 @@
 import argparse
 from seed_utils import run_seeder_with_retry
+from backend.app.utils.request_logger import get_logger
+from app import create_app
 
 # Import all seeders
 from seed_user import seed_user

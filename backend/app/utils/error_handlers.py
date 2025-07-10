@@ -2,19 +2,20 @@
 
 from flask import jsonify, current_app, request
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from app.extensions import ValidationError as MarshmallowValidationError
+from marshmallow import ValidationError as MarshmallowValidationError
 from werkzeug.exceptions import HTTPException
 from app.utils.error_exceptions import APIException, ValidationError, NotFoundError, DatabaseError
-<<<<<<< HEAD
-from backend.app.utils.request_logger import log_network_event
-=======
 from app.utils.auth import AuthError
 from app.utils.security_logger import log_network_event
->>>>>>> 012f3ac (refactor: improve testing structure and simplify export response handling)
 import traceback
 import socket
 
 def register_error_handlers(app):
+    
+    @app.errorhandler(AuthError)
+    def handle_auth_error(ex):
+        """Handle JWT authentication errors from Auth0"""
+        return {"error": ex.error}, ex.status_code
     
     @app.errorhandler(APIException)
     def handle_api_exception(e):
@@ -47,7 +48,7 @@ def register_error_handlers(app):
         if isinstance(e, IntegrityError):
             return jsonify({
                 'error': {
-                    'message': 'Data integrity constranit Error',
+                    'message': 'Data integrity constraint violation',
                     'status_code': 409
                 }
             }), 409
