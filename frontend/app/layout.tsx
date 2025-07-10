@@ -1,8 +1,7 @@
 // frontend/app/layout.tsx
 import '../styles/globals.css';
 import { ReactNode } from "react";
-import {store} from "@/redux/store";
-import { Provider } from 'react-redux';
+import ClientProviders from "./ClientProviders";
 
 export const metadata = {
   title: 'Podverse Admin',
@@ -15,12 +14,12 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   return (
-    <Provider store={store}>
-      <html lang="en">
-        <body className="bg-podverse-background text-podverse-text font-sans min-h-screen">
+    <html lang="en">
+      <body className="bg-podverse-background text-podverse-text font-sans min-h-screen">
+        <ClientProviders>
           {children}
-        </body>
-      </html>
-    </Provider>
+        </ClientProviders>
+      </body>
+    </html>
   );
 }

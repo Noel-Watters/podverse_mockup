@@ -1,3 +1,4 @@
+"use client";
 // layouts/AdminLayout.tsx
 import React, { ReactNode} from "react";
 import {useRouter} from "next/navigation";

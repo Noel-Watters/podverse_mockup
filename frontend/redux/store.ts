@@ -1,8 +1,9 @@
 import { configureStore } from '@reduxjs/toolkit';
+import reparseReducer from './reparseSlice';
 
 export const store = configureStore({
   reducer: {
-    // Add your reducers here
+    reparse: reparseReducer,
   },
 });
 

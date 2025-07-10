@@ -1,3 +1,4 @@
+"use client";
 //Used to display a pie chart on Dashboard
 import React from "react";
 import { PieChart, Pie, Cell, Legend, ResponsiveContainer } from "recharts";

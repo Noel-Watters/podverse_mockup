@@ -1,3 +1,4 @@
+"use client";
 //Used on every page
 import Link from "next/link";
 import Image from "next/image";

@@ -1,4 +1,5 @@
 //Used to Add RSS Feeds on RSS Feed Page
+"use client";
 import React, { useState } from "react";
 
 interface AddRssFeedModalProps {
