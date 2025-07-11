@@ -19,4 +19,6 @@ END
 $$;
 
 -- Insert the new status values
-INSERT INTO feed_flag_status (status) VALUES ('parse_error'), ('fetch_error'); 
+INSERT INTO feed_flag_status (status) 
+VALUES ('parse_error'), ('fetch_error')
+ON CONFLICT (status) DO NOTHING; 
