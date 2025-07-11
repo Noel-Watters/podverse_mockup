@@ -7,13 +7,14 @@ import AddRssFeedModal from "@/components/AddRssFeedModal";
 import FeedTable from "@/components/rssfeed/FeedTable";
 import ReparseNotify from "@/components/reparsefeed/ReparseNotify";
 import FeedToolBar from "@/components/rssfeed/FeedToolbar";
+import { useDispatch } from "react-redux";
+import { fetchFeedLogs } from "@/redux/reparseSlice";
+import type { AppDispatch } from "@/redux/store";
 
 export default function FeedsPageContent() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [expandedFeedId, setExpandedFeedId] = useState<number | null>(null);
   const [error, setError] = useState<string>("");
-  const [logLoading, setLogLoading] = useState(false);
-  const [logError, setLogError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
   const [searchTerm, setSearchTerm] = useState<string>(initialSearch);
@@ -44,41 +45,25 @@ export default function FeedsPageContent() {
     loadFeeds();
   }, []);
 
-  const toggleExpand = async (feedId: number) => {
-    if (expandedFeedId === feedId) {
-      setExpandedFeedId(null);
-      setLogError(null);
-      return;
-    }
+const dispatch = useDispatch<AppDispatch>();
 
-    setLogLoading(true);
-    setLogError(null);
-
-    try {
-      const response = await fetch(`/api/feeds/${feedId}`);
-      if (!response.ok) throw new Error("Failed to fetch feed details");
-      const feedData = await response.json();
-
-      const updatedFeeds = feeds.map(f =>
-        f.id === feedId ? { ...f, logs: feedData.recent_logs || [] } : f
-      );
-      setFeeds(updatedFeeds);
-    } catch (err) {
-      setLogError("FAILED to load");
-    }
-
-    setLogLoading(false);
-    setExpandedFeedId(feedId);
-  };
+const toggleExpand = (feedId: number) => {
+  if (expandedFeedId === feedId) {
+    setExpandedFeedId(null);
+    return;
+  }
+  dispatch(fetchFeedLogs(String(feedId))); // Make sure to use String(feedId) if your state uses string keys
+  setExpandedFeedId(feedId);
+};
 
   const handleCopyLogs = (logs: FeedLog[]) => {
-    const text = logs.map((log) => `${log.created_at}: ${log.message}`).join("\n");
+    const text = logs.map((log) => `${log.started_at ?? ""}: ${log.parse_error_message ?? ""}`).join("\n");
     navigator.clipboard.writeText(text);
     alert("Logs copied to clipboard!");
   };
 
   const handleDownloadLogs = (logs: FeedLog[], title: string) => {
-    const text = logs.map((log) => `${log.created_at}: ${log.message}`).join("\n");
+    const text = logs.map((log) => `${log.started_at ?? ""}: ${log.parse_error_message ?? ""}`).join("\n");
     const blob = new Blob([text], { type: "text/plain" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -119,8 +104,6 @@ export default function FeedsPageContent() {
           feeds={filteredFeeds}
           expandedFeedId={expandedFeedId}
           toggleExpand={toggleExpand}
-          logLoading={logLoading}
-          logError={logError}
           handleCopyLogs={handleCopyLogs}
           handleDownloadLogs={handleDownloadLogs}
           onNotify={(n) =>

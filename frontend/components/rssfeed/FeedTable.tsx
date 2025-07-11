@@ -3,13 +3,14 @@ import React from "react";
 import FeedTableRow from "./FeedTableRow";
 import FeedAuditLogRow from "./FeedAuditLogRow";
 import { Feed, FeedLog } from "@/types/feed";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 interface FeedTableProps {
   feeds: Feed[];
   expandedFeedId: number | null;
   toggleExpand: (feedId: number) => void;
-  logLoading: boolean;
-  logError: string | null;
+  // You can remove logLoading and logError from props if you only use Redux!
   handleCopyLogs: (logs: FeedLog[]) => void;
   handleDownloadLogs: (logs: FeedLog[], title: string) => void;
   onNotify: (n: {
@@ -24,8 +25,6 @@ const FeedTable: React.FC<FeedTableProps> = ({
   feeds,
   expandedFeedId,
   toggleExpand,
-  logLoading,
-  logError,
   handleCopyLogs,
   handleDownloadLogs,
   onNotify,
@@ -41,25 +40,32 @@ const FeedTable: React.FC<FeedTableProps> = ({
       </tr>
     </thead>
     <tbody>
-      {feeds.map((feed) => (
-        <React.Fragment key={feed.id}>
-          <FeedTableRow
-            feed={feed}
-            expanded={expandedFeedId === feed.id}
-            onExpand={() => toggleExpand(feed.id)}
-            onNotify={onNotify}
-          />
-          {expandedFeedId === feed.id && (
-            <FeedAuditLogRow
+      {feeds.map((feed) => {
+        // Get logs, loading, and error for this feed from Redux
+        const logs = useSelector((state: RootState) => state.reparse[String(feed.id)]?.logs ?? []);
+        const logLoading = useSelector((state: RootState) => state.reparse[String(feed.id)]?.loading ?? false);
+        const logError = useSelector((state: RootState) => state.reparse[String(feed.id)]?.error ?? null);
+
+        return (
+          <React.Fragment key={feed.id}>
+            <FeedTableRow
               feed={feed}
-              logLoading={logLoading}
-              logError={logError}
-              handleCopyLogs={handleCopyLogs}
-              handleDownloadLogs={handleDownloadLogs}
+              expanded={expandedFeedId === feed.id}
+              onExpand={() => toggleExpand(feed.id)}
+              onNotify={onNotify}
             />
-          )}
-        </React.Fragment>
-      ))}
+            {expandedFeedId === feed.id && (
+              <FeedAuditLogRow
+                feed={{ ...feed, logs }} // override logs with Redux logs
+                logLoading={logLoading}
+                logError={logError}
+                handleCopyLogs={handleCopyLogs}
+                handleDownloadLogs={handleDownloadLogs}
+              />
+            )}
+          </React.Fragment>
+        );
+      })}
       {feeds.length === 0 && (
         <tr>
           <td

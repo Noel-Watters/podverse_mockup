@@ -54,5 +54,6 @@ class FeedLog(Base):
     started_at: Mapped[Optional[DateTime]] = mapped_column(DateTime)
     finished_at: Mapped[Optional[DateTime]] = mapped_column(DateTime)
     parsed_by: Mapped[Optional[str]] = mapped_column(String(255)) # This will come as an Auth0 ID
+    last_finished_parse_time: Mapped[Optional[DateTime]] = mapped_column(DateTime)#Noel added this for testing
 
     feed = relationship("Feed", back_populates="logs")

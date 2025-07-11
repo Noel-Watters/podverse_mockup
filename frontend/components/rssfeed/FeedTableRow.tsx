@@ -31,10 +31,10 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
     </td>
     <td className="px-4 py-2">{feed.parsing_priority}</td>
     <td className="px-4 py-2 text-xs">
-      {new Date(feed.created_at).toLocaleString()}
+      {new Date(feed.created_at ?? "").toLocaleString()}
     </td>
     <td className="px-4 py-2 text-xs">
-      {new Date(feed.updated_at).toLocaleString()}
+      {new Date(feed.updated_at ?? "").toLocaleString()}
     </td>
     <td className="px-4 py-2 text-sm">
       <button

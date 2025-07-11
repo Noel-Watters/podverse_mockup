@@ -1,6 +1,6 @@
 "use client";
 import { useDispatch, useSelector } from 'react-redux';
-import { startReparse, fetchFeedStatus } from '../../redux/reparseSlice';
+import { startReparse, fetchFeedStatus, fetchFeedLogs, reparseFeed } from '../../redux/reparseSlice';
 import type { AppDispatch, RootState } from '../../redux/store';
 
 interface ReparseFeedProps {
@@ -26,18 +26,9 @@ export default function ReparseFeed({ feedId, children, onNotify }: ReparseFeedP
   const handleReparse = async () => {
     dispatch(startReparse(feedId));
     try {
-      const response = await fetch(`/api/feeds/${feedId}/reparse`, { method: 'POST' });
-      await dispatch(fetchFeedStatus(feedId));
-    if (!response.ok) {
-      // Try to extract error message from response body if available
-      let errorMsg = `HTTP ${response.status}`;
-      try {
-        const data = await response.json();
-        if (data && data.error) errorMsg = data.error;
-      } catch {}
-      throw new Error(errorMsg);
-    }
+      await dispatch(reparseFeed(feedId)).unwrap();
     await dispatch(fetchFeedStatus(feedId));
+    await dispatch(fetchFeedLogs(feedId));
     if (onNotify) {
       onNotify({
         type: "success",

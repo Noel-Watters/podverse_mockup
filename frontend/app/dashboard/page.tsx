@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Feed, RecentLog } from "@/types/feed";
+import { Feed, FeedLog } from "@/types/feed";
 import FeedStatsChart from "../../components/FeedStatsChart";
 import AdminLayout from "@/layouts/AdminLayout";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,7 @@ export default function DashboardPage() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [error, setError] = useState<string>("");
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
-  const [selectedFeedLogs, setSelectedFeedLogs] = useState<RecentLog[]>([]);
+  const [selectedFeedLogs, setSelectedFeedLogs] = useState<FeedLog[]>([]);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -19,7 +19,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchFeeds = async () => {
       try {
-        const response = await fetch("/api/feeds?limit=2000");
+        const response = await fetch("/api/feeds");
         if (!response.ok) throw new Error("Failed to load feeds");
         const data = await response.json();
         setFeeds(data);
@@ -34,7 +34,7 @@ export default function DashboardPage() {
   const handleRecentFlagged = (feeds: Feed[]) => {
     return feeds
       .filter(feed => feed.feed_flag_status_id === 2 || feed.feed_flag_status_id === 3)
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .sort((a, b) => new Date(b.updated_at ?? "").getTime() - new Date(a.updated_at ?? "").getTime())
       .slice(0, 6);
   };
 
@@ -158,10 +158,9 @@ const handleSearch = () => {
               ) : (
                 selectedFeedLogs.map((log, i) => (
                   <div key={i} className="p-3 rounded bg-white border border-gray-200">
-                    <p className="font-semibold text-black break-words">{log.message}</p>
+                    <p className="font-semibold text-black break-words">{log.parse_error_message ?? ""}</p>
                     <p className="text-xs text-gray-400">{new Date(
                       log.last_finished_parse_time ||
-                      log.last_good_http_status_time ||
                       ""
                     ).toLocaleString()}</p>
                     <span className={log.parse_errors === 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>

@@ -538,3 +538,7 @@ CREATE TABLE account_location (
     account_id INTEGER UNIQUE REFERENCES account(id) ON DELETE CASCADE,
     region CHAR(2) CHECK (region ~ '^[A-Z]{2}$')
 );
+
+--Noel Testing stuff
+ALTER TABLE feed_log
+ADD COLUMN IF NOT EXISTS last_finished_parse_time TIMESTAMP;
