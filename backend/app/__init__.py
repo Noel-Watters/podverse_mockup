@@ -5,7 +5,7 @@ from app.extensions import ma, db, limiter, migrate
 from app.blueprints import register_blueprints
 from flask_cors import CORS
 from config import config_by_name
-from app.utils.logger import get_logger, log_request_start, log_request_end
+from app.utils.request_logger import register_logging
 from app.utils.error_handlers import register_error_handlers
 from app.utils.auth import AuthError
 import os

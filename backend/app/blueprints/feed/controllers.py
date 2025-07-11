@@ -6,7 +6,7 @@ from app.blueprints.feed.services import parse_and_update_feed, get_all_feeds, i
 from app.blueprints.feed.schemas import feeds_schema, feed_schema, feeds_export_schema, feed_export_schema
 from app.utils.query_params import get_pagination_params, get_sorting_params, get_search_query
 from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
-from app.utils.logger import get_logger, log_database_operation
+from app.utils.request_logger import get_logger, log_database_operation
 from app.utils.export_response import generate_export_response
 from datetime import datetime
 

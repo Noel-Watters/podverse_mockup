@@ -5,8 +5,13 @@ from functools import wraps
 from flask import request, _request_ctx_stack, abort
 from jose import jwt
 import requests
+<<<<<<< HEAD
 import os
 from flask_limiter.util import get_remote_address
+=======
+from app.utils.error_exceptions import AuthError
+from app.utils.security_logger import log_auth_event
+>>>>>>> 012f3ac (refactor: improve testing structure and simplify export response handling)
 
 # 
 AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
@@ -72,7 +77,9 @@ def requires_auth(f):
                 audience=API_AUDIENCE,
                 issuer=f"https://{AUTH0_DOMAIN}/"
             )
+            log_auth_event(logger, "TOKEN_VALID", payload["sub"], "Token validated successfully")
         except jwt.ExpiredSignatureError:
+            log_auth_event(logger, "TOKEN_EXPIRED", "unknown", "Token expired")
             raise AuthError({"code": "token_expired"}, 401)
         except jwt.JWTClaimsError:
             raise AuthError({"code": "invalid_claims"}, 401)

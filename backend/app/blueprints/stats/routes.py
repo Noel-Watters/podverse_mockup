@@ -3,10 +3,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy import func, desc
 from app.blueprints.stats import stats_bp
 from app.extensions import db
-from app.models.channel import Channel
-from app.models.item import Item
-from app.models.stats import StatsAggregatedChannel, StatsAggregatedItem
-from app.utils.logger import get_logger, log_request
+from app.utils.request_logger import get_logger, log_request
 from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
 from app.blueprints.stats.schemas import (
     stats_channel_schema,

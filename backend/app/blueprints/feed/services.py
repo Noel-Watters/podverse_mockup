@@ -6,7 +6,8 @@ from app.models.feed import Feed, FeedFlagStatus
 from app.models.channel import Channel
 from app.blueprints.feed.reparse_helpers import reparse_feed_url, handle_bozo_parse_error, create_or_update_channel, insert_items, create_successful_feed_log, get_flag_status_id
 from app.extensions import db
-from app.utils.logger import get_logger, log_database_operation, log_network_event, log_error
+from app.utils.request_logger import get_logger, log_database_operation
+from app.utils.security_logger import log_network_event, log_error
 from app.utils.query_helpers import paginate_query, apply_sorting
 from app.utils.error_exceptions import NotFoundError, ValidationError, DatabaseError
 from datetime import datetime

@@ -2,7 +2,7 @@
 
 from flask import jsonify
 from . import feed_bp
-from app.utils.logger import get_logger, log_request_start, log_request_end
+from app.utils.request_logger import get_logger, log_request_start, log_request_end
 from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
 from app.extensions import limiter
 from app.utils.auth import requires_auth

@@ -2,11 +2,29 @@
 from typing import List, Optional, Dict, Any
 from sqlalchemy import asc, desc
 from datetime import datetime
+from app.models.stats import StatsAggregatedChannel, StatsAggregatedItem, StatsTrackEventChannel, StatsTrackEventItem
+from app.models.channel import Channel
+from app.models.item import Item
+from app.blueprints.stats.schemas import (
+    channel_details_schema, 
+    channel_daily_stats_only_schema, 
+    channel_weekly_stats_only_schema, 
+    stats_channel_schema_many, 
+    item_daily_stats_only_schema,
+    item_details_schema,
+    item_weekly_stats_only_schema,
+    stats_item_schema_many
+)
+from app.extensions import db
+from app.utils.error_exceptions import NotFoundError, DatabaseError, ValidationError
+from app.utils.request_logger import get_logger, log_database_operation
 
-class BaseFilterBuilder:
-    def __init__(self, query, model_class):
-        self.query = query
-        self.model_class = model_class
+logger = get_logger(__name__)
+
+# class BaseFilterBuilder:
+#     def __init__(self, query, model_class):
+#         self.query = query
+#         self.model_class = model_class
     
     def apply_sorting(self, sort_by, sort_order='desc'):
         """
