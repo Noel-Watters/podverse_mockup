@@ -132,3 +132,4 @@ def log_database_operation(logger: Logger, operation: str, table: str,
     else:
         logger.info(f"DB {operation}: {table}")
         
+        
