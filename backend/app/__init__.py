@@ -12,9 +12,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def create_app(config_name="development"):
+def create_app(config_name=None):
+    if config_name is None:
+        config_name = os.getenv("FLASK_ENV", "development")
     app = Flask(__name__)
     app.config.from_object(config_by_name[config_name])
+
     
 
     # initialize extensions

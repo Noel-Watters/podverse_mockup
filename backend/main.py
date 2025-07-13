@@ -5,7 +5,7 @@ from app.extensions import db
 from dotenv import load_dotenv
 import os
 from flask import redirect
-from backend.app.utils.request_logger import get_logger
+from app.utils.log_config import get_logger
 
 load_dotenv() # loads .env from root
 

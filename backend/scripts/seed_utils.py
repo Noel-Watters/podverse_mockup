@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 from faker import Faker
 import uuid
 from app.extensions import db
-from backend.app.utils.request_logger import get_logger
+from app.utils.log_config import get_logger
 
 # Initialize Faker
 fake = Faker()

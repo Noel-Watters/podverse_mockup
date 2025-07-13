@@ -2,18 +2,20 @@
 
 #NOT: Refactor into classes only if logic grows more complex for now stand alonw functions are already modular since it's in the same file
 
-from app.models.feed import Feed, FeedFlagStatus
+from app.models.feed import Feed, FeedFlagStatus, FeedLog
 from app.models.channel import Channel
-from app.blueprints.feed.reparse_helpers import reparse_feed_url, handle_bozo_parse_error, create_or_update_channel, insert_items, create_successful_feed_log, get_flag_status_id
+from app.blueprints.feed.reparse_helpers import reparse_feed_url, handle_bozo_parse_error, create_or_update_channel, insert_items, create_successful_feed_log
+from app.utils.helpers import get_flag_status_id
 from app.extensions import db
 from app.utils.request_logger import get_logger, log_database_operation
 from app.utils.security_logger import log_network_event, log_error
 from app.utils.query_helpers import paginate_query, apply_sorting
-from app.utils.error_exceptions import NotFoundError, ValidationError, DatabaseError
+from app.utils.error_exceptions import NotFoundError, ValidationError, DatabaseError, ParseError
 from datetime import datetime
 import xml.etree.ElementTree as ET
 from flask import current_app
 from sqlalchemy import or_
+import traceback
 
 logger = get_logger(__name__)
 
@@ -69,7 +71,7 @@ def create_single_feed(url: str, parsing_priority: int = 0):
         raise DatabaseError(f"Failed to create feed: {str(e)}")
 
 
-def _parse_and_update_feed_object(feed: Feed):
+def parse_and_update_feed_object(feed: Feed):
     """Helper function that takes a Feed object directly (avoids redundant DB lookups)"""
     # Race condition guard: check if already parsing
     if feed.is_parsing:
@@ -85,6 +87,7 @@ def _parse_and_update_feed_object(feed: Feed):
     
     try:
         parsed_data = reparse_feed_url(feed.url)
+        logger.info(f"Debug - parsed_data: {parsed_data}")
         
         # if bozo true then mark the feed as error and log
         if parsed_data["feed"]["bozo"]:
@@ -107,10 +110,10 @@ def _parse_and_update_feed_object(feed: Feed):
         create_successful_feed_log(feed.id, parsed_data["feed"]["http_status"])
         
         feed.is_parsing = False
-        feed.updated_at = datetime.utcnow()
+        feed.updated_at = datetime.utcnow()  # updated only on success
         db.session.commit()
         
-        logger.info(f"Succesxsfully reparsed Feed ID: {feed.id}, Channel ID: {channel.id}, Items: {len(parsed_data['items'])}")
+        logger.info(f"Successfully reparsed Feed ID: {feed.id}, Channel ID: {channel.id}, Items: {len(parsed_data['items'])}")
         return {
             "status": "success",
             "feed_id": feed.id,
@@ -119,11 +122,38 @@ def _parse_and_update_feed_object(feed: Feed):
         }
     except ValidationError:
         raise
+    except ParseError as e:
+        db.session.rollback()
+        logger.error(f"Parse error for feed {feed.id} ({feed.url}): {str(e)}")
+        feed.feed_flag_status_id = get_flag_status_id("parse_error")
+        db.session.commit()
+        return {
+            "status": "failed",
+            "error": str(e),
+            "feed_id": feed.id
+        }
     except Exception as e:
         db.session.rollback()
-        # Log network issues separately from general errors
+        
+        full_trace = traceback.format_exc()
+        logger.error(f"Exception reparsing feed {feed.id} ({feed.url}):\n{full_trace}")
+        
+        # detect DNS failure veya unreachable domains
+        if "Name or service not known" in str(e) or "Failed to resolve" in str(e):
+            logger.warning(f"Feed ID {feed.id} marked as unreachable due to DNS failure")
+            feed.feed_flag_status_id = get_flag_status_id("fetch_error")
+
+            db.session.commit()
+            return {
+                "status": "failed",
+                "error": "DNS resolution failed - domain unreachable",
+                "feed_id": feed.id
+            }
+        
+        # Logging network issues separately from general errors
         if "timeout" in str(e).lower() or "connection" in str(e).lower():
             log_network_event(logger, "RSS_FETCH_ERROR", f"URL: {feed.url}, Error: {str(e)}")
+            
         log_error("parse_and_update_feed", e)
         raise DatabaseError(f"Failed to reparse feed: {str(e)}")
     finally:
@@ -140,7 +170,7 @@ def parse_and_update_feed(feed_id: int):
     if not feed:
         raise NotFoundError("Feed not found")
     
-    return _parse_and_update_feed_object(feed)
+    return parse_and_update_feed_object(feed)
         
 
 def get_all_feeds(page=1, limit=10, parsing_priority=None, is_parsing=None, status=None, sort_by="id", sort_order="desc", search=None):
@@ -317,10 +347,10 @@ def get_feeds_for_export(search=None, sort_by='id', sort_order='asc', max_rows=1
         List of Feed objects
     """
     try:
-        # Add left join to Channel for title search
-        query = db.session.query(Feed).join(FeedFlagStatus).outerjoin(Channel)
+        # Create base query with left join to Channel for title search
+        query = db.session.query(Feed).join(FeedFlagStatus).outerjoin(Channel).order_by(Feed.id.desc())
         log_database_operation(logger, "READ", "feeds", f"export_max_{max_rows}")
-        
+             
         if search:
             # Enhanced search: ID (exact), URL (partial), or Channel title (partial)
             search_conditions = []
@@ -338,24 +368,24 @@ def get_feeds_for_export(search=None, sort_by='id', sort_order='asc', max_rows=1
             
             # Combine with OR
             query = query.filter(or_(*search_conditions))
-            logger.info(f"Applying enhanced search filter for export (ID/URL/title): {search}")
-        
+            logger.info(f"Export query with search: {search}")
+            
+        # Safe dynamic sorting
         query = apply_sorting(query, Feed, sort_by, sort_order)
         logger.info(f"Export query with sort: {sort_by} {sort_order}")
         
-        # Limit to max_rows for performance
-        query = query.limit(max_rows)
-        
-        feeds = query.all()
-        
+        # Limit rows max_rows for performance
+        feeds = query.limit(max_rows).all()
         logger.info(f"Retrieved {len(feeds)} feeds for export with search: {search or 'none'}")
-        if len(feeds) == max_rows:
-            logger.warning(f"Export hit max_rows limit of {max_rows} - results may be truncated")
         
-        return feeds
+        # Serialize feeds for export
+        from app.blueprints.feed.schemas import feeds_export_schema
+        serialized_feeds = feeds_export_schema.dump(feeds)
+        
+        return serialized_feeds
         
     except Exception as e:
-        logger.error(f"Error retrieving feeds for export: {str(e)}")
+        log_error("get_feeds_for_export", e)
         raise DatabaseError(f"Failed to retrieve feeds for export: {str(e)}")
 
 
@@ -465,7 +495,7 @@ def bulk_reparse_feeds(feed_ids: list):
                 continue
             
             try:
-                result = _parse_and_update_feed_object(feed)  # Use helper to avoid redundant lookup
+                result = parse_and_update_feed_object(feed)  # Use helper to avoid redundant lookup
                 if result and result.get('status') == 'success':
                     success_count += 1
                     results.append({
@@ -503,4 +533,43 @@ def bulk_reparse_feeds(feed_ids: list):
     except Exception as e:
         log_error("bulk_reparse_feeds", e)
         raise DatabaseError(f"Failed to bulk reparse feeds: {str(e)}")
+    
+
+def get_feed_logs(feed_id: int):
+    """
+    Get all logs for a specific feed, sorted by finished_at
+    
+    Args:
+        feed_id (int): ID of the feed to get logs for
+        
+    Returns:
+        list: List of FeedLog objects
+        
+    Raises:
+        NotFoundError: If feed doesn't exist
+        DatabaseError: If database operation fails
+    """
+    try:
+        # Check if feed exists
+        feed = db.session.get(Feed, feed_id)
+        if not feed:
+            logger.warning(f"Feed not found when fetching logs: ID {feed_id}")
+            raise NotFoundError("Feed not found")
+
+        # Get all logs for the feed, sorted by finished_at
+        logs = (
+            db.session.query(FeedLog)
+            .filter(FeedLog.feed_id == feed_id)
+            .order_by(FeedLog.finished_at.desc())
+            .all()
+        )
+        
+        logger.info(f"Retrieved {len(logs)} logs for feed ID {feed_id}")
+        return logs
+        
+    except NotFoundError:
+        raise
+    except Exception as e:
+        log_error("get_feed_logs", e)
+        raise DatabaseError(f"Failed to retrieve feed logs: {str(e)}")
     

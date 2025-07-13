@@ -7,6 +7,7 @@ from jose import jwt
 import requests
 from app.utils.error_exceptions import AuthError
 from app.utils.security_logger import log_auth_event
+from app.utils.log_config import get_audit_logger
 
 def get_auth0_config() -> Dict[str, Any]:
     """Get Auth0 configuration from current app config.
@@ -59,6 +60,7 @@ def requires_auth(f: F) -> F:
     """
     @wraps(f)
     def decorated(*args: Any, **kwargs: Any) -> Any:
+        logger = get_audit_logger()
         token = get_token_auth_header() 
         jsonurl = requests.get(f"https://{current_app.config['AUTH0_DOMAIN']}/.well-known/jwks.json") # get the jwks from the auth0 domain
         jwks = jsonurl.json() # parse the jwks

@@ -66,11 +66,13 @@ def seed_feed(n=10):
                 scenario = random.choice(LOG_SCENARIOS)
                 log = FeedLog(
                     feed_id=feed.id,
-                    last_http_status=scenario["status"],
-                    last_good_http_status_time=datetime.utcnow() - timedelta(days=random.randint(1, 5)),
-                    last_finished_parse_time=datetime.utcnow() - timedelta(days=random.randint(0, 3)),
+                    http_status=scenario["status"],
+                    is_success=scenario["status"] == 200,
                     parse_errors=scenario["errors"],
-                    message=scenario["message"]
+                    parse_error_message=scenario["message"],
+                    started_at=datetime.utcnow() - timedelta(days=random.randint(1, 5)),
+                    finished_at=datetime.utcnow() - timedelta(days=random.randint(0, 3)),
+                    parsed_by="seeder"
                 )
                 session.add(log)
 

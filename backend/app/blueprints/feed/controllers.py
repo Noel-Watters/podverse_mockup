@@ -2,14 +2,25 @@
 
 from flask import request
 from werkzeug.datastructures import FileStorage
-from app.blueprints.feed.services import parse_and_update_feed, get_all_feeds, import_feeds_from_opml, get_feed_by_id, create_single_feed, get_feeds_for_export, bulk_update_feeds, bulk_reparse_feeds
-from app.blueprints.feed.schemas import feeds_schema, feed_schema, feeds_export_schema, feed_export_schema
+from app.blueprints.feed.services import (
+    parse_and_update_feed,
+    get_all_feeds,
+    import_feeds_from_opml,
+    get_feed_by_id,
+    create_single_feed,
+    get_feeds_for_export,
+    bulk_update_feeds,
+    bulk_reparse_feeds,
+    get_feed_logs
+)
+from app.blueprints.feed.schemas import feeds_schema, feed_schema, feeds_export_schema, feed_export_schema, feed_logs_schema
 from app.utils.query_params import get_pagination_params, get_sorting_params, get_search_query
 from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.request_logger import get_logger, log_database_operation
 from app.utils.export_response import generate_export_response
 from datetime import datetime
-
+from app.tasks.feed_task import reparse_feed_task
+from app.utils.export_logging import create_export_log_simple, finalize_export_log   
 
 logger = get_logger(__name__)
 
@@ -44,7 +55,16 @@ def create_feed_controller():
     # Create the feed
     feed = create_single_feed(url=url, parsing_priority=parsing_priority)
     
-    # Immediately parse the feed after creation
+    # Check for async flag (query param ?async=true or JSON field "async": true)
+    async_flag = request.args.get("async", "").lower() == "true" or data.get("async", False)
+    if async_flag:
+        # Queue background Celery task and return immediately
+        reparse_feed_task.delay(feed.id)
+        serialized_feed = feed_schema.dump(feed)
+        serialized_feed["queued"] = True
+        return serialized_feed, 202
+
+    # Immediately parse the feed after creation (synchronous path)
     parse_result = parse_and_update_feed(feed.id)
     
     # Serialize and return the created feed
@@ -57,31 +77,53 @@ def create_feed_controller():
     return serialized_feed
 
 
-def reparse_feed_controller(feed_id: int):
+def reparse_feed_controller(feed_id: int, async_mode: bool = False):
     """
     Controller to handle feed reparsing
-    Coordinates the reparse operation and returns result
+    Coordinion and returns result
     """
     logger.info(f"Starting reparse for feed ID: {feed_id}")
     log_database_operation(logger, "UPDATE", "feeds", feed_id)
     
-    result = parse_and_update_feed(feed_id)
-    if result is None:
-        raise NotFoundError("Feed not found.")
-
-    # Log the operation result
-    if result.get('status') == 'success':
-        logger.info(
-                f"Successfully completed reparse for feed ID: {feed_id}"
-                f"Channel: {result.get('channel_id')}, Items: {result.get('item_count')}"
-            )
-    else:
-        logger.warning(
-                f"Reparse failed for feed ID: {feed_id}"
-                f"Status: {result.get('status')}, Error: {result.get('error')}"
-            )
+    # First check if feed exists
+    feed = get_feed_by_id(feed_id)
+    if not feed:
+        logger.warning(f"Feed not found: ID {feed_id}")
+        raise NotFoundError("Feed not found")
+        
+    if feed.is_parsing:
+        logger.warning(f"Feed {feed_id} is already being parsed")
+        return {"status": "error", "message": "Feed is already being parsed"}, 409
     
-    return result
+    try:
+        if async_mode:
+            # Queue the task
+            task = reparse_feed_task.delay(feed_id)
+            logger.info(f"Queued reparse task for feed {feed_id}, task id: {task.id}")
+            return {
+                "status": "queued",
+                "feed_id": feed_id,
+                "task_id": task.id,
+                "message": "Feed reparse queued successfully"
+            }, 202
+        else:
+            # Synchronous reparse
+            result = parse_and_update_feed(feed_id)
+            if result.get('status') == 'success':
+                logger.info(
+                    f"Successfully completed reparse for feed ID: {feed_id}, "
+                    f"Channel: {result.get('channel_id')}, Items: {result.get('item_count')}"
+                )
+            else:
+                logger.warning(
+                    f"Reparse failed for feed ID: {feed_id}, "
+                    f"Status: {result.get('status')}, Error: {result.get('error')}"
+                )
+            return result, 200
+            
+    except Exception as e:
+        logger.error(f"Error reparsing feed {feed_id}: {str(e)}")
+        return {"status": "error", "message": "Failed to reparse feed", "error": str(e)}, 500
 
 
 def get_all_feeds_controller():
@@ -89,6 +131,9 @@ def get_all_feeds_controller():
     Controller to handle getting all feeds with pagination
     Coordinates between request parsing, service calls, and response formatting
     """
+    logger.info("Starting feed retrieval")
+    log_database_operation(logger, "READ", "feeds", "all_feeds_query")
+    
     page, limit = get_pagination_params(request)
     sort_by, sort_order = get_sorting_params(request, allowed_fields=['id', 'url', 'updated_at'], default_field='id')
     search = get_search_query(request)
@@ -189,39 +234,52 @@ def import_feeds_controller():
 def bulk_export_feeds_controller():
     """
     Controller to handle bulk export of feeds
-    Similar to channel export but for feeds
     """
     try:
         # Get query parameters
         sort_by, sort_order = get_sorting_params(request, ['id', 'url', 'updated_at'], default_field='id')
         search = get_search_query(request)
-        
-        # Get max_rows parameter (optional, defaults to 10000)
-        max_rows = request.args.get('max_rows', 10000, type=int)
-        if max_rows <= 0 or max_rows > 50000:  
-            max_rows = 10000
+        format = request.args.get("format", "csv")
+        admin_email = request.args.get("admin_email", "system@podverse.com")
 
-        logger.info(f"Exporting feeds - sort: {sort_by} {sort_order}, search: {search or 'none'}, max_rows: {max_rows}")
-        log_database_operation(logger, "READ", "feeds", f"export_max_{max_rows}")
+        # create export log
+        export_log = create_export_log_simple(
+            export_type="feeds",
+            filters={"format": format, "admin_email": admin_email},
+            status="pending",
+            file_path=None,
+            admin_email=admin_email
+        )
 
         # Get feeds for export
-        feeds = get_feeds_for_export(search, sort_by, sort_order, max_rows)
-
-        # Serialize feeds for export
-        export_data = feeds_export_schema.dump(feeds)
-
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        feeds = get_feeds_for_export(search=search, sort_by=sort_by, sort_order=sort_order)
+        
+        # Generate filename
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         filename = f"feeds_export_{timestamp}"
-
-        logger.info(f"Generated bulk export file: {filename} with {len(export_data)} records")
-        return generate_export_response(export_data, filename, "feed")
-
-    except ValidationError as e:
-        logger.warning(f"Validation error in bulk_export_feeds: {str(e)}")
-        raise
+        
+        # Generate response
+        response = generate_export_response(feeds, filename, export_type="feed")
+        
+        # Update export log with success
+        finalize_export_log(
+            export_log.id,
+            status="success",
+            file_path=f"/exports/{filename}.{format}",
+            format=format,
+            feeds_count=len(feeds)
+        )
+        
+        return response
+        
     except Exception as e:
-        logger.error(f"Unexpected error in bulk_export_feeds: {str(e)}")
+        logger.error(f"Error in bulk_export_feeds: {str(e)}")
+        if export_log:
+            finalize_export_log(
+                export_log.id,
+                status="error",
+                error_message=str(e)
+            )
         raise DatabaseError("Failed to export feeds")
 
 
@@ -238,7 +296,6 @@ def export_single_feed_controller(feed_id: int):
             logger.warning(f"Feed not found for export: ID {feed_id}")
             raise NotFoundError("Feed not found")
 
-        # Serialize single feed for export
         export_data = [feed_export_schema.dump(feed)]
 
         # Generate filename
@@ -334,9 +391,17 @@ def bulk_reparse_feeds_controller():
         if not isinstance(feed_ids, list) or not feed_ids:
             raise ValidationError("feed_ids must be a non-empty list")
         
+        # Optional async flag
+        async_flag = request.args.get("async", "").lower() == "true" or data.get("async", False)
+        if async_flag:
+            for fid in feed_ids:
+                reparse_feed_task.delay(fid)
+            logger.info(f"Queued {len(feed_ids)} feeds for async reparse")
+            return {"queued": len(feed_ids), "feed_ids": feed_ids}, 202
+        
         logger.info(f"Bulk reparsing {len(feed_ids)} feeds")
         
-        # Process the bulk reparse
+        # Process the bulk reparse synchronously
         result = bulk_reparse_feeds(feed_ids)
         
         logger.info(f"Bulk reparse completed - Success: {result['success']}, Failed: {result['failed']}, Not found: {result['not_found']}, Already parsing: {result['already_parsing']}")
@@ -348,3 +413,24 @@ def bulk_reparse_feeds_controller():
     except Exception as e:
         logger.error(f"Unexpected error in bulk_reparse_feeds: {str(e)}")
         raise DatabaseError("Failed to bulk reparse feeds")
+
+
+def get_feed_logs_controller(feed_id: int):
+    """
+    Controller to handle retrieving logs for a specific feed
+    """
+    try:
+        logger.info(f"Fetching logs for feed ID: {feed_id}")
+        log_database_operation(logger, "READ", "feed_logs", f"feed_{feed_id}")
+
+        logs = get_feed_logs(feed_id)
+        serialized_logs = feed_logs_schema.dump(logs)
+        logger.info(f"Retrieved and serialized {len(serialized_logs)} logs for feed ID {feed_id}")
+
+        return {"logs": serialized_logs}
+
+    except NotFoundError:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in get_feed_logs: {str(e)}")
+        raise DatabaseError("Failed to retrieve feed logs")

@@ -45,7 +45,7 @@ def celery_init_app(app=None):
     celery.autodiscover_tasks(['app.tasks'])
     return celery
 
-flask_app = create_app()
+flask_app = create_app(os.getenv("FLASK_ENV", "development"))
 celery_app = celery_init_app(flask_app)
 
 # Run with:

@@ -15,7 +15,7 @@ migrate = Migrate()
 
 limiter = Limiter(
     key_func=get_limiter_key,
-    default_limits=os.getenv("DEFAULT_RATE_LIMIT", "1000 per hour"),
+    default_limits=[os.getenv("DEFAULT_RATE_LIMIT", "1000 per hour")],
     storage_uri=get_limiter_storage(),
     strategy="moving-window" # to avoid burst abuse at the start of the window
 )

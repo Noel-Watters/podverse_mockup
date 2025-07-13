@@ -41,7 +41,7 @@ services:
       - ./backend/.env
     environment:
       FLASK_APP: main.py
-      FLASK_ENV: ${FLASK_ENV}
+      FLASK_ENV: development
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       REDIS_RESULT_BACKEND: ${REDIS_RESULT_BACKEND}
@@ -64,6 +64,7 @@ services:
     entrypoint: ""  # override entrypoint.sh
     command: celery -A make_celery worker --loglevel=info
     env_file:
+      - .env
       - ./backend/.env
     environment:
       FLASK_APP: main.py
@@ -91,6 +92,7 @@ services:
     entrypoint: ""  # override entrypoint.sh
     command: celery -A make_celery beat --loglevel=info
     env_file:
+      - .env
       - ./backend/.env
     environment:
       FLASK_APP: main.py
