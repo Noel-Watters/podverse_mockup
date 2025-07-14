@@ -1,9 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
+
 import reparseReducer from './reparseSlice';
+import channelReducer from './channelslice';
 
 export const store = configureStore({
   reducer: {
     reparse: reparseReducer,
+    channel: channelReducer,
   },
 });
 

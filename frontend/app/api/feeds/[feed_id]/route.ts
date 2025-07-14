@@ -8,7 +8,7 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 //Fetch a specific feed by ID
 export async function GET(_request: Request, context: any) {
 
-  const { feed_id } = context.params;
+  const { feed_id } = await context.params;
   const url = `${BACKEND_URL}/admin/feeds/${feed_id}`;
   console.log("API route /api/feeds/id called with URL:", url);
   try {
