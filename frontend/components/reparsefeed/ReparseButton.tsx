@@ -2,9 +2,10 @@
 import React from 'react';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
 
+
 interface ReparseButtonProps {
   onClick: () => void;
-  loading: boolean;
+  loading: boolean; // will now be reparsing
   disabled?: boolean;
   status?: string;
   children?: React.ReactNode;

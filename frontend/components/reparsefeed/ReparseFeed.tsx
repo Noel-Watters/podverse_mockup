@@ -27,8 +27,24 @@ export default function ReparseFeed({ feedId, children, onNotify }: ReparseFeedP
     dispatch(startReparse(feedId));
     try {
       await dispatch(reparseFeed(feedId)).unwrap();
-    await dispatch(fetchFeedStatus(feedId));
-    await dispatch(fetchFeedLogs(feedId));
+      await dispatch(fetchFeedStatus(feedId));
+      await dispatch(fetchFeedLogs(feedId));
+      const latestFeedStatus = (await dispatch(fetchFeedStatus(feedId))).payload;
+      // Type guard: check if payload is object and has status
+      if (
+        latestFeedStatus &&
+        typeof latestFeedStatus === 'object' &&
+        'status' in latestFeedStatus &&
+        (latestFeedStatus as { status?: string }).status === 'error'
+      ) {
+        if (onNotify) {
+          onNotify({
+            type: "error",
+            message: "Reparse failed: Feed status is error.",
+          });
+        }
+        return;
+      }
     if (onNotify) {
       onNotify({
         type: "success",
@@ -45,12 +61,11 @@ export default function ReparseFeed({ feedId, children, onNotify }: ReparseFeedP
     }
   }
 };
-  
 
   return children({
     onReparse: handleReparse,
     status: feedState?.status,
-    loading: feedState?.loading ?? false,
+    loading: feedState?.reparsing ?? false,
     error: feedState?.error ?? null,
   });
 }

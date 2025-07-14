@@ -91,6 +91,7 @@ const reparseSlice = createSlice({
       if (state[action.payload]) {
         state[action.payload].status = 'idle';
         state[action.payload].loading = false;
+        state[action.payload].reparsing = false; 
         state[action.payload].success = true;
       }
     },
@@ -107,6 +108,7 @@ const reparseSlice = createSlice({
         if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false };
         state[feedId].loading = true;
         state[feedId].error = null;
+        state[feedId].reparsing = true;
         state[feedId].success = false;
       })
       .addCase(fetchFeedStatus.fulfilled, (state, action) => {
@@ -114,12 +116,14 @@ const reparseSlice = createSlice({
         if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false };
         state[feedId].status = status;
         state[feedId].loading = false;
+        state[feedId].reparsing = false;
         state[feedId].success = true;
       })
       .addCase(fetchFeedStatus.rejected, (state, action) => {
         const feedId = action.meta.arg;
         if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false };
         state[feedId].loading = false;
+        state[feedId].reparsing = false;
         state[feedId].error = action.error.message || 'Failed to fetch status';
         state[feedId].success = false;
       })
