@@ -53,18 +53,3 @@ export async function DELETE(_request: Request, context: any) {
     );
   }
 }
-
-//Reparse a specific feed by ID
-export async function POST(_request: Request, context: any) {
-  const { feed_id } = context.params;
-  const session = await auth0.getSession();
-  try {
-    const response = await axios.post(`${BACKEND_URL}/admin/feeds/${feed_id}/reparse`);
-    return NextResponse.json(response.data, { status: response.status });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to reparse feed" },
-      { status: error.response?.status || 500 }
-    );
-  }
-}
