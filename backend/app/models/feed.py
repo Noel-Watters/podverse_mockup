@@ -18,6 +18,7 @@ class Feed(Base):
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=db.func.now())
     updated_at: Mapped[DateTime] = mapped_column(DateTime, server_default=db.func.now(), onupdate=db.func.now())
     is_parsing: Mapped[Optional[bool]] = mapped_column(db.Boolean)
+    podcast_index_id: Mapped[Optional[int]] = mapped_column(Integer)
 
     flag_status = relationship("FeedFlagStatus", back_populates="feeds")
     channels = relationship("Channel", back_populates="feed")

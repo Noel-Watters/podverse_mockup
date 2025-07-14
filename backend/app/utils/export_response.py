@@ -20,7 +20,7 @@ def generate_export_response(data: List[Dict[str, Any]], filename: str) -> Respo
     """
     format = request.args.get("format", "csv").lower()
     if format not in ("csv", "json"):
-        raise ValidationError("Unsupported format. Use 'csv', 'json', or 'opml'")
+        raise ValidationError("Unsupported format. Use 'csv', 'json' ")
 
     # Ensure filename has correct extension
     if not filename.endswith(f'.{format}'):
@@ -33,7 +33,9 @@ def generate_export_response(data: List[Dict[str, Any]], filename: str) -> Respo
     if format == "json":
         return jsonify(data)
     else:
-        headers = {k: k for k in data[0].keys()}
+        # lazy import to avoid circular dependency
+        from app.blueprints.feed.schemas import FeedExportSchema
+        headers = {field: field for field in FeedExportSchema.Meta.fields}
         return generate_csv_response(data, headers, filename)
 
 def generate_csv_response(data: List[Dict[str, Any]], headers: Dict[str, str], filename: str) -> Response:

@@ -1,7 +1,6 @@
 #app/blueprints/feed/routes.py
 
 from flask import jsonify, request
-from sqlalchemy import and_, or_, desc
 from . import feed_bp
 from app.utils.request_logger import get_logger, log_request_start, log_request_end
 from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
@@ -10,7 +9,6 @@ from app.utils.auth import requires_auth
 from .controllers import (
     reparse_feed_controller, 
     get_all_feeds_controller, 
-    import_feeds_controller, 
     get_feed_by_id_controller, 
     create_feed_controller, 
     bulk_export_feeds_controller, 
@@ -19,6 +17,7 @@ from .controllers import (
     bulk_reparse_feeds_controller,
     get_feed_logs_controller
 )
+from app.utils.redis_lock import is_locked
 
 logger = get_logger(__name__)
 
@@ -31,6 +30,15 @@ def before_request():
 def after_request(response):
     """Log the end of every request to feed endpoints"""
     return log_request_end(logger, response)
+
+def is_auto_reparse_running() -> bool:
+    """
+    Check if the auto_reparse_all task is currently running.
+    
+    Returns:
+        bool: True if auto_reparse_all is currently running, False otherwise
+    """
+    return is_locked("auto_reparse_all")
 
 
 @feed_bp.route('', methods=['POST'])
@@ -60,7 +68,12 @@ def reparse_feed(feed_id: int):
     if request.is_json:
         async_mode = async_mode or request.json.get('async', False)
     
-    return reparse_feed_controller(feed_id, async_mode=async_mode)
+    if async_mode:
+        import threading
+        threading.Thread(target=reparse_feed_controller, args=(feed_id,)).start()
+        return jsonify({"status": "queued"}), 202
+
+    return reparse_feed_controller(feed_id, async_mode=False)
 
 
 @feed_bp.route('', methods=['GET'])
@@ -113,21 +126,6 @@ def export_single_feed(feed_id):
         raise DatabaseError("Failed to export feed")
 
 #MARK: bulk endpoints   
-@feed_bp.route('/import', methods=['POST'])
-@limiter.limit("3 per minute") 
-#@requires_auth
-def import_feeds():
-    """Import feeds from OPML file upload """
-    try:
-        result = import_feeds_controller()
-        return jsonify(result), 200    
-    except ValidationError as e:
-        logger.warning(f"Validation error in import_feeds: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in import_feeds: {str(e)}")
-        raise DatabaseError("Failed to import feeds")
-
 
 @feed_bp.route('/export', methods=['GET'])
 @limiter.limit("5 per minute")  

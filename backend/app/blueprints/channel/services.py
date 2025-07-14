@@ -28,7 +28,7 @@ def channel_eagerload_options():
     )
     
 
-def get_channels_list(search, sort_by, sort_order, page, limit):
+def get_channels_list(search, sort_by, sort_order, page, limit, channel_id=None):
     """
     Retrieve a paginated list of channels with optional search and sorting.
     Eager loads related feed, medium, categories, and stats.
@@ -37,6 +37,10 @@ def get_channels_list(search, sort_by, sort_order, page, limit):
     try:
         query = db.session.query(Channel).options(*channel_eagerload_options())
         log_database_operation(logger, "READ", "channels", f"page_{page}_limit_{limit}")
+        
+        if channel_id is not None:
+            query = query.filter(Channel.id == channel_id)
+            logger.info(f"Filtering channels by ID: {channel_id}")
         
         if search:
             # Try to parse as integer for ID and podcast_index_id search

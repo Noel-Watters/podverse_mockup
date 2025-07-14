@@ -19,11 +19,12 @@ def list_channels():
         page, limit = get_pagination_params(request)
         sort_by, sort_order = get_sorting_params(request, ['id', 'title'], default_field='id')
         search = get_search_query(request)
+        channel_id = request.args.get("id", type=int)  
 
-        logger.info(f"Listing channels - page: {page}, limit: {limit}, sort: {sort_by} {sort_order}, search: {search or 'none'}")
+        logger.info(f"Listing channels - page: {page}, limit: {limit}, sort: {sort_by} {sort_order}, search: {search or 'none'}, id: {channel_id}")
         log_database_operation(logger, "READ", "channels", f"list_p{page}_l{limit}")
 
-        channels, meta = get_channels_list(search, sort_by, sort_order, page, limit)
+        channels, meta = get_channels_list(search, sort_by, sort_order, page, limit, channel_id)
 
         result = {
             "data": channels_schema.dump(channels),
@@ -87,10 +88,10 @@ def export_channels():
         filename = f"channels_export_{timestamp}.csv"
         
         # Create response
-        response = generate_export_response(export_data, filename, "channel")
+        response = generate_export_response(export_data, filename)
         
         # finalize export log
-        finalize_export_log(log, status="success" , file_path=f"/exports/{filename}", counts={"channels": len(export_data)}) # file name is set in generate_export_response
+        finalize_export_log(log.id, status="success", file_path=f"/exports/{filename}", format=request.args.get("format", "csv")) # file name is set in generate_export_response
         
         logger.info(f"Generated export file: {filename} with {len(export_data)} records")
         return response

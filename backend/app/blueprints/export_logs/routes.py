@@ -25,9 +25,9 @@ def get_export_logs():
         page, per_page = get_pagination_params(request)
         sort_by, sort_order = get_sorting_params(
             request,
-            request,
             ['created_at', 'completed_at', 'status', 'export_type'],
-            default_field='created_at'
+            'created_at',
+            'desc'
         )
 
         query = db.session.query(ExportLog)
@@ -44,6 +44,10 @@ def get_export_logs():
         admin_email = request.args.get('admin_email')
         if admin_email:
             query = query.filter(ExportLog.admin_email == admin_email)
+
+        log_id = request.args.get('id', type=int)
+        if log_id:
+            query = query.filter(ExportLog.id == log_id)
 
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')

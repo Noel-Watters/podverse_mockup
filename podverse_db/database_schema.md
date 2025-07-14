@@ -37,6 +37,7 @@
 | parsing_priority | INTEGER DEFAULT |
 | last_parsed_file_hash | varchar_md5 |
 | container_id | VARCHAR(12) |
+| podcast_index_id | INTEGER |
 | created_at | server_time_with_default |
 | updated_at | server_time_with_default |
 

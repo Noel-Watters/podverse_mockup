@@ -3,6 +3,7 @@
 from app.extensions import ma
 from app.models.feed import Feed, FeedFlagStatus, FeedLog
 from datetime import datetime
+from app.utils.error_exceptions import ValidationError
 
 class FeedLogSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -11,9 +12,10 @@ class FeedLogSchema(ma.SQLAlchemyAutoSchema):
         include_relationships = False
         include_fk = True
 
-# Export single and many versions
+
 feed_log_schema = FeedLogSchema()
 feed_logs_schema = FeedLogSchema(many=True)
+
 
 class FeedSchema(ma.SQLAlchemyAutoSchema):
     recent_logs = ma.Method("get_recent_logs")
@@ -42,6 +44,7 @@ class FeedSchema(ma.SQLAlchemyAutoSchema):
 feed_schema = FeedSchema()
 feeds_schema = FeedSchema(many=True)
 
+
 class FeedFlagStatusSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = FeedFlagStatus
@@ -51,6 +54,7 @@ class FeedFlagStatusSchema(ma.SQLAlchemyAutoSchema):
 
 feed_flag_status_schema = FeedFlagStatusSchema()
 feed_flag_statuses_schema = FeedFlagStatusSchema(many=True)
+
 
 # Without this schema i woulf get nested schmas in export. this flattens data with simple fileds 
 class FeedExportSchema(ma.SQLAlchemyAutoSchema):
@@ -68,8 +72,12 @@ class FeedExportSchema(ma.SQLAlchemyAutoSchema):
         return feed_obj.flag_status.status if feed_obj.flag_status else None
     
     def get_channel_title(self, feed_obj):
-        return feed_obj.channels[0].title if feed_obj.channels else None
-        
+        if not feed_obj.channels:
+            return None
+        if len(feed_obj.channels) > 1:
+            raise ValidationError(f"Feed {feed_obj.id} has multiple channels")
+        return feed_obj.channels[0].title
+      
     def get_channel_id(self, feed_obj):
         return feed_obj.channels[0].id if feed_obj.channels else None
 

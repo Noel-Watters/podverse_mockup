@@ -21,7 +21,7 @@ def finalize_export_log(log_id: int, status: str = None, file_path: str = None, 
     
         Returns the updated log entry.
     """
-    log = ExportLog.query.get(log_id)
+    log = db.session.get(ExportLog, log_id)
     if not log:
         return None
         

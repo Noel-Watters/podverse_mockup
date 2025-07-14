@@ -124,6 +124,18 @@ services:
     networks:
       - podverse-network
 
+  parse-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.perse_service
+    image: podverse-parse-service:latest
+    container_name: podverse_parse_service
+    ports:
+      - "3001:3001"
+    networks:
+      - podverse-network
+
+
 volumes:
   pgdata:
 

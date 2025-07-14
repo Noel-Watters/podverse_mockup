@@ -17,6 +17,7 @@ from seed_stats_event_channel import seed_stats_event_channel
 from seed_stats_event_item import seed_stats_event_item
 from seed_stats_aggregated_channel import seed_stats_aggregated_channel
 from seed_stats_aggregated_item import seed_stats_aggregated_item
+from seed_export_logs import seed_export_logs
 
 # Seeder list (name, seeder function)
 SEED_JOBS = [
@@ -33,6 +34,7 @@ SEED_JOBS = [
     ("Stats Event Item", seed_stats_event_item),
     ("Stats Aggregated Channel", seed_stats_aggregated_channel),
     ("Stats Aggregated Item", seed_stats_aggregated_item),
+    ("Export Logs", seed_export_logs),
 ]
 
 def normalize_name(name: str):

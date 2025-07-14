@@ -1,11 +1,9 @@
 #app/blueprints/feed/controllers.py
 
 from flask import request
-from werkzeug.datastructures import FileStorage
 from app.blueprints.feed.services import (
     parse_and_update_feed,
     get_all_feeds,
-    import_feeds_from_opml,
     get_feed_by_id,
     create_single_feed,
     get_feeds_for_export,
@@ -19,7 +17,6 @@ from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseE
 from app.utils.request_logger import get_logger, log_database_operation
 from app.utils.export_response import generate_export_response
 from datetime import datetime
-from app.tasks.feed_task import reparse_feed_task
 from app.utils.export_logging import create_export_log_simple, finalize_export_log   
 
 logger = get_logger(__name__)
@@ -53,19 +50,7 @@ def create_feed_controller():
         raise ValidationError("parsing_priority must be an integer between 0 and 10")
     
     # Create the feed
-    feed = create_single_feed(url=url, parsing_priority=parsing_priority)
-    
-    # Check for async flag (query param ?async=true or JSON field "async": true)
-    async_flag = request.args.get("async", "").lower() == "true" or data.get("async", False)
-    if async_flag:
-        # Queue background Celery task and return immediately
-        reparse_feed_task.delay(feed.id)
-        serialized_feed = feed_schema.dump(feed)
-        serialized_feed["queued"] = True
-        return serialized_feed, 202
-
-    # Immediately parse the feed after creation (synchronous path)
-    parse_result = parse_and_update_feed(feed.id)
+    feed, parse_result = create_single_feed(url=url, parsing_priority=parsing_priority)
     
     # Serialize and return the created feed
     serialized_feed = feed_schema.dump(feed)
@@ -77,7 +62,7 @@ def create_feed_controller():
     return serialized_feed
 
 
-def reparse_feed_controller(feed_id: int, async_mode: bool = False):
+def reparse_feed_controller(feed_id: int):
     """
     Controller to handle feed reparsing
     Coordinion and returns result
@@ -95,31 +80,22 @@ def reparse_feed_controller(feed_id: int, async_mode: bool = False):
         logger.warning(f"Feed {feed_id} is already being parsed")
         return {"status": "error", "message": "Feed is already being parsed"}, 409
     
+    if feed.flag_status.status.lower() not in ["active", "always-parse"]:
+        raise ValidationError("Feed is not eligible for parsing")
+
     try:
-        if async_mode:
-            # Queue the task
-            task = reparse_feed_task.delay(feed_id)
-            logger.info(f"Queued reparse task for feed {feed_id}, task id: {task.id}")
-            return {
-                "status": "queued",
-                "feed_id": feed_id,
-                "task_id": task.id,
-                "message": "Feed reparse queued successfully"
-            }, 202
+        result = parse_and_update_feed(feed_id)
+        if result.get('status') == 'success':
+            logger.info(
+                f"Successfully completed reparse for feed ID: {feed_id}, "
+                f"Channel: {result.get('channel_id')}, Items: {result.get('item_count')}"
+            )
         else:
-            # Synchronous reparse
-            result = parse_and_update_feed(feed_id)
-            if result.get('status') == 'success':
-                logger.info(
-                    f"Successfully completed reparse for feed ID: {feed_id}, "
-                    f"Channel: {result.get('channel_id')}, Items: {result.get('item_count')}"
-                )
-            else:
-                logger.warning(
-                    f"Reparse failed for feed ID: {feed_id}, "
-                    f"Status: {result.get('status')}, Error: {result.get('error')}"
-                )
-            return result, 200
+            logger.warning(
+                f"Reparse failed for feed ID: {feed_id}, "
+                f"Status: {result.get('status')}, Error: {result.get('error')}"
+            )
+        return result, 200
             
     except Exception as e:
         logger.error(f"Error reparsing feed {feed_id}: {str(e)}")
@@ -142,8 +118,9 @@ def get_all_feeds_controller():
     parsing_priority = request.args.get("parsing_priority")
     is_parsing = request.args.get("is_parsing")
     status = request.args.get("status")
+    feed_id = request.args.get("id", type=int)  
     
-    logger.info(f"Fetching feeds - page: {page}, limit: {limit}, - filters: priority={parsing_priority}, parsing={is_parsing}, status={status}")
+    logger.info(f"Fetching feeds - page: {page}, limit: {limit}, - filters: priority={parsing_priority}, parsing={is_parsing}, status={status}, id={feed_id}")
     log_database_operation(logger, "READ", "feeds", f"paginated_query_p{page}_l{limit}")
     
     # Get feeds with pagination from service
@@ -153,6 +130,7 @@ def get_all_feeds_controller():
         parsing_priority=parsing_priority,
         is_parsing=is_parsing,
         status=status,
+        feed_id=feed_id,  
         sort_by=sort_by,
         sort_order=sort_order,
         search=search
@@ -182,59 +160,63 @@ def get_feed_by_id_controller(feed_id: int):
     return serialized_feed
 
 
-def import_feeds_controller():
+def get_feed_logs_controller(feed_id: int):
     """
-    Controller to handle OPML file upload and feed import
-    Coordinates file handling, validation, and import process
+    Controller to handle retrieving logs for a specific feed
     """
-    logger.info("Starting OPML feed import")
-    log_database_operation(logger, "CREATE", "feeds", "bulk_import_attempt")
-    
-    # Validate file upload
-    if 'file' not in request.files:
-        logger.warning("Import attempt without file upload")
-        raise ValidationError("No file provided. Please upload an OPML file.")
-    
-    file: FileStorage = request.files['file'] 
-    
-    if file.filename == '':
-        logger.warning("Import attempt with empty filename")
-        raise ValidationError("No file selected. Please choose an OPML file to upload.")
-    
-    # validate file extension 
-    if not file.filename.lower().endswith(('.opml', '.xml')):
-        logger.warning(f"Invalid file type uploaded: {file.filename}")
-        raise ValidationError("Invalid file type. Please upload an OPML or XML file.")
-    
-    # Read file content and log it
     try:
-        file_content = file.read().decode('utf-8') # binary to string
-        logger.info(f"Successfully read OPML file: {file.filename} ({len(file_content)} characters)")
-    except UnicodeDecodeError:
-        logger.error(f"Failed to decode OPML file: {file.filename}")
-        raise ValidationError("Unable to read file. Please ensure it's a valid UTF-8 encoded OPML file.")
-    
-    if not file_content.strip(): 
-        logger.warning(f"Empty OPML file uploaded: {file.filename}")
-        raise ValidationError("File is empty. Please upload a valid OPML file with feed data.")
-    
-    # Process the import 
-    result = import_feeds_from_opml(file_content)
-    
-    # Log detailed import results
-    total_processed = result['imported'] + result['skipped'] + result['failed']
-    logger.info(f"OPML import completed - Total processed: {total_processed}, Imported: {result['imported']}, Skipped: {result['skipped']}, Failed: {result['failed']}")
-    
-    if result['imported'] > 0:
-        log_database_operation(logger, "CREATE", "feeds", f"bulk_import_success_{result['imported']}")
-    
-    return result
+        logger.info(f"Fetching logs for feed ID: {feed_id}")
+        log_database_operation(logger, "READ", "feed_logs", f"feed_{feed_id}")
+
+        logs = get_feed_logs(feed_id)
+        serialized_logs = feed_logs_schema.dump(logs)
+        logger.info(f"Retrieved and serialized {len(serialized_logs)} logs for feed ID {feed_id}")
+
+        return {"logs": serialized_logs}
+
+    except NotFoundError:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in get_feed_logs: {str(e)}")
+        raise DatabaseError("Failed to retrieve feed logs")
+
+
+def export_single_feed_controller(feed_id: int):
+    """
+    Controller to handle export of a single feed
+    """
+    try:
+        logger.info(f"Exporting single feed: ID {feed_id}")
+        log_database_operation(logger, "READ", "feeds", f"export_single_{feed_id}")
+
+        feed = get_feed_by_id(feed_id)
+        if not feed:
+            logger.warning(f"Feed not found for export: ID {feed_id}")
+            raise NotFoundError("Feed not found")
+
+        export_data = [feed_export_schema.dump(feed)]
+
+        # Generate filename
+        filename = f"feed_{feed_id}_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+        logger.info(f"Generated single feed export file: {filename}")
+        return generate_export_response(export_data, filename)
+
+    except NotFoundError:
+        raise
+    except ValidationError as e:
+        logger.warning(f"Validation error in export_single_feed: {str(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in export_single_feed: {str(e)}")
+        raise DatabaseError("Failed to export single feed")
 
 
 def bulk_export_feeds_controller():
     """
     Controller to handle bulk export of feeds
     """
+    export_log = None
     try:
         # Get query parameters
         sort_by, sort_order = get_sorting_params(request, ['id', 'url', 'updated_at'], default_field='id')
@@ -259,7 +241,7 @@ def bulk_export_feeds_controller():
         filename = f"feeds_export_{timestamp}"
         
         # Generate response
-        response = generate_export_response(feeds, filename, export_type="feed")
+        response = generate_export_response(feeds, filename)
         
         # Update export log with success
         finalize_export_log(
@@ -281,37 +263,6 @@ def bulk_export_feeds_controller():
                 error_message=str(e)
             )
         raise DatabaseError("Failed to export feeds")
-
-
-def export_single_feed_controller(feed_id: int):
-    """
-    Controller to handle export of a single feed
-    """
-    try:
-        logger.info(f"Exporting single feed: ID {feed_id}")
-        log_database_operation(logger, "READ", "feeds", f"export_single_{feed_id}")
-
-        feed = get_feed_by_id(feed_id)
-        if not feed:
-            logger.warning(f"Feed not found for export: ID {feed_id}")
-            raise NotFoundError("Feed not found")
-
-        export_data = [feed_export_schema.dump(feed)]
-
-        # Generate filename
-        filename = f"feed_{feed_id}_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
-        logger.info(f"Generated single feed export file: {filename}")
-        return generate_export_response(export_data, filename, "feed")
-
-    except NotFoundError:
-        raise
-    except ValidationError as e:
-        logger.warning(f"Validation error in export_single_feed: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in export_single_feed: {str(e)}")
-        raise DatabaseError("Failed to export single feed")
 
 
 def bulk_update_feeds_controller():
@@ -391,16 +342,6 @@ def bulk_reparse_feeds_controller():
         if not isinstance(feed_ids, list) or not feed_ids:
             raise ValidationError("feed_ids must be a non-empty list")
         
-        # Optional async flag
-        async_flag = request.args.get("async", "").lower() == "true" or data.get("async", False)
-        if async_flag:
-            for fid in feed_ids:
-                reparse_feed_task.delay(fid)
-            logger.info(f"Queued {len(feed_ids)} feeds for async reparse")
-            return {"queued": len(feed_ids), "feed_ids": feed_ids}, 202
-        
-        logger.info(f"Bulk reparsing {len(feed_ids)} feeds")
-        
         # Process the bulk reparse synchronously
         result = bulk_reparse_feeds(feed_ids)
         
@@ -413,24 +354,3 @@ def bulk_reparse_feeds_controller():
     except Exception as e:
         logger.error(f"Unexpected error in bulk_reparse_feeds: {str(e)}")
         raise DatabaseError("Failed to bulk reparse feeds")
-
-
-def get_feed_logs_controller(feed_id: int):
-    """
-    Controller to handle retrieving logs for a specific feed
-    """
-    try:
-        logger.info(f"Fetching logs for feed ID: {feed_id}")
-        log_database_operation(logger, "READ", "feed_logs", f"feed_{feed_id}")
-
-        logs = get_feed_logs(feed_id)
-        serialized_logs = feed_logs_schema.dump(logs)
-        logger.info(f"Retrieved and serialized {len(serialized_logs)} logs for feed ID {feed_id}")
-
-        return {"logs": serialized_logs}
-
-    except NotFoundError:
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in get_feed_logs: {str(e)}")
-        raise DatabaseError("Failed to retrieve feed logs")
