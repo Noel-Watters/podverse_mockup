@@ -1,6 +1,6 @@
 "use client";
 import { useDispatch, useSelector } from 'react-redux';
-import { startReparse, fetchFeedStatus } from '../../redux/reparseSlice';
+import { startReparse, fetchFeedStatus, fetchFeedLogs, reparseFeed } from '../../redux/reparseSlice';
 import type { AppDispatch, RootState } from '../../redux/store';
 
 interface ReparseFeedProps {
@@ -26,18 +26,25 @@ export default function ReparseFeed({ feedId, children, onNotify }: ReparseFeedP
   const handleReparse = async () => {
     dispatch(startReparse(feedId));
     try {
-      const response = await fetch(`/api/feeds/${feedId}/reparse`, { method: 'POST' });
+      await dispatch(reparseFeed(feedId)).unwrap();
       await dispatch(fetchFeedStatus(feedId));
-    if (!response.ok) {
-      // Try to extract error message from response body if available
-      let errorMsg = `HTTP ${response.status}`;
-      try {
-        const data = await response.json();
-        if (data && data.error) errorMsg = data.error;
-      } catch {}
-      throw new Error(errorMsg);
-    }
-    await dispatch(fetchFeedStatus(feedId));
+      await dispatch(fetchFeedLogs(feedId));
+      const latestFeedStatus = (await dispatch(fetchFeedStatus(feedId))).payload;
+      // Type guard: check if payload is object and has status
+      if (
+        latestFeedStatus &&
+        typeof latestFeedStatus === 'object' &&
+        'status' in latestFeedStatus &&
+        (latestFeedStatus as { status?: string }).status === 'error'
+      ) {
+        if (onNotify) {
+          onNotify({
+            type: "error",
+            message: "Reparse failed: Feed status is error.",
+          });
+        }
+        return;
+      }
     if (onNotify) {
       onNotify({
         type: "success",
@@ -54,12 +61,11 @@ export default function ReparseFeed({ feedId, children, onNotify }: ReparseFeedP
     }
   }
 };
-  
 
   return children({
     onReparse: handleReparse,
     status: feedState?.status,
-    loading: feedState?.loading ?? false,
+    loading: feedState?.reparsing ?? false,
     error: feedState?.error ?? null,
   });
 }

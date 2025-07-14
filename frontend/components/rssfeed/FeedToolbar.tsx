@@ -1,3 +1,4 @@
+"use client";
 import React from "react";
 import { PlusIcon, TrashIcon, FunnelIcon, ArrowsUpDownIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import ReparseButton from "../reparsefeed/ReparseButton";

@@ -1,4 +1,4 @@
-"Use Client";
+"use client";
 import React from "react";
 import { Feed, FeedLog } from "@/types/feed";
 
@@ -28,16 +28,17 @@ const FeedAuditLogRow: React.FC<FeedAuditLogRowProps> = ({
             <div className="text-podverse-muted">Loading logs...</div>
           ) : logError ? (
             <div className="text-red-500">{logError}</div>
-          ) : !feed.recent_logs || feed.recent_logs.length === 0 ? (
+          ) : !feed.logs || feed.logs.length === 0 ? (
             <div className="text-podverse-muted">No logs available</div>
           ) : (
-            feed.recent_logs.map((log, i) => (
+            feed.logs.map((log, i) => (
               <div key={i} className="text-xs border-b border-gray-200 py-2">
                 <div>
                   <strong>Time:</strong>{" "}
                   {new Date(
                     log.last_finished_parse_time ||
-                    log.last_good_http_status_time ||
+                    log.finished_at ||
+                    log.started_at ||
                     ""
                   ).toLocaleString()}
                 </div>
@@ -48,7 +49,13 @@ const FeedAuditLogRow: React.FC<FeedAuditLogRowProps> = ({
                   </span>
                 </div>
                 <div>
-                  <strong>Message:</strong> {log.message}
+                  <strong>HTTP Status:</strong> {log.http_status ?? "N/A"}
+                </div>
+                <div>
+                  <strong>Message:</strong> {log.parse_error_message ?? ""}
+                </div>
+                <div>
+                  <strong>Parsed By:</strong> {log.parsed_by ?? ""}
                 </div>
               </div>
             ))
