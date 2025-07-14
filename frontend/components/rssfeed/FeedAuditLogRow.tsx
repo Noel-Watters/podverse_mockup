@@ -1,4 +1,4 @@
-"Use Client";
+"use client";
 import React from "react";
 import { Feed, FeedLog } from "@/types/feed";
 

@@ -1,4 +1,4 @@
-"Use Client";
+"use client";
 import React from "react";
 import ReparseFeed from "@/components/reparsefeed/ReparseFeed";
 import { Feed } from "@/types/feed";

@@ -1,4 +1,4 @@
-"Use Client";
+"use client";
 import React from "react";
 import FeedStatusBadge from "./FeedStatusBadge";
 import ReparseFeed from "@/components/reparsefeed/ReparseFeed";
