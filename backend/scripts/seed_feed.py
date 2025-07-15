@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
-from seed_utils import get_db_session, fake
-from app.models.feed import Feed, FeedLog
+from seed_utils import get_db_session, fake, unique_uuid
+from app.models.feed import Feed, FeedLog, FeedFlagStatus
 from sqlalchemy.exc import IntegrityError
 import random
 
@@ -43,23 +43,30 @@ LOG_SCENARIOS = [
     }
 ]
 
-def seed_feed(n=10):
+def seed_feed(n=100):
     session = get_db_session()
+    feeds = []
     try:
+        # Fetch actual feed_flag_status ids
+        status_ids = [s.id for s in session.query(FeedFlagStatus).all()]
+        if not status_ids:
+            raise RuntimeError("No feed_flag_status values were found. These must be seeded first.")
+        
         for _ in range(n):
-            url = fake.unique.url() + "/rss"
+            url = f"https://{fake.domain_name()}/{'-'.join(fake.words(nb=3))}-{str(unique_uuid())[:6]}/rss"
             feed = Feed(
                 url=url,
-                feed_flag_status_id=random.choices([1, 2, 3], weights=[0.6, 0.2, 0.2])[0],
+                feed_flag_status_id=random.choice(status_ids),
                 is_parsing=fake.boolean(chance_of_getting_true=10),
                 parsing_priority=random.randint(0, 5),
                 last_parsed_file_hash=fake.md5(),
                 container_id=fake.bothify(text="##########"),
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                created_at=datetime.utcnow() - timedelta(minutes=random.randint(11, 40)),
+                updated_at=datetime.utcnow() - timedelta(minutes=random.randint(1, 10))
             )
             session.add(feed)
             session.flush()  # So we can use feed.id before commit
+            feeds.append(feed) # Save feed to list for channel use
 
             # Generate 1–3 log entries with useful diagnostic messages
             for _ in range(random.randint(1, 3)):
@@ -67,21 +74,26 @@ def seed_feed(n=10):
                 log = FeedLog(
                     feed_id=feed.id,
                     http_status=scenario["status"],
-                    is_success=scenario["status"] == 200,
+                    is_success=(scenario["status"] == 200),
                     parse_errors=scenario["errors"],
                     parse_error_message=scenario["message"],
-                    started_at=datetime.utcnow() - timedelta(days=random.randint(1, 5)),
-                    finished_at=datetime.utcnow() - timedelta(days=random.randint(0, 3)),
-                    parsed_by="seeder"
+                    started_at=datetime.utcnow() - timedelta(minutes=random.randint(6, 20)),
+                    finished_at=datetime.utcnow() - timedelta(minutes=random.randint(1, 5)),
+                    parsed_by=random.choice(["auth0|admin1", "auth0|admin2", "auth0|admin3"])
                 )
                 session.add(log)
-
+        
+        session.flush()
+        feed_ids = [feed.id for feed in feeds]
+        print(feed_ids)
         session.commit()
-        print(f"✅ Seeded {n} feeds with diverse statuses and logs successfully")
-
+        print(f"Seeded {n} feeds with diverse statuses and logs successfully")
+        return feed_ids
+        
     except IntegrityError as e:
         session.rollback()
-        print("⚠️  Integrity error while inserting feeds or logs:", str(e))
+        print("Integrity error while inserting feeds or logs:", str(e))
+        return []
     finally:
         session.close()
 

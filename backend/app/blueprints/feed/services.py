@@ -20,6 +20,7 @@ import requests
 from app.blueprints.feed.schemas import feeds_export_schema
 import traceback
 
+
 logger = get_logger(__name__)
 import time
 
@@ -33,13 +34,14 @@ def get_flag_status_id(status: str) -> int:
             raise RuntimeError(f"FeedFlagStatus '{status}' not found")
         return record.id
 
-def trigger_node_parser(url: str, podcast_index_id: int):
+def trigger_node_parser(url: str, podcast_index_id: int = None):
     for attempt in range(2):  # 1 retry
         try:
-            response = requests.post("http://parse-service:3001/trigger-parse", json={
-                "url": url,
-                "podcast_index_id": podcast_index_id
-            }, timeout=5)
+            payload = {"url": url}
+            if podcast_index_id is not None:
+                payload["podcast_index_id"] = podcast_index_id
+                
+            response = requests.post("http://parse-service:3001/trigger-parse", json=payload, timeout=5)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:
@@ -76,12 +78,15 @@ def create_single_feed(url: str, parsing_priority: int = 0):
 
         # Trigger parsing via Node
         parse_result = None
-        if feed.podcast_index_id:
-            try:
-                parse_result = trigger_node_parser(feed.url, feed.podcast_index_id)
-            except Exception as e:
-                logger.warning(f"Parse trigger failed for feed {feed.id}: {e}")
-                parse_result = {"status": "error", "error": str(e)}
+        try:
+            # Get podcast_index_id from channel if available
+            channel = feed.channels[0] if feed.channels else None
+            podcast_index_id = channel.podcast_index_id if channel else None
+            
+            parse_result = trigger_node_parser(feed.url, podcast_index_id)
+        except Exception as e:
+            logger.warning(f"Parse trigger failed for feed {feed.id}: {e}")
+            parse_result = {"status": "error", "error": str(e)}
         
         return feed, parse_result
 
@@ -96,6 +101,9 @@ def create_single_feed(url: str, parsing_priority: int = 0):
 def parse_and_update_feed_object(feed: Feed) -> dict:
     logger.info(f"Calling Node trigger for feed {feed.id}")
     
+    channel = feed.channels[0] if feed.channels else None
+    podcast_index_id = channel.podcast_index_id if channel else None
+
     if feed.is_parsing:
         return {"status": "error", "message": "Already parsing"}, 409
 
@@ -109,10 +117,11 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
 
     result = None
     try:
-        response = requests.post("http://parse-service:3001/trigger-parse", json={
-            "url": feed.url,
-            "podcast_index_id": feed.podcast_index_id
-        }, timeout=5)
+        payload = {"url": feed.url}
+        if podcast_index_id is not None:
+            payload["podcast_index_id"] = podcast_index_id
+            
+        response = requests.post("http://parse-service:3001/trigger-parse", json=payload, timeout=5)
         response.raise_for_status()
         result = response.json()
         is_success = result.get("success", False)

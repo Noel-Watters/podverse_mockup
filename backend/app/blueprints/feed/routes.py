@@ -19,6 +19,7 @@ from .controllers import (
 )
 from app.utils.redis_lock import is_locked
 
+
 logger = get_logger(__name__)
 
 @feed_bp.before_request
@@ -70,7 +71,13 @@ def reparse_feed(feed_id: int):
     
     if async_mode:
         import threading
-        threading.Thread(target=reparse_feed_controller, args=(feed_id,)).start()
+        from flask import current_app
+        
+        def run_reparse_with_context():
+            with current_app.app_context():
+                reparse_feed_controller(feed_id)
+        
+        threading.Thread(target=run_reparse_with_context).start()
         return jsonify({"status": "queued"}), 202
 
     return reparse_feed_controller(feed_id, async_mode=False)
@@ -181,8 +188,6 @@ def bulk_reparse_feeds():
 def auto_reparse_status():
     """Check if auto_reparse_all task is currently running"""
     try:
-        from app.utils.helpers import is_auto_reparse_running
-        
         is_running = is_auto_reparse_running()
         
         return jsonify({

@@ -1,6 +1,7 @@
 import argparse
+import inspect
 from seed_utils import run_seeder_with_retry
-from app.utils.log_config import get_logger
+from app.utils.request_logger import get_logger
 from app import create_app
 
 # Import all seeders
@@ -44,16 +45,19 @@ def main():
     parser = argparse.ArgumentParser(description="Seed the Podverse database")
     parser.add_argument("--only", help="Comma-separated list of seeders to run (normalized names)", type=str)
     parser.add_argument("--skip", help="Comma-separated list of seeders to skip (normalized names)", type=str)
-    parser.add_argument("--count", help="Override count for seeders that accept n", type=int, default=None)
+    parser.add_argument("--count", help="Override count for seeders that accept n", type=int, default=25)
 
     args = parser.parse_args()
 
     only = set(normalize_name(name) for name in args.only.split(",")) if args.only else None
     skip = set(normalize_name(name) for name in args.skip.split(",")) if args.skip else set()
 
-    print("\n🚀 Starting full seeding process...\n")
+    print("\n Starting full seeding process...\n")
 
     summary = []
+
+    # Track Objects for passing
+    feeds = []
 
     for label, func in SEED_JOBS:
         normalized = normalize_name(label)
@@ -61,25 +65,34 @@ def main():
         if only and normalized not in only:
             continue
         if normalized in skip:
-            print(f"⏭️ Skipping {label}")
+            print(f"Skipping {label}")
             continue
+        
+        try:
+            if normalized == "feeds":
+                feed_ids = run_seeder_with_retry(lambda: func(n=100), label=label, return_result=True)
+            elif normalized == "channels":
+                run_seeder_with_retry(lambda: func(feed_ids), label=label)
+            else:
+                try:
+                    sig = inspect.signature(func)
+                    if "n" in sig.parameters:
+                        run_seeder_with_retry(lambda: func(n=args.count), label=label)
+                    else:
+                        run_seeder_with_retry(func, label=label)
+                except TypeError:
+                    # For seeders that don't accept `n`
+                    run_seeder_with_retry(func, label=label)
+      
+            summary.append(f"{label}")
+        except Exception as e:
+            print(f"Failed to run {label}: {e}")
 
-        if args.count is not None:
-            try:
-                run_seeder_with_retry(lambda: func(n=args.count), label=label)
-            except TypeError:
-                # For seeders that don't accept `n`
-                run_seeder_with_retry(func, label=label)
-        else:
-            run_seeder_with_retry(func, label=label)
-
-        summary.append(f"✅ {label}")
-
-    print("\n🎉 Seeder Summary:")
+    print("\n Seeder Summary:")
     for entry in summary:
         print(" ", entry)
 
-    print("\n✅ All seeders completed. Database is ready!\n")
+    print("\n All seeders completed. Database is ready!\n")
 
 if __name__ == "__main__":
     main()

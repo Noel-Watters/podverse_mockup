@@ -32,14 +32,32 @@ ALTER TABLE item
 ALTER COLUMN item_flag_status_id SET NOT NULL;
 
 -- Add foreign key constraint for item_flag_status_id
-ALTER TABLE item 
-ADD CONSTRAINT item_item_flag_status_id_fkey 
-FOREIGN KEY (item_flag_status_id) REFERENCES item_flag_status(id);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'item_item_flag_status_id_fkey'
+    ) THEN
+        ALTER TABLE item 
+        ADD CONSTRAINT item_item_flag_status_id_fkey 
+        FOREIGN KEY (item_flag_status_id) REFERENCES item_flag_status(id);
+    END IF;
+END
+$$;
 
 -- Add check constraint to ensure either guid or guid_enclosure_url is present
-ALTER TABLE item 
-ADD CONSTRAINT item_guid_check 
-CHECK (guid IS NOT NULL OR guid_enclosure_url IS NOT NULL);
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'item_guid_check'
+    ) THEN
+        ALTER TABLE item 
+        ADD CONSTRAINT item_guid_check 
+        CHECK (guid IS NOT NULL OR guid_enclosure_url IS NOT NULL);
+    END IF;
+END 
+$$;
 
 -- Create indexes
 CREATE UNIQUE INDEX IF NOT EXISTS item_slug ON item(slug) WHERE slug IS NOT NULL;

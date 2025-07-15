@@ -282,7 +282,7 @@ class TestSecurityLogging:
     
     def test_failed_authentication_logged(self, client):
         """Test that failed authentication attempts are logged."""
-        with patch('app.utils.logger.get_logger') as mock_logger:
+        with patch('app.utils.log_config.get_logger') as mock_logger:
             mock_log_instance = MagicMock()
             mock_logger.return_value = mock_log_instance
             
@@ -296,7 +296,7 @@ class TestSecurityLogging:
         auth_headers = {'Authorization': 'Bearer valid.jwt.token'}
         
         with patch('app.utils.auth.requires_auth') as mock_auth, \
-             patch('app.utils.logger.log_security_event') as mock_log_security:
+             patch('app.utils.security_logger.log_security_event') as mock_log_security:
             
             def decorator(f):
                 return f

@@ -516,13 +516,12 @@ CREATE INDEX stats_aggregated_item_week_current_count_idx ON stats_aggregated_it
 CREATE INDEX stats_aggregated_item_month_current_count_idx ON stats_aggregated_item(month_current_count);
 CREATE INDEX stats_aggregated_item_all_time_count_idx ON stats_aggregated_item(all_time_count);
 
--- 0002 migration - Add new_feed_log and account_location
--- 0003 migration - Add export_logs table
+-- 0002 migration - Add new feed_log and account_location
 
--- Replace old feed_log with new_feed_log
+-- Replace old feed_log with new updated feed_log
 DROP TABLE IF EXISTS feed_log CASCADE;
 
-CREATE TABLE new_feed_log (
+CREATE TABLE feed_log (
     id SERIAL PRIMARY KEY,
     feed_id INTEGER NOT NULL REFERENCES feed(id) ON DELETE CASCADE,
     http_status INTEGER,
@@ -534,7 +533,65 @@ CREATE TABLE new_feed_log (
     parsed_by varchar_normal -- This should be an Auth0 ID
 );
 
-CREATE INDEX idx_new_feed_log_feed_id ON new_feed_log(feed_id);
+CREATE INDEX idx_feed_log_feed_id ON feed_log(feed_id);
+
+-- Location data for accounts
+-- Location data is saved a ISO 3166-1 Alpha-2 format
+-- Meaning it is saved as 2 capital letters
+CREATE TABLE account_location (
+    id SERIAL PRIMARY KEY,
+    account_id INTEGER UNIQUE REFERENCES account(id) ON DELETE CASCADE,
+    region CHAR(2) CHECK (region ~ '^[A-Z]{2}$')
+);
+
+-- Create export_logs table
+CREATE TABLE export_logs (
+    id SERIAL PRIMARY KEY,
+    admin_email TEXT NOT NULL,                             -- who triggered it (manually or via system)
+    export_type TEXT NOT NULL CHECK (export_type IN ('channels', 'feeds', 'items')),
+    filters JSONB,                                         -- optional, if search terms used (e.g., search, sort_by)
+    status TEXT NOT NULL CHECK (status IN ('pending', 'success', 'failed', 'skipped', 'expired')),
+    file_path TEXT,                                        -- absolute or relative file path
+    format TEXT NOT NULL CHECK (format IN ('csv', 'json')),
+    channels_count INTEGER,                                -- result count for channels (if present)
+    feeds_count INTEGER,                                   -- result count for feeds (if present)
+    items_count INTEGER,                                   -- result count for items (if present)
+    created_at TIMESTAMP NOT NULL DEFAULT now(),           -- when task started
+    completed_at TIMESTAMP,                                -- when task finished
+    error_message TEXT                                     -- in case of failure
+);
+
+-- indexes for commonly queried fields
+CREATE INDEX idx_export_logs_admin_email ON export_logs(admin_email);
+CREATE INDEX idx_export_logs_export_type ON export_logs(export_type);
+CREATE INDEX idx_export_logs_status ON export_logs(status);
+CREATE INDEX idx_export_logs_created_at ON export_logs(created_at);
+CREATE INDEX idx_export_logs_created_at_desc ON export_logs(created_at DESC);
+
+--  permissions to read and read_write users
+GRANT SELECT ON export_logs TO read; -- for analytics or audit tools
+GRANT SELECT, INSERT, UPDATE ON export_logs TO read_write;
+GRANT USAGE, SELECT ON SEQUENCE export_logs_id_seq TO read_write;
+
+-- 0002 migration - Add new feed_log and account_location
+-- 0003 migration - Add export_logs table
+
+-- Replace old feed_log with new updated feed_log
+DROP TABLE IF EXISTS feed_log CASCADE;
+
+CREATE TABLE feed_log (
+    id SERIAL PRIMARY KEY,
+    feed_id INTEGER NOT NULL REFERENCES feed(id) ON DELETE CASCADE,
+    http_status INTEGER,
+    is_success BOOLEAN,
+    parse_errors INTEGER,
+    parse_error_message varchar_normal,
+    started_at server_time,
+    finished_at server_time,
+    parsed_by varchar_normal -- This should be an Auth0 ID
+);
+
+CREATE INDEX idx_feed_log_feed_id ON feed_log(feed_id);
 
 -- Location data for accounts
 -- Location data is saved a ISO 3166-1 Alpha-2 format

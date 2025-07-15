@@ -18,7 +18,6 @@ class Feed(Base):
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=db.func.now())
     updated_at: Mapped[DateTime] = mapped_column(DateTime, server_default=db.func.now(), onupdate=db.func.now())
     is_parsing: Mapped[Optional[bool]] = mapped_column(db.Boolean)
-    podcast_index_id: Mapped[Optional[int]] = mapped_column(Integer)
 
     flag_status = relationship("FeedFlagStatus", back_populates="feeds")
     channels = relationship("Channel", back_populates="feed")
@@ -45,16 +44,16 @@ class FeedFlagStatus(Base):
 
 
 class FeedLog(Base):
-    __tablename__ = "new_feed_log"
+    __tablename__ = "feed_log"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     feed_id: Mapped[int] = mapped_column(db.ForeignKey("feed.id"))
-    http_status: Mapped[Optional[int]] = mapped_column(db.Integer)
-    is_success: Mapped[Optional[bool]] = mapped_column(db.Boolean)
+    http_status: Mapped[Optional[int]] = mapped_column(db.Integer) # HTTP status based on result of parse
+    is_success: Mapped[Optional[bool]] = mapped_column(db.Boolean) # T or F based on the Reparse Result
     parse_errors: Mapped[Optional[int]] = mapped_column(db.Integer, default=0)
-    parse_error_message: Mapped[Optional[str]] = mapped_column(String(255))
+    parse_error_message: Mapped[Optional[str]] = mapped_column(String(255)) # new field to hold message
     started_at: Mapped[Optional[DateTime]] = mapped_column(DateTime)
     finished_at: Mapped[Optional[DateTime]] = mapped_column(DateTime)
-    parsed_by: Mapped[Optional[str]] = mapped_column(String(255))
+    parsed_by: Mapped[Optional[str]] = mapped_column(String(255)) # This will come as an Auth0 ID
 
     feed = relationship("Feed", back_populates="logs")
