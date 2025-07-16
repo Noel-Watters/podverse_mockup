@@ -24,7 +24,7 @@ const initialState: FeedState = {
     feed_flag_status_id: undefined,
     parsing_priority: undefined,
     is_parsing: undefined,
-    sort: 'updated_at',
+    sort: 'id', // Only allow: 'id', 'url', 'updated_at'
     order: 'desc'
   },
   hasMore: true,
@@ -43,8 +43,11 @@ const buildQueryParams = (filters: FeedFilters, offset: number, limit: number) =
   if (filters.is_parsing !== undefined)
     params.append('is_parsing', filters.is_parsing.toString());
 
-  params.append('sort', filters.sort ?? 'updated_at');
-  params.append('order', filters.order ?? 'desc');
+  // Only allow valid sort fields
+  const allowedSorts = ['id', 'url', 'updated_at'];
+  const sortField = allowedSorts.includes(filters.sort ?? '') ? (filters.sort ?? 'id') : 'id';
+  params.append('sort_by', sortField);
+  params.append('sort_order', filters.order ?? 'desc');
 
   params.append('limit', limit.toString());
   params.append('offset', offset.toString());

@@ -60,11 +60,9 @@ const exportFeeds = async () => {
             defaultValue=""
           >
             <option value="">Sort by</option>
-            <option value="feed_flag_status_id">Status</option>
             <option value="updated_at">Last Updated</option>
-            <option value="created_at">Created</option>
-            <option value="parsing_priority">Priority</option>
             <option value="id">Feed ID</option>
+            <option value="url">Feed URL</option>
           </select>
           <ArrowsUpDownIcon className="h-5 w-5 absolute right-2 top-2 text-black pointer-events-none" />
         </div>

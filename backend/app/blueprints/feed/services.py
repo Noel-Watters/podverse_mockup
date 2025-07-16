@@ -301,7 +301,7 @@ def get_all_feeds(page=1, limit=10, parsing_priority=None, is_parsing=None, stat
     """
     try:
         # Create base query with left join to Channel for title search
-        query = db.session.query(Feed).join(FeedFlagStatus).outerjoin(Channel).order_by(Feed.id.desc())
+        query = db.session.query(Feed).join(FeedFlagStatus).outerjoin(Channel)
         log_database_operation(logger, "READ", "feeds", f"page_{page}_limit_{limit}")
              
         if status:
