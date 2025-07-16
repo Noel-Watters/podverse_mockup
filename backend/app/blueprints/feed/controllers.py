@@ -138,9 +138,10 @@ def get_all_feeds_controller() -> dict:
     parsing_priority = request.args.get("parsing_priority")
     is_parsing = request.args.get("is_parsing")
     status = request.args.get("status")
-    feed_id = request.args.get("id", type=int)  
+    feed_id = request.args.get("id", type=int)
+    podcast_index_id = request.args.get("podcast_index_id", type=int)
     
-    logger.info(f"Fetching feeds - page: {page}, limit: {limit}, - filters: priority={parsing_priority}, parsing={is_parsing}, status={status}, id={feed_id}")
+    logger.info(f"Fetching feeds - page: {page}, limit: {limit}, - filters: priority={parsing_priority}, parsing={is_parsing}, status={status}, id={feed_id}, podcast_index_id={podcast_index_id}")
     log_database_operation(logger, "READ", "feeds", f"paginated_query_p{page}_l{limit}")
     
     # Get feeds with pagination from service
@@ -150,7 +151,8 @@ def get_all_feeds_controller() -> dict:
         parsing_priority=parsing_priority,
         is_parsing=is_parsing,
         status=status,
-        feed_id=feed_id,  
+        feed_id=feed_id,
+        podcast_index_id=podcast_index_id,
         sort_by=sort_by,
         sort_order=sort_order,
         search=search
@@ -258,6 +260,7 @@ def bulk_export_feeds_controller() -> Response:
         format = request.args.get("format", "csv")
         admin_email = request.args.get("admin_email", "system@podverse.com")
         feed_id = request.args.get("id", type=int)  # Add ID filter parameter
+        podcast_index_id = request.args.get("podcast_index_id", type=int)  # Add podcast index ID filter parameter
         
         # Validate format
         if format not in ["csv", "json"]:
@@ -266,14 +269,14 @@ def bulk_export_feeds_controller() -> Response:
         # create export log
         export_log = create_export_log_simple(
             export_type="feeds",
-            filters={"format": format, "admin_email": admin_email, "feed_id": feed_id},
+            filters={"format": format, "admin_email": admin_email, "feed_id": feed_id, "podcast_index_id": podcast_index_id},
             status="pending",
             file_path=None,
             export_by=admin_email
         )
 
         # Get feeds for export
-        feeds = get_feeds_for_export(search=search, sort_by=sort_by, sort_order=sort_order, feed_id=feed_id)
+        feeds = get_feeds_for_export(search=search, sort_by=sort_by, sort_order=sort_order, feed_id=feed_id, podcast_index_id=podcast_index_id)
         
         # Generate filename
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")

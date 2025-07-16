@@ -1,7 +1,7 @@
 # backend/app/blueprints/export_logs/routes.py
 
 from flask import jsonify, request, send_file
-from sqlalchemy import and_
+from sqlalchemy import and_, or_, func
 from . import export_logs_bp
 from app.extensions import limiter, db
 from app.models.export_logs import ExportLog
@@ -12,6 +12,7 @@ from app.utils.query_params import get_pagination_params, get_sorting_params
 from app.utils.query_helpers import paginate_query, apply_sorting
 from app.blueprints.export_logs.schemas import export_log_schema
 import os
+from datetime import datetime, timedelta
 
 logger = get_logger(__name__)
 
@@ -25,7 +26,7 @@ def get_export_logs():
         page, per_page = get_pagination_params(request)
         sort_by, sort_order = get_sorting_params(
             request,
-            ['created_at', 'completed_at', 'status', 'export_type'],
+            ['created_at', 'completed_at', 'status', 'export_type', 'format', 'duration'],
             'created_at',
             'desc'
         )
@@ -39,7 +40,7 @@ def get_export_logs():
 
         export_type = request.args.get('export_type')
         if export_type:
-            query = query.filter(ExportLog.export_type == export_type)
+            query = query.filter(ExportLog.export_type == export_type) # export_type: channels, feeds
 
         export_by = request.args.get('export_by')
         if export_by:
@@ -48,6 +49,31 @@ def get_export_logs():
         log_id = request.args.get('id', type=int)
         if log_id:
             query = query.filter(ExportLog.id == log_id)
+            
+        format_type = request.args.get('format')
+        if format_type:
+            query = query.filter(ExportLog.format == format_type)
+
+        # Error status filtering
+        has_error = request.args.get('has_error', type=str)
+        if has_error:
+            if has_error.lower() == 'true':
+                query = query.filter(ExportLog.status == 'failed')
+            elif has_error.lower() == 'false':
+                query = query.filter(ExportLog.status != 'failed')
+
+        # Duration filtering (in seconds)
+        min_duration = request.args.get('min_duration', type=float)
+        max_duration = request.args.get('max_duration', type=float)
+        
+        if min_duration is not None or max_duration is not None:
+            # Calculate duration using SQL expression
+            duration_expr = func.extract('epoch', ExportLog.completed_at - ExportLog.created_at)
+            
+            if min_duration is not None:
+                query = query.filter(duration_expr >= min_duration)
+            if max_duration is not None:
+                query = query.filter(duration_expr <= max_duration)
 
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
@@ -59,8 +85,24 @@ def get_export_logs():
                 )
             )
 
+        # Text search across error_message field
+        search_term = request.args.get('search')
+        if search_term:
+            search_filter = or_(
+                ExportLog.error_message.ilike(f'%{search_term}%')
+            )
+            query = query.filter(search_filter)
+            
         # Apply sorting
-        query = apply_sorting(query, ExportLog, sort_by, sort_order)
+        if sort_by == 'duration':
+            # Custom sorting for duration
+            duration_expr = func.extract('epoch', ExportLog.completed_at - ExportLog.created_at)
+            if sort_order == 'asc':
+                query = query.order_by(duration_expr.asc())
+            else:
+                query = query.order_by(duration_expr.desc())
+        else:
+            query = apply_sorting(query, ExportLog, sort_by, sort_order)
 
         # Paginate
         logs, pagination_metadata = paginate_query(query, page, per_page)
