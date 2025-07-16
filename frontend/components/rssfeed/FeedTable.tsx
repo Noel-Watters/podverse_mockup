@@ -2,7 +2,7 @@
 import React from "react";
 import FeedTableRow from "./FeedTableRow";
 import FeedAuditLogRow from "./FeedAuditLogRow";
-import { Feed, FeedLog } from "@/types/feed";
+import { Feed } from "@/types/feed";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
 
@@ -27,7 +27,7 @@ const FeedTable: React.FC<FeedTableProps> = ({
   toggleExpand,
   onNotify,
   selectedFeeds,
-  setSelectedFeeds
+  setSelectedFeeds,
 }) => {
     const handleCheckboxChange = (feedId: number, checked: boolean) => {
     if (checked) {
@@ -101,6 +101,7 @@ const FeedTable: React.FC<FeedTableProps> = ({
             </td>
           </tr>
         )}
+
       </tbody>
     </table>
   );

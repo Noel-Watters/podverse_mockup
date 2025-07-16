@@ -18,7 +18,7 @@ interface FeedState {
 const initialState: FeedState = {
   items: [],
   offset: 0,
-  limit: 25,
+  limit: 50,
   loading: false,
   filters: {
     feed_flag_status_id: undefined,
@@ -52,14 +52,18 @@ const buildQueryParams = (filters: FeedFilters, offset: number, limit: number) =
   return params.toString();
 };
 
-export const fetchFeeds = createAsyncThunk<Feed[], void, {state: {feeds: FeedState}}>(
+export const fetchFeeds = createAsyncThunk<
+  { data: Feed[] },
+  void,
+  { state: { feeds: FeedState } }
+>(
   'feeds/fetchFeeds',
   async (_, { getState, rejectWithValue }) => {
     const { offset, limit, filters } = getState().feeds;
     const queryString = buildQueryParams(filters, offset, limit);
     try {
       const response = await axios.get(`/api/feeds/?${queryString}`);
-      return response.data ?? [];
+      return { data: response.data };
     } catch (err: any) {
       return rejectWithValue(err.message);
     }
@@ -90,14 +94,20 @@ const feedsSlice = createSlice({
         state.loading = true;
         state.error = undefined;
       })
-      .addCase(fetchFeeds.fulfilled, (state, action: PayloadAction<Feed[]>) => {
+      .addCase(fetchFeeds.fulfilled, (state, action: PayloadAction<{ data: Feed[] }>) => {
+        const { data } = action.payload;
+        console.log('Fetched feed IDs:', (data ?? []).map(f => f.id));
         if (state.offset === 0) {
-          state.items = action.payload;
+          state.items = data ?? [];
         } else {
-            state.items.push(...action.payload);
+          const existingIds = new Set(state.items.map(feed => feed.id));
+          const newFeeds = (data ?? []).filter(feed => !existingIds.has(feed.id));
+          state.items.push(...newFeeds);
+          console.log('All feed IDs in state:', state.items.map(f => f.id));
         }
         state.offset += state.limit;
-        state.hasMore = action.payload.length === state.limit;
+        // If we got fewer than limit, there are no more pages
+        state.hasMore = (data ?? []).length === state.limit;
         state.loading = false;
       })
       .addCase(fetchFeeds.rejected, (state, action) => {

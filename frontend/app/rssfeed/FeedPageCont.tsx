@@ -8,7 +8,7 @@ import FeedTable from "@/components/rssfeed/FeedTable";
 import ReparseNotify from "@/components/reparsefeed/ReparseNotify";
 import FeedToolBar from "@/components/rssfeed/FeedToolbar";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchFeedLogs, bulkReparseFeeds } from "@/redux/reparseSlice";
+import { fetchFeedLogs, bulkReparseFeeds, fetchFeedStatus } from "@/redux/reparseSlice";
 import { fetchFeeds, resetFeeds, setFilters } from "@/redux/feedSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
 
@@ -23,6 +23,7 @@ export default function FeedsPageContent() {
   const dispatch = useDispatch<AppDispatch>();
   const { items: feeds, loading, error, offset, hasMore } = useSelector((state: RootState) => state.feeds);
   const { filters } = useSelector((state: RootState) => state.feeds);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const [notifies, setNotifies] = useState<
     {
@@ -35,27 +36,20 @@ export default function FeedsPageContent() {
   >([]);
 
 
-const scrollRef = React.useRef<HTMLDivElement>(null);
-useEffect(() => {
-  const scrollContainer = scrollRef.current;
-  if (!scrollContainer) return;
-  const onScroll = () => {
-    if (
-      scrollContainer.scrollHeight - scrollContainer.scrollTop <= scrollContainer.clientHeight + 50 &&
-      hasMore &&
-      !loading
-    ) {
-      dispatch(fetchFeeds());
-    }
-  };
-  scrollContainer.addEventListener("scroll", onScroll);
-  return () => scrollContainer.removeEventListener("scroll", onScroll);
-}, [dispatch, offset, hasMore, loading]);
+const handleScroll = (e: { currentTarget: HTMLDivElement | null }) => {
+  if (!e.currentTarget) return;
+  const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+  console.log('scroll', scrollTop, clientHeight, scrollHeight);
+  console.log('scroll', scrollTop, clientHeight, scrollHeight, 'hasMore:', hasMore, 'loading:', loading, 'offset:', offset);
+  if (scrollTop + clientHeight >= scrollHeight - 20 && hasMore && !loading) {
+    dispatch(fetchFeeds());
+  }
+};
 
 useEffect(() => {
   dispatch(resetFeeds());
   dispatch(fetchFeeds());
-}, [searchTerm, filters, dispatch]);
+}, [searchTerm, filters]);
 
 
 const handleSortChange = (sort: string) => {
@@ -84,7 +78,12 @@ const handleBulkReparse = async () => {
   let failed: string[] = [];
   try {
     await dispatch(bulkReparseFeeds(selectedFeeds.map(String))).unwrap();
-    // If you can get per-feed results, collect errors here
+    await Promise.all(
+      selectedFeeds.map(feedId => {
+        dispatch(fetchFeedStatus(String(feedId)));
+        dispatch(fetchFeedLogs(String(feedId)));
+      })
+    );
   } catch (err: any) {
     failed = selectedFeeds.map(feedId => `Feed ${feedId}: ${err.message || "Unknown error"}`);
   } finally {
@@ -122,30 +121,24 @@ const toggleExpand = (feedId: number) => {
   setExpandedFeedId(feedId);
 };
 
-  const handleCopyLogs = (logs: FeedLog[]) => {
-    const text = logs.map((log) => `${log.started_at ?? ""}: ${log.parse_error_message ?? ""}`).join("\n");
-    navigator.clipboard.writeText(text);
-    alert("Logs copied to clipboard!");
-  };
-
-  const handleDownloadLogs = (logs: FeedLog[], title: string) => {
-    const text = logs.map((log) => `${log.started_at ?? ""}: ${log.parse_error_message ?? ""}`).join("\n");
-    const blob = new Blob([text], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${title}_logs.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   const filteredFeeds = feeds.filter(feed => feed.url.toLowerCase().includes(searchTerm.toLowerCase()));
+
+useEffect(() => {
+  console.log('feeds length:', feeds.length, 'filteredFeeds length:', filteredFeeds.length);
+}, [feeds, filteredFeeds]);
 
   return (
     <AdminLayout
       searchValue={searchTerm}
       onSearchChange={(e) => setSearchTerm(e.target.value)}
     >
+      <div ref={scrollContainerRef} onScroll={handleScroll} className = "overflow-y-auto h-[80vh] p-4">
+  <div className="p-4">
+        <button className="text-black"onClick={() => handleScroll({ currentTarget: scrollContainerRef.current })}>
+  Test Scroll Trigger
+</button>
+</div>
       {notifies.map((notify) => (
         <ReparseNotify
           key={notify.id}
@@ -163,30 +156,30 @@ const toggleExpand = (feedId: number) => {
         <div className="text-red-500 font-semibold mb-4">{error}</div>
       )}
 
-      <div ref={scrollRef} className="overflow-y-auto h-[600px]">
-        {/* Toolbar for bulk actions, add, sort, filter */}
-        <FeedToolBar 
-          onSortChange={handleSortChange}
-          onOrderChange={handleOrderChange}
-          onFilterChange={handleFilterChange}
-          selectedFeeds={selectedFeeds}
-          onBulkReparse={handleBulkReparse}
-          onBulkUpdateStatus={handleBulkUpdateStatus}
-          isBulkReparseLoading={isBulkReparseLoading}
-        />
-        <FeedTable
-          feeds={filteredFeeds}
-          expandedFeedId={expandedFeedId}
-          toggleExpand={toggleExpand}
-          onNotify={(n) =>
-            setNotifies((prev) => [
-              ...prev,
-              { ...n, id: crypto.randomUUID() },
-            ])
-          }
-          selectedFeeds={selectedFeeds}
-          setSelectedFeeds={setSelectedFeeds}
-        />
+      {/* Toolbar for bulk actions, add, sort, filter */}
+      <FeedToolBar 
+        onSortChange={handleSortChange}
+        onOrderChange={handleOrderChange}
+        onFilterChange={handleFilterChange}
+        selectedFeeds={selectedFeeds}
+        onBulkReparse={handleBulkReparse}
+        onBulkUpdateStatus={handleBulkUpdateStatus}
+        isBulkReparseLoading={isBulkReparseLoading}
+      />
+      <FeedTable
+        feeds={filteredFeeds}
+        expandedFeedId={expandedFeedId}
+        toggleExpand={toggleExpand}
+        onNotify={(n) =>
+          setNotifies((prev) => [
+            ...prev,
+            { ...n, id: crypto.randomUUID() },
+          ])
+        }
+        selectedFeeds={selectedFeeds}
+        setSelectedFeeds={setSelectedFeeds}
+      />
+
       </div>
     </AdminLayout>
   );

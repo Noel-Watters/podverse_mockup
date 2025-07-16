@@ -117,6 +117,32 @@ const reparseSlice = createSlice({
   },
   extraReducers: builder => {
     builder
+          .addCase(reparseFeed.pending, (state, action) => {
+        const feedId = action.meta.arg;
+        if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false };
+        state[feedId].loading = true;
+        state[feedId].reparsing = true;
+        state[feedId].error = null;
+        state[feedId].success = false;
+        state[feedId].status = 'pending';
+      })
+      .addCase(reparseFeed.fulfilled, (state, action) => {
+        const feedId = action.payload;
+        if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false };
+        state[feedId].loading = false;
+        state[feedId].reparsing = false;
+        state[feedId].success = true;
+        state[feedId].status = 'idle';
+      })
+      .addCase(reparseFeed.rejected, (state, action) => {
+        const feedId = action.meta.arg;
+        if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false };
+        state[feedId].loading = false;
+        state[feedId].reparsing = false;
+        state[feedId].error = action.error.message || 'Reparse failed';
+        state[feedId].success = false;
+        state[feedId].status = 'error';
+      })
     // Handle individual feed reparsing
       .addCase(fetchFeedStatus.pending, (state, action) => {
         const feedId = action.meta.arg;
@@ -129,7 +155,7 @@ const reparseSlice = createSlice({
       .addCase(fetchFeedStatus.fulfilled, (state, action) => {
         const { feedId, status } = action.payload;
         if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false };
-        state[feedId].status = status;
+        state[feedId].status = 'idle';
         state[feedId].loading = false;
         state[feedId].reparsing = false;
         state[feedId].success = true;
