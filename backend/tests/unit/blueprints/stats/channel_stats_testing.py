@@ -1,5 +1,5 @@
 import pytest
-from app.extensions import ValidationError
+from app.utils.error_exceptions import ValidationError
 from app.blueprints.channel.schemas import StatsTrackEventChannelSchema, StatsTrackEventChannel
 from uuid import uuid4
     

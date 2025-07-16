@@ -1,4 +1,5 @@
 # backend/app/blueprints/stats/services.py
+
 from typing import List, Optional, Dict, Any
 from sqlalchemy import asc, desc, func
 from sqlalchemy.orm import joinedload
@@ -18,7 +19,7 @@ from app.blueprints.stats.schemas import (
 )
 from app.extensions import db
 from app.utils.error_exceptions import NotFoundError, DatabaseError, ValidationError
-from app.utils.logger import get_logger, log_database_operation
+from app.utils.request_logger import get_logger, log_database_operation
 
 logger = get_logger(__name__)
 

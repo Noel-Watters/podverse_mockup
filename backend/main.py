@@ -1,15 +1,18 @@
+# backend/main.py
+
 from app import create_app
 from app.extensions import db
 from dotenv import load_dotenv
 import os
 from flask import redirect
-from app.utils.logger import get_logger
+from app.utils.request_logger import get_logger
 from app.utils.migration_runner import run_sql_migrations
 
 load_dotenv() # loads .env from root
 
 # Use our centralized logger
 logger = get_logger(__name__)
+
 
 config_name = os.getenv("FLASK_ENV", "development")
 app = create_app(config_name)

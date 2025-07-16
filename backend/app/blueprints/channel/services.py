@@ -1,12 +1,18 @@
 # app/blueprints/channel/services.py
 
-from app.models import Channel
-from app.models.channel import ChannelCategory
-from app.extensions import db
+from typing import List, Optional, Dict, Any
+from sqlalchemy import func, desc, and_
 from sqlalchemy.orm import joinedload
+from sqlalchemy.sql import text
+from datetime import datetime, timedelta
+
+from app.extensions import db
+from app.models.channel import Channel
+from app.models.channel import ChannelCategory
+from app.utils.request_logger import get_logger, log_database_operation
 from app.utils.query_helpers import apply_sorting, paginate_query
 from app.utils.error_exceptions import NotFoundError, DatabaseError
-from app.utils.logger import get_logger, log_database_operation
+from app.utils.export_response import generate_export_response
 
 logger = get_logger(__name__)
 
@@ -20,8 +26,9 @@ def channel_eagerload_options():
         joinedload(Channel.stats),
         joinedload(Channel.categories).joinedload(ChannelCategory.category)
     )
+    
 
-def get_channels_list(search, sort_by, sort_order, page, limit):
+def get_channels_list(search, sort_by, sort_order, page, limit, channel_id=None):
     """
     Retrieve a paginated list of channels with optional search and sorting.
     Eager loads related feed, medium, categories, and stats.
@@ -31,8 +38,24 @@ def get_channels_list(search, sort_by, sort_order, page, limit):
         query = db.session.query(Channel).options(*channel_eagerload_options())
         log_database_operation(logger, "READ", "channels", f"page_{page}_limit_{limit}")
         
+        if channel_id is not None:
+            query = query.filter(Channel.id == channel_id)
+            logger.info(f"Filtering channels by ID: {channel_id}")
+        
         if search:
-            query = query.filter(Channel.title.ilike(f"%{search}%"))
+            # Try to parse as integer for ID and podcast_index_id search
+            try:
+                search_id = int(search)
+                query = query.filter(
+                    db.or_(
+                        Channel.id == search_id,
+                        Channel.podcast_index_id == search_id,
+                        Channel.title.ilike(f"%{search}%")
+                    )
+                )
+            except ValueError:
+                # If search is not a number, only search by title
+                query = query.filter(Channel.title.ilike(f"%{search}%"))
             logger.info(f"Applying search filter for channels: {search}")
         
         query = apply_sorting(query, Channel, sort_by, sort_order)
@@ -46,6 +69,7 @@ def get_channels_list(search, sort_by, sort_order, page, limit):
     except Exception as e:
         logger.error(f"Error retrieving channels list: {str(e)}")
         raise DatabaseError(f"Failed to retrieve channels: {str(e)}")
+
 
 def get_channels_for_export(search=None, sort_by='id', sort_order='asc', max_rows=10000):
     """

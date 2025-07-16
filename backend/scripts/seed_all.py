@@ -1,6 +1,8 @@
 import argparse
 import inspect
 from seed_utils import run_seeder_with_retry
+from app.utils.request_logger import get_logger
+from app import create_app
 
 # Import all seeders
 from seed_user import seed_user
@@ -16,6 +18,7 @@ from seed_stats_event_channel import seed_stats_event_channel
 from seed_stats_event_item import seed_stats_event_item
 from seed_stats_aggregated_channel import seed_stats_aggregated_channel
 from seed_stats_aggregated_item import seed_stats_aggregated_item
+from seed_export_logs import seed_export_logs
 
 # Seeder list (name, seeder function)
 SEED_JOBS = [
@@ -32,6 +35,7 @@ SEED_JOBS = [
     ("Stats Event Item", seed_stats_event_item),
     ("Stats Aggregated Channel", seed_stats_aggregated_channel),
     ("Stats Aggregated Item", seed_stats_aggregated_item),
+    ("Export Logs", seed_export_logs),
 ]
 
 def normalize_name(name: str):

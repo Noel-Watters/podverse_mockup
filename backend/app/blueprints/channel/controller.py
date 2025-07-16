@@ -1,13 +1,16 @@
 # app/blueprints/channel/controller.py
 
-from flask import request, jsonify
+from typing import List, Optional, Dict, Any
+from flask import jsonify, request
+from sqlalchemy.orm import joinedload
 from app.blueprints.channel.services import get_channels_list, get_channel_detail, get_channels_for_export
 from app.blueprints.channel.schemas import channels_schema, channel_exports_schema, channel_detail_schema
 from app.utils.query_params import get_pagination_params, get_sorting_params, get_search_query
 from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
-from app.utils.logger import get_logger, log_database_operation
+from app.utils.request_logger import get_logger, log_database_operation
 from app.utils.export_response import generate_export_response
 from datetime import datetime
+from app.utils.export_logging import create_export_log_simple, finalize_export_log
 
 logger = get_logger(__name__)
 
@@ -16,11 +19,12 @@ def list_channels():
         page, limit = get_pagination_params(request)
         sort_by, sort_order = get_sorting_params(request, ['id', 'title'], default_field='id')
         search = get_search_query(request)
+        channel_id = request.args.get("id", type=int)  
 
-        logger.info(f"Listing channels - page: {page}, limit: {limit}, sort: {sort_by} {sort_order}, search: {search or 'none'}")
+        logger.info(f"Listing channels - page: {page}, limit: {limit}, sort: {sort_by} {sort_order}, search: {search or 'none'}, id: {channel_id}")
         log_database_operation(logger, "READ", "channels", f"list_p{page}_l{limit}")
 
-        channels, meta = get_channels_list(search, sort_by, sort_order, page, limit)
+        channels, meta = get_channels_list(search, sort_by, sort_order, page, limit, channel_id)
 
         result = {
             "data": channels_schema.dump(channels),
@@ -47,6 +51,20 @@ def export_channels():
     Reuses the same filtering logic as list_channels but without pagination.
     """
     try:
+        # # Get admin email from request args
+        # admin_email = request.args.get("admin_email")
+        # if not admin_email:
+        #     raise ValidationError("admin_email is required")
+        # Get admin email from request args (optional, defaults to system@podverse.com)
+        export_by = request.args.get("export_by", "system@podverse.com")
+
+        # Create export log
+        log = create_export_log_simple(
+            export_type="channels",
+            filters=request.args.to_dict(),
+            export_by=export_by
+        )
+
         # Get query parameters (reuse same logic as list view)
         sort_by, sort_order = get_sorting_params(request, ['id', 'title'], default_field='id')
         search = get_search_query(request)
@@ -61,16 +79,22 @@ def export_channels():
 
         # Get channels for export
         channels = get_channels_for_export(search, sort_by, sort_order, max_rows)
-
+        
         # Serialize channels
         export_data = channel_exports_schema.dump(channels)
 
         # Generate filename with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"channels_export_{timestamp}.csv"
-
+        
+        # Create response
+        response = generate_export_response(export_data, filename)
+        
+        # finalize export log
+        finalize_export_log(log.id, status="success", file_path=f"/exports/{filename}", format=request.args.get("format", "csv")) # file name is set in generate_export_response
+        
         logger.info(f"Generated export file: {filename} with {len(export_data)} records")
-        return generate_export_response(export_data, filename, "channel")
+        return response
 
     except ValidationError as e:
         logger.warning(f"Validation error in export_channels: {str(e)}")

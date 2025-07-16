@@ -23,9 +23,10 @@ Flask-Limiter[redis]==3.12
 Flask-Migrate==4.1.0
 Flask-SQLAlchemy==3.1.1
 greenlet==3.2.3
-h11==0.16.0
-httpcore==1.0.9
-httpx==0.26.0
+gunicorn==21.2.0
+h11==0.14.0
+httpcore==0.17.3
+httpx==0.24.1
 idna==3.10
 iniconfig==2.1.0
 itsdangerous==2.2.0

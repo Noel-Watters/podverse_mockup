@@ -1,15 +1,15 @@
-# 🐳 Podverse Mockup - Docker Setup & Usage
+# Podverse Mockup - Docker Setup & Usage
 
-## 🚀 Prerequisites
+## Prerequisites
 
 * [Docker Desktop](https://www.docker.com/products/docker-desktop) installed on your machine (Windows, macOS, WSL2, or a real-deal Linux box).
 * Docker Compose is included with Docker Desktop.
 
-> 🐧 Linux users: May the flags be ever in your favor. Install Docker & Compose manually and enable the daemon.
+> Linux users: May the flags be ever in your favor. Install Docker & Compose manually and enable the daemon.
 
 ---
 
-## 📦 Cloning the Repo
+## Cloning the Repo
 
 ```bash
 git clone https://github.com/Cramessar/podverse_mockup.git
@@ -18,11 +18,11 @@ cd podverse_mockup
 
 ---
 
-## 🔨 Build Docker Images
+## Build Docker Images
 
 You should have `Dockerfile`s for backend, frontend, and the database setup in place.
 
-To build and start all services (backend, frontend, and Postgres):
+To build and start all services (backend, frontend, Postgres, Redis, Celery, and Celery-Beat):
 
 ```bash
 docker compose up --build
@@ -32,22 +32,28 @@ Once built, containers should appear in Docker Desktop, humming along nicely.
 
 ---
 
-## ▶️ Running the Containers
+## ▶ Running the Containers
 
-You’ve got options:
+You've got options:
 
-* **Option 1**: Click the “play” button in Docker Desktop. Easy.
+* **Option 1**: Click the "play" button in Docker Desktop. Easy.
 * **Option 2**: Real devs use terminals. (Or masochists. Hard to tell.)
 
 ```bash
 docker compose up
 ```
 
-This will start all services as defined in `docker-compose.yml`.
+This will start all services as defined in `docker-compose.yml`:
+- **Backend**: Flask API server with task queue integration
+- **Frontend**: Next.js application  
+- **Database**: PostgreSQL database
+- **Redis**: In-memory store for caching and task queue
+- **Celery**: Background task worker
+- **Celery-Beat**: Scheduled task scheduler
 
 ---
 
-## 🧠 Database Setup & Initialization
+## Database Setup & Initialization
 
 Schema and seeding are handled automatically by the backend container using scripts like `init_database.sql` or individual seed scripts.
 
@@ -59,54 +65,20 @@ For details on how it works or to re-run seeders, see:
 
 ---
 
-## 🌐 Access the Application
+## Access the Application
 
-* **Frontend**: [http://localhost:3000](http://localhost:3000)
-* **Backend API**: [http://localhost:5000](http://localhost:5000)
-* **Postgres (DB)**: `localhost:5432` (connect via pgAdmin or DBeaver)
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:8000](http://localhost:8000)
+- **Postgres (DB)**: `localhost:5432` (connect via pgAdmin or DBeaver)
+- **Redis**: `localhost:6379` (for caching and task queue)
 
 > Postgres creds are usually defined in `.env` or `docker-compose.yml`. Use those if you need to connect manually.
 
----
+### Background Services
 
-## 🏠 Ollama Container Requirements
+- **Celery Worker**: Handles background tasks (feed parsing, data processing)
+- **Celery Beat**: Scheduled task runner (auto-reparse feeds every hour)
 
-To run the AI container using Ollama:
-
-You will need ollama. Make sure to download the program [Ollama Download](https://ollama.com/download).
-Then you will need models. Some models are better than others for different things. [Models](https://ollama.com/search)
-
-If you want some suggesttions for now `mistral`, `gemma3`, `gemma3n`
-
-
-* The default expected endpoint is:
-
-```
-OLLAMA_BASE_URL=http://ollama:11434
-```
-But seeing as we need 11434 to make sure ollama is running the container uses 11435. This is important
-
-* Make sure Ollama the app is running otherwise the Ollama container will not see what models you have downloaded.
-
-
-* Running and reachable by the app backend.
-* Loaded with at least one supported model.
-
-To check models:
-
-```bash
-http://localhost:5050/ollama/models
-```
-
-To pull a model manually, click on the model name. In the top right there should be a command like this:
-
-```bash
-ollama run gemma3n
-```
-
-Copy and paste it in command prompt. You dont have to navigate to any folder. Just open as usual and past the command. 
-
----
 
 ### 📂 Environment Variables (`.env`)
 
@@ -115,28 +87,7 @@ This project uses environment variables to keep configuration clean and secure a
 Here are a few key variables you’ll need:
 
 ```env
-# 🐘 Main Database
-POSTGRES_USER=your_postgres_user
-POSTGRES_PASSWORD=your_postgres_password
-POSTGRES_DB=your_postgres_db
-DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@database:5432/${POSTGRES_DB}
-
-# 🤖 AI Database
-AI_DB_USER=your_ai_user
-AI_DB_PASSWORD=your_ai_password
-AI_DB_NAME=your_ai_db_name
-AI_DATABASE_URL=postgresql://${AI_DB_USER}:${AI_DB_PASSWORD}@ai_db:5432/${AI_DB_NAME}
-
-# 🧠 AI Service
-BACKEND_URL=http://backend:8000
-PYTHONPATH=/app
-PODVERSE_BACKEND_PATH=/app/backend/app
-
-# 🎧 API Keys
-LISTENNOTES_API_KEY=your_listennotes_api_key_here
-
-# 🦙 Ollama (Local Model Path)
-OLLAMA_MODEL_PATH=C:/Users/your_user/.ollama  # Or wherever Ollama stores your models
+copy the example
 ```
 
 > ⚠️ **Important:**  
@@ -144,20 +95,9 @@ OLLAMA_MODEL_PATH=C:/Users/your_user/.ollama  # Or wherever Ollama stores your m
 
 🔍 You don’t need to memorize these — just peek at `.env.example` and fill in the blanks. It’ll make sense, eventually. Promise. ✨
 
----
-
-![Look for this icon](ollama_icon.png) 
-
-in the bottom right of your screen. Should make sense.🦙
-
-If you right click this and click on settings you will see you `Model location` and `Expose Ollama to the network`
-
-I trust this makes sense given the above info. 
 
 
----
-
-## 🛑 Stopping Containers
+## Stopping Containers
 
 To gracefully stop all running services:
 
@@ -167,7 +107,7 @@ docker compose down
 
 ---
 
-## 🧹 Cleanup & Troubleshooting
+## Cleanup & Troubleshooting
 
 If Docker starts acting like a gremlin got into your volumes, try the following to clean things up:
 
@@ -177,15 +117,15 @@ If Docker starts acting like a gremlin got into your volumes, try the following 
 docker system prune -a
 ```
 
-> ⚠️ Warning: This deletes *all* unused data. Use wisely.
+> Warning: This deletes *all* unused data. Use wisely.
 
-### 🗑️ Remove all unused volumes (especially useful for DB issues):
+###  Remove all unused volumes (especially useful for DB issues):
 
 ```bash
 docker volume prune
 ```
 
-### 🔥 Nuke and rebuild everything (if all else fails):
+###  Nuke and rebuild everything (if all else fails):
 
 I cannot stress this enough. Too many problems will be caused by old build caches, volumes, etc. Just run these commands every few days and rebuild. 
 
@@ -198,7 +138,8 @@ docker compose up --build
 
 ---
 
-## 🛠️ Helpful Commands
+##  Helpful Commands
+
 
 Just use docker desktop. It simplifies all of these tips.
 
@@ -228,7 +169,7 @@ docker inspect --format='{{json .State.Health}}' <container-name>
 
 ---
 
-## 📝 Notes
+## Notes
 
 * Make sure your line endings for `entrypoint.sh` or seed scripts use **LF**, not **CRLF**, especially if editing on Windows.
-* Port conflicts? Double-check nothing else is running on 3000/8000/5432.
+* Port conflicts? Double-check nothing else is running on 3000/5000/5432.
