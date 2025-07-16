@@ -4,11 +4,10 @@ import { PlusIcon, TrashIcon, FunnelIcon, ArrowsUpDownIcon, ArrowDownTrayIcon } 
 import ReparseButton from "../reparsefeed/ReparseButton";
 
 interface FeedToolbarProps {
-  onAddFeed: () => void;
   // Future: onBulkReparse, onBulkDelete, onSortChange, onFilterChange, etc.
 }
 
-export default function FeedToolBar({ onAddFeed }: FeedToolbarProps) {
+export default function FeedToolBar() {
   return (
     <div className="flex flex-wrap items-center justify-between px-2 bg-white border-b border-gray-200 rounded-t-md">
       {/* Left: Sort & Filter controls */}
@@ -36,18 +35,6 @@ export default function FeedToolBar({ onAddFeed }: FeedToolbarProps) {
             <option>Disabled</option>
           </select>
           <FunnelIcon className="h-5 w-5 absolute right-2 top-2 text-black pointer-events-none" />
-        </div>
-        {/* Page Size Control */}
-        <div className="relative">
-          <select
-            className="border border-black rounded-md px-4 py-2 text-base text-black bg-white focus:outline-none min-w-[80px]"
-            disabled
-          >
-            <option>25 / page</option>
-            <option>10 / page</option>
-            <option>50 / page</option>
-            <option>100 / page</option>
-          </select>
         </div>
       </div>
 
@@ -78,15 +65,6 @@ export default function FeedToolBar({ onAddFeed }: FeedToolbarProps) {
             aria-label="Export"
           >
             <ArrowDownTrayIcon className="h-5 w-5" />
-          </button>
-          {/* Add New RSS Feed Button */}
-          <button
-            type="button"
-            className="border border-black rounded-md p-1 bg-white hover:bg-gray-100 transition flex items-center justify-center"
-            onClick={onAddFeed}
-            aria-label="Add New RSS Feed"
-          >
-            <PlusIcon className="h-5 w-5 text-black" />
           </button>
         </div>
       </div>

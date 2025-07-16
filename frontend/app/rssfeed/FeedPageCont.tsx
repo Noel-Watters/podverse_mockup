@@ -112,7 +112,7 @@ const toggleExpand = (feedId: number) => {
 
       <div ref={scrollRef} className="overflow-y-auto h-[600px]">
         {/* Toolbar for bulk actions, add, sort, filter */}
-        <FeedToolBar onAddFeed={() => setModalOpen(true)} />
+        <FeedToolBar  />
         <FeedTable
           feeds={filteredFeeds}
           expandedFeedId={expandedFeedId}
