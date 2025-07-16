@@ -1,7 +1,7 @@
 # app/blueprints/channel/schemas.py
 
 from app.extensions import ma, fields, validate
-from app.models.channel import Channel
+from app.models.channel import Channel, ChannelCategory
 from app.models.stats import StatsTrackEventChannel
 
 class ChannelSchema(ma.SQLAlchemyAutoSchema):
@@ -104,3 +104,13 @@ class ChannelExportSchema(ma.SQLAlchemyAutoSchema):
     stats_day_current_count = fields.Function(lambda obj: obj.stats[0].day_current_count if obj.stats else 0)
 
 channel_exports_schema = ChannelExportSchema(many=True)
+
+
+class ChannelCategorySchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = ChannelCategory
+        load_instance = True
+        include_fk = True
+
+channel_category_schema = ChannelCategorySchema()
+channel_categories_schema = ChannelCategorySchema(many=True)

@@ -1,5 +1,5 @@
 import pytest
-from app.extensions import ValidationError
+from app.utils.error_exceptions import ValidationError
 from app.blueprints.item.schemas import ItemSchema, ItemFlagStatusSchema, StatsTrackEventItemSchema
 from app.blueprints.stats.schemas import StatsItemSchema
 from app.models.item import Item, ItemFlagStatus, StatsAggregatedItem, StatsTrackEventItem

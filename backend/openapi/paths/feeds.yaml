@@ -6,7 +6,7 @@
       Supports optional search, limit, and offset parameters for pagination and filtering.
       Data is sourced from the `feed` table, joined with `feed_flag_status` for human-readable status labels.
       
-      **Enhanced Search**: Search across feed ID (exact match), feed URL (partial), and channel title (partial).
+      **Enhanced Search**: Search across feed ID (exact match), feed URL (partial), channel title (partial), and podcast index ID (exact match).
     tags:
       - Feeds
     security:

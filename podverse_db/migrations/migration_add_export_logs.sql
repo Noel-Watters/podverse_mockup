@@ -1,7 +1,7 @@
 -- Create export_logs table
 CREATE TABLE export_logs (
     id SERIAL PRIMARY KEY,
-    admin_email TEXT NOT NULL,                             -- who triggered it (manually or via system)
+    export_by TEXT NOT NULL,                             -- who triggered it (manually or via system)
     export_type TEXT NOT NULL CHECK (export_type IN ('channels', 'feeds', 'items')),
     filters JSONB,                                         -- optional, if search terms used (e.g., search, sort_by)
     status TEXT NOT NULL CHECK (status IN ('pending', 'success', 'failed', 'skipped', 'expired')),
@@ -16,7 +16,7 @@ CREATE TABLE export_logs (
 );
 
 -- indexes for commonly queried fields
-CREATE INDEX idx_export_logs_admin_email ON export_logs(admin_email);
+CREATE INDEX idx_export_logs_export_by ON export_logs(export_by);
 CREATE INDEX idx_export_logs_export_type ON export_logs(export_type);
 CREATE INDEX idx_export_logs_status ON export_logs(status);
 CREATE INDEX idx_export_logs_created_at ON export_logs(created_at);

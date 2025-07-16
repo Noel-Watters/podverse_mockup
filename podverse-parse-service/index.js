@@ -14,9 +14,22 @@ app.get('/health', (req, res) => {
   }
 });
 
+// placeholder to replace with Jenkins job trigger
+function triggerRealParser(url, podcast_index_id) {
+  // e.g., axios.post to Jenkins or SQS
+  console.log("Trigger real parser here for:", { url, podcast_index_id });
+}
+
 // Parse trigger endpoint
 app.post("/trigger-parse", async (req, res) => {
   const { url, podcast_index_id } = req.body;
+
+  if (!url || typeof url !== 'string' || !podcast_index_id || typeof podcast_index_id !== 'number') {
+    return res.status(400).json({ success: false, message: "Invalid payload" });
+  }
+
+  triggerRealParser(url, podcast_index_id);
+
   console.log("Would trigger parser for:", url, podcast_index_id);
   res.json({ success: true, message: "Simulated parser trigger" });
 });

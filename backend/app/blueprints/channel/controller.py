@@ -56,13 +56,13 @@ def export_channels():
         # if not admin_email:
         #     raise ValidationError("admin_email is required")
         # Get admin email from request args (optional, defaults to system@podverse.com)
-        admin_email = request.args.get("admin_email", "system@podverse.com")
+        export_by = request.args.get("export_by", "system@podverse.com")
 
         # Create export log
         log = create_export_log_simple(
             export_type="channels",
             filters=request.args.to_dict(),
-            admin_email=admin_email
+            export_by=export_by
         )
 
         # Get query parameters (reuse same logic as list view)

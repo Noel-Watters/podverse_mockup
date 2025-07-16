@@ -12,7 +12,7 @@ class ExportLogSchema(ma.SQLAlchemyAutoSchema):
 
     # Add explicit field definitions for validation and formatting
     id = fields.Integer(dump_only=True)
-    admin_email = fields.Email(required=True)
+    export_by = fields.Email(required=True)
     export_type = fields.String(required=True, validate=validate.OneOf(['channels', 'feeds', 'items']))
     filters = fields.Dict(keys=fields.String(), values=fields.Raw(), required=False)
     status = fields.String(required=True, validate=validate.OneOf(['pending', 'success', 'failed', 'skipped', 'expired']))

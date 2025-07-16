@@ -41,9 +41,9 @@ def get_export_logs():
         if export_type:
             query = query.filter(ExportLog.export_type == export_type)
 
-        admin_email = request.args.get('admin_email')
-        if admin_email:
-            query = query.filter(ExportLog.admin_email == admin_email)
+        export_by = request.args.get('export_by')
+        if export_by:
+            query = query.filter(ExportLog.export_by == export_by)
 
         log_id = request.args.get('id', type=int)
         if log_id:
@@ -74,6 +74,24 @@ def get_export_logs():
         logger.error(f"Error retrieving export logs: {str(e)}")
         raise ValidationError(f"Failed to retrieve export logs: {str(e)}")
 
+
+@export_logs_bp.route('/<int:log_id>', methods=['GET'])
+#@requires_auth
+@limiter.limit("100 per day")
+def get_export_log(log_id):
+    """Get detailed information about a specific export log"""
+    try:
+        log = db.session.get(ExportLog, log_id)
+        if not log:
+            raise NotFoundError("Export log not found")
+
+        return jsonify(export_log_schema.dump(log))
+
+    except NotFoundError:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving export log {log_id}: {str(e)}")
+        raise ValidationError(f"Failed to retrieve export log: {str(e)}")
 
 
 @export_logs_bp.route('/<int:log_id>/download', methods=['GET'])

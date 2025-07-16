@@ -24,6 +24,7 @@ def scheduled_export_task(self: Task) -> Dict[str, Any]:
     Uses Redis lock to prevent multiple exports running simultaneously.
     Includes fallback to temp directory if primary export location is unavailable.
     """
+    log = None  # Initialize log variable
     try:
         # Try to acquire Redis lock
         with redis_lock("scheduled_export", timeout=1800) as (acquired, error): # 30 minutes timeout
@@ -51,7 +52,8 @@ def scheduled_export_task(self: Task) -> Dict[str, Any]:
                 log = create_export_log_simple(
                     export_type="channels",
                     format="csv",
-                    filters={} # no filters for scheduled export
+                    filters={}, # no filters for scheduled export
+                    export_by="system@podverse.com"
                 )
                 
                 # Perform export with directory override
@@ -59,14 +61,12 @@ def scheduled_export_task(self: Task) -> Dict[str, Any]:
                 
                 # finalize export log
                 finalize_export_log(
-                    log, 
-                    status="success" , 
+                    log.id, 
+                    status="success", 
                     file_path=os.path.join(result["export_directory"], result["channels_file"]), 
-                    counts={
-                        "channels": result.get("channels_count", 0),
-                        "feeds": result.get("feeds_count", 0),
-                        "items": result.get("items_count", 0)
-                    }
+                    channels_count=result.get("channels_count", 0),
+                    feeds_count=result.get("feeds_count", 0),
+                    items_count=result.get("items_count", 0)
                 )
                 
                 logger.info(f"Export completed successfully: {result}")
@@ -80,7 +80,8 @@ def scheduled_export_task(self: Task) -> Dict[str, Any]:
                 logger.error(f"Filesystem error during export: {str(e)}")
                 if self.request.retries < self.max_retries:
                     logger.info(f"Retrying export task (attempt {self.request.retries + 1})")
-                    finalize_export_log(log, status="failed", error_message=str(e))
+                    if log:
+                        finalize_export_log(log.id, status="failed", error_message=str(e))
                     # retry the task
                     self.retry(exc=e, countdown=60 * (self.request.retries + 1))  # exponential backoff
                 return {
@@ -92,7 +93,8 @@ def scheduled_export_task(self: Task) -> Dict[str, Any]:
                 logger.error(f"Export failed: {str(e)}")
                 if self.request.retries < self.max_retries: # if the task has not been retried 3 times
                     logger.info(f"Retrying export task (attempt {self.request.retries + 1})")
-                    finalize_export_log(log, status="failed", error_message=str(e))
+                    if log:
+                        finalize_export_log(log.id, status="failed", error_message=str(e))
                     
                     self.retry(exc=e, countdown=60 * (self.request.retries + 1))  # Exponential backoff
                 return {

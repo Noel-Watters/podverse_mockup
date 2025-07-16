@@ -16,7 +16,8 @@ def create_export_log(data: dict) -> ExportLog:
     return log
 
 def finalize_export_log(log_id: int, status: str = None, file_path: str = None, format: str = None, 
-                       feeds_count: int = None, error_message: str = None) -> ExportLog:
+                       feeds_count: int = None, channels_count: int = None, items_count: int = None, 
+                       error_message: str = None) -> ExportLog:
     """ Updates an existing log after the export finishes or fails.
     
         Returns the updated log entry.
@@ -33,6 +34,10 @@ def finalize_export_log(log_id: int, status: str = None, file_path: str = None, 
         log.format = format
     if feeds_count is not None:
         log.feeds_count = feeds_count
+    if channels_count is not None:
+        log.channels_count = channels_count
+    if items_count is not None:
+        log.items_count = items_count
     if error_message:
         log.error_message = error_message
         
@@ -41,18 +46,19 @@ def finalize_export_log(log_id: int, status: str = None, file_path: str = None, 
     return log
 
 def create_export_log_simple(export_type: str, filters: dict = None, status: str = "pending", 
-                           file_path: str = None, admin_email: str = "system@podverse.com") -> ExportLog:
+                           file_path: str = None, export_by: str = "system@podverse.com", format: str = "csv") -> ExportLog:
     """ Creates a new export log entry with required fields.
 
         Returns:
             The created ExportLog instance.
     """
     data = {
-        "admin_email": admin_email,
+        "export_by": export_by,
         "export_type": export_type,
         "filters": filters or {},
         "status": status,
         "file_path": file_path,
-        "format": filters.get("format", "csv") if filters else "csv"
+        "format": format 
+        # Todo json format
     }
     return create_export_log(data)
