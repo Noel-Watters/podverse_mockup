@@ -7,18 +7,21 @@ import AddRssFeedModal from "@/components/AddRssFeedModal";
 import FeedTable from "@/components/rssfeed/FeedTable";
 import ReparseNotify from "@/components/reparsefeed/ReparseNotify";
 import FeedToolBar from "@/components/rssfeed/FeedToolbar";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { fetchFeedLogs } from "@/redux/reparseSlice";
-import type { AppDispatch } from "@/redux/store";
+import { fetchFeeds, resetFeeds } from "@/redux/feedSlice";
+import type { AppDispatch, RootState } from "@/redux/store";
 
 export default function FeedsPageContent() {
-  const [feeds, setFeeds] = useState<Feed[]>([]);
+  //const [feeds, setFeeds] = useState<Feed[]>([]);
   const [expandedFeedId, setExpandedFeedId] = useState<number | null>(null);
-  const [error, setError] = useState<string>("");
+  //const [error, setError] = useState<string>("");
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
   const [searchTerm, setSearchTerm] = useState<string>(initialSearch);
   const [modalOpen, setModalOpen] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
+  const { items: feeds, loading, error, offset, hasMore } = useSelector((state: RootState) => state.feeds);
 
   const [notifies, setNotifies] = useState<
     {
@@ -30,22 +33,32 @@ export default function FeedsPageContent() {
     }[]
   >([]);
 
-  useEffect(() => {
-    const loadFeeds = async () => {
-      try {
-        const response = await fetch("/api/feeds");
-        if (!response.ok) throw new Error("Failed to load feeds");
-        const data = await response.json();
-        setFeeds(data);
-      } catch (err: any) {
-        setError("Failed to load feeds");
-        console.error(err);
-      }
-    };
-    loadFeeds();
-  }, []);
 
-const dispatch = useDispatch<AppDispatch>();
+const scrollRef = React.useRef<HTMLDivElement>(null);
+useEffect(() => {
+  const scrollContainer = scrollRef.current;
+  if (!scrollContainer) return;
+  const onScroll = () => {
+    if (
+      scrollContainer.scrollHeight - scrollContainer.scrollTop <= scrollContainer.clientHeight + 50 &&
+      hasMore &&
+      !loading
+    ) {
+      dispatch(fetchFeeds(offset));
+    }
+  };
+  scrollContainer.addEventListener("scroll", onScroll);
+  return () => scrollContainer.removeEventListener("scroll", onScroll);
+}, [dispatch, offset, hasMore, loading]);
+
+useEffect(() => {
+  dispatch(resetFeeds());
+  dispatch(fetchFeeds(0));
+}, [searchTerm, dispatch]);
+
+
+
+
 
 const toggleExpand = (feedId: number) => {
   if (expandedFeedId === feedId) {
@@ -97,7 +110,7 @@ const toggleExpand = (feedId: number) => {
         <div className="text-red-500 font-semibold mb-4">{error}</div>
       )}
 
-      <div className="overflow-x-auto">
+      <div ref={scrollRef} className="overflow-y-auto h-[600px]">
         {/* Toolbar for bulk actions, add, sort, filter */}
         <FeedToolBar onAddFeed={() => setModalOpen(true)} />
         <FeedTable

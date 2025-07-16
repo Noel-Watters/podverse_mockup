@@ -44,13 +44,13 @@ const FeedTable: React.FC<FeedTableProps> = ({
         </tr>
       </thead>
       <tbody>
-        {feeds.map((feed) => {
+        {feeds.map((feed, idx) => {
           const logs = reparse[String(feed.id)]?.logs ?? [];
           const logLoading = reparse[String(feed.id)]?.loading ?? false;
           const logError = reparse[String(feed.id)]?.error ?? null;
 
           return (
-            <React.Fragment key={feed.id}>
+            <React.Fragment key={feed.id + '-' + idx}>
               <FeedTableRow
                 feed={feed}
                 expanded={expandedFeedId === feed.id}
@@ -59,7 +59,7 @@ const FeedTable: React.FC<FeedTableProps> = ({
               />
               {expandedFeedId === feed.id && (
                 <FeedAuditLogRow
-                  feed={{ ...feed, logs }} // override logs with Redux logs
+                  feed={{ ...feed, logs }} 
                   logLoading={logLoading}
                   logError={logError}
                   handleCopyLogs={handleCopyLogs}

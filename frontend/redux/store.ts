@@ -2,11 +2,13 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import reparseReducer from './reparseSlice';
 import channelReducer from './channelslice';
+import feedsReducer from './feedSlice';
 
 export const store = configureStore({
   reducer: {
     reparse: reparseReducer,
     channel: channelReducer,
+    feeds: feedsReducer,
   },
 });
 
