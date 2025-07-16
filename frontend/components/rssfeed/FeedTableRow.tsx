@@ -15,6 +15,7 @@ interface FeedTableRowProps {
     duration?: number;
     details?: string[];
   }) => void;
+  checkbox?: React.ReactNode;
 }
 
 const FeedTableRow: React.FC<FeedTableRowProps> = ({
@@ -22,8 +23,10 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
   expanded,
   onExpand,
   onNotify,
+  checkbox,
 }) => (
   <tr className="border-t border-podverse-border hover:bg-podverse-highlight transition">
+    <td>{checkbox}</td>
     <td className="px-4 py-2 font-medium">{feed.id}</td>
     <td className="px-4 py-2 truncate max-w-xs">{feed.url}</td>
     <td className="px-4 py-2">

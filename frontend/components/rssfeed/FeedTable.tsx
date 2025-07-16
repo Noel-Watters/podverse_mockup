@@ -19,6 +19,8 @@ interface FeedTableProps {
     duration?: number;
     details?: string[];
   }) => void;
+  selectedFeeds: number[];
+  setSelectedFeeds: (ids: number[]) => void;
 }
 
 const FeedTable: React.FC<FeedTableProps> = ({
@@ -28,7 +30,16 @@ const FeedTable: React.FC<FeedTableProps> = ({
   handleCopyLogs,
   handleDownloadLogs,
   onNotify,
+  selectedFeeds,
+  setSelectedFeeds
 }) => {
+    const handleCheckboxChange = (feedId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedFeeds([...selectedFeeds, feedId]);
+    } else {
+      setSelectedFeeds(selectedFeeds.filter(id => id !== feedId));
+    }
+  };
   // Get the entire reparse state once
   const reparse = useSelector((state: RootState) => state.reparse);
 
@@ -36,6 +47,14 @@ const FeedTable: React.FC<FeedTableProps> = ({
     <table className="min-w-full bg-podverse-surface rounded shadow text-podverse-text text-sm">
       <thead className="bg-podverse-accent text-black">
         <tr>
+          <th>
+            {/* Select All Checkbox */}
+            <input
+              type="checkbox"
+              checked={feeds.length > 0 && selectedFeeds.length === feeds.length}
+              onChange={e => setSelectedFeeds(e.target.checked ? feeds.map(f => f.id) : [])}
+            />
+          </th>
           {["ID", "URL", "Status", "Priority", "Created At", "Updated At", "Details", "Action"].map((header) => (
             <th key={header} className="text-left px-4 py-2 font-semibold">
               {header}
@@ -56,6 +75,13 @@ const FeedTable: React.FC<FeedTableProps> = ({
                 expanded={expandedFeedId === feed.id}
                 onExpand={() => toggleExpand(feed.id)}
                 onNotify={onNotify}
+                checkbox={
+                  <input
+                    type="checkbox"
+                    checked={selectedFeeds.includes(feed.id)}
+                    onChange={e => handleCheckboxChange(feed.id, e.target.checked)}
+                  />
+                }
               />
               {expandedFeedId === feed.id && (
                 <FeedAuditLogRow

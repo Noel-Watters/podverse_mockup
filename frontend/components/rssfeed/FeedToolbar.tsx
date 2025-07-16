@@ -1,5 +1,5 @@
 "use client";
-import React, {useEffect, useState} from "react";
+import React, {useState} from "react";
 import {FunnelIcon, ArrowsUpDownIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import ReparseButton from "../reparsefeed/ReparseButton";
 
@@ -7,11 +7,26 @@ interface FeedToolbarProps {
   onSortChange: (sort: string) => void;
   onOrderChange: (order: string) => void;
   onFilterChange: (filter: string, value: string) => void;
+  selectedFeeds: number[]; 
+  onBulkReparse: () => void;
+  onBulkUpdateStatus: (newStatus: string) => void;
+  isBulkReparseLoading: boolean;
 }
 
 
 
-export default function FeedToolBar({ onSortChange, onOrderChange, onFilterChange }: FeedToolbarProps) {
+export default function FeedToolBar({ 
+  onSortChange, 
+  onOrderChange, 
+  onFilterChange,
+  selectedFeeds,
+  onBulkReparse,
+  onBulkUpdateStatus,
+  isBulkReparseLoading
+}: FeedToolbarProps) {
+  const statusMap = { flagged: 1, unflagged: 2, disabled: 3 };
+  type StatusKey = keyof typeof statusMap;
+  const [statusToUpdate, setStatusToUpdate] = useState<StatusKey>("flagged");
   const [feeds, setFeeds] = useState([]);
   const [error, setError] = useState<string>("");
   const [exportFormat, setExportFormat] = useState("csv");
@@ -104,12 +119,35 @@ const exportFeeds = async () => {
       <div className="flex flex-col items-end gap-1">
         <span className="text-xs font-semibold text-black mb-1 self-center">Bulk Operations</span>
         <div className="flex gap-2 items-center">
+          {/* Bulk Update Status */}
+          <select
+            value={statusToUpdate}
+            onChange={e => setStatusToUpdate(e.target.value as StatusKey)}
+            className="border border-black rounded-md px-2 py-1 text-base text-black bg-white focus:outline-none min-w-[90px] mr-2"
+          >
+            <option value="flagged">Flagged</option>
+            <option value="unflagged">Unflagged</option>
+            <option value="disabled">Disabled</option>
+          </select>
+          <button
+            onClick={() => onBulkUpdateStatus(statusMap[statusToUpdate].toString())}
+            disabled={selectedFeeds.length === 0}
+            className="border border-black bg-white text-black rounded-md px-3 py-2 hover:bg-gray-100 transition flex items-center gap-1"
+            aria-label="Confirm Status Update"
+          >
+            {/* Flag Icon from heroicons */}
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-black">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18m0 0h18m-18 0V3m0 0h18m-18 0v18" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l6 6-6 6" />
+            </svg>
+            Confirm Status Update
+          </button>
           {/* Bulk Reparse Button */}
           <ReparseButton
-            onClick={() => {}} // placeholder, replace with actual handler later
-            loading={false} // Replace with actual loading state
-            disabled
-          />
+            onClick={onBulkReparse}
+            loading={isBulkReparseLoading}
+            disabled={selectedFeeds.length === 0}
+            />
           {/* Export Button*/}
           <button
             onClick={exportFeeds}

@@ -23,15 +23,15 @@ interface ReparseState {
   [feedId: string]: FeedAsyncState & { logs?: FeedLog[] };
 }
 
-// Async thunk for reparsing a feed
+// Async thunk for individual reparsing a feed
 export const reparseFeed = createAsyncThunk(
   'reparse/reparseFeed',
   async (feedId: string) => {
-    const response = await fetch(`/api/feeds/${feedId}/reparse`, { method: 'POST' });
-    if (!response.ok) {
+    const response = await axios.post(`/api/feeds/${feedId}/reparse`);
+    if (!response.data.success) {
       let errorMsg = `HTTP ${response.status}`;
       try {
-        const data = await response.json();
+        const data = response.data;
         if (data && data.error) errorMsg = data.error;
       } catch {}
       throw new Error(errorMsg);
@@ -39,6 +39,20 @@ export const reparseFeed = createAsyncThunk(
     return feedId;
   }
 );
+
+// Async thunk for bulk reparsing a feed
+export const bulkReparseFeeds = createAsyncThunk(
+  'reparse/bulkReparseFeeds',
+  async (feedIds: string[]) => {
+    const response = await axios.post('/api/feed/bulk-reparse', {
+      feed_ids: feedIds,
+    });
+    if (!response.data.success) throw new Error('Bulk reparse failed');
+    return feedIds;
+  }
+);
+
+
 
 const initialState: ReparseState = {};
 
@@ -103,6 +117,7 @@ const reparseSlice = createSlice({
   },
   extraReducers: builder => {
     builder
+    // Handle individual feed reparsing
       .addCase(fetchFeedStatus.pending, (state, action) => {
         const feedId = action.meta.arg;
         if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false };
@@ -127,10 +142,44 @@ const reparseSlice = createSlice({
         state[feedId].error = action.error.message || 'Failed to fetch status';
         state[feedId].success = false;
       })
+      // Fetch logs for a specific feed
       .addCase(fetchFeedLogs.fulfilled, (state, action) => {
          const { feedId, logs } = action.payload;
         if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false, logs: [] };
         state[feedId].logs = logs;
+      })
+      // Bulk reparse state handling
+      .addCase(bulkReparseFeeds.pending, (state, action) => {
+        const feedIds = action.meta.arg;
+        feedIds.forEach(feedId => {
+          if (!state[feedId]) {
+            state[feedId] = { status: 'pending', loading: false, reparsing: true, error: null, success: false, logs: [] };
+          } else {
+            state[feedId].status = 'pending';
+            state[feedId].reparsing = true;
+            state[feedId].error = null;
+            state[feedId].success = false;
+          }
+        });
+      })
+      .addCase(bulkReparseFeeds.fulfilled, (state, action) => {
+        const feedIds = action.payload;
+        feedIds.forEach(feedId => {
+          if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false, logs: [] };
+          state[feedId].status = 'idle';
+          state[feedId].reparsing = false;
+          state[feedId].success = true;
+        });
+      })
+      .addCase(bulkReparseFeeds.rejected, (state, action) => {
+        const feedIds = action.meta.arg;
+        feedIds.forEach(feedId => {
+          if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false, logs: [] };
+          state[feedId].reparsing = false;
+          state[feedId].status = 'idle';
+          state[feedId].error = action.error.message || 'Bulk reparse failed';
+          state[feedId].success = false;
+        });
     });
   },
 });

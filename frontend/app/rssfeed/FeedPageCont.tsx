@@ -8,15 +8,14 @@ import FeedTable from "@/components/rssfeed/FeedTable";
 import ReparseNotify from "@/components/reparsefeed/ReparseNotify";
 import FeedToolBar from "@/components/rssfeed/FeedToolbar";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchFeedLogs } from "@/redux/reparseSlice";
-import { fetchFeeds, resetFeeds } from "@/redux/feedSlice";
+import { fetchFeedLogs, bulkReparseFeeds } from "@/redux/reparseSlice";
+import { fetchFeeds, resetFeeds, setFilters } from "@/redux/feedSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
-import { setFilters } from "@/redux/feedSlice";
 
 export default function FeedsPageContent() {
-  //const [feeds, setFeeds] = useState<Feed[]>([]);
+  const [isBulkReparseLoading, setIsBulkReparseLoading] = useState(false);
   const [expandedFeedId, setExpandedFeedId] = useState<number | null>(null);
-  //const [error, setError] = useState<string>("");
+  const [selectedFeeds, setSelectedFeeds] = useState<number[]>([]);
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get("search") || "";
   const [searchTerm, setSearchTerm] = useState<string>(initialSearch);
@@ -80,7 +79,38 @@ const handleFilterChange = (filterName: string, value: string) => {
   dispatch(setFilters({ [filterName]: parsedValue }));
 };
 
+const handleBulkReparse = async () => {
+  setIsBulkReparseLoading(true);
+  let failed: string[] = [];
+  try {
+    await dispatch(bulkReparseFeeds(selectedFeeds.map(String))).unwrap();
+    // If you can get per-feed results, collect errors here
+  } catch (err: any) {
+    failed = selectedFeeds.map(feedId => `Feed ${feedId}: ${err.message || "Unknown error"}`);
+  } finally {
+    setNotifies(prev => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        type: failed.length ? "error" : "success",
+        message: failed.length
+          ? `Bulk reparse completed with errors.`
+          : `Bulk reparse completed successfully for ${selectedFeeds.length} feeds.`,
+        details: failed.length ? failed : undefined,
+        duration: failed.length ? undefined : 2500,
+      },
+    ]);
+    setIsBulkReparseLoading(false);
+  }
+};
 
+const handleBulkUpdateStatus = async (newStatus: string) => {
+  await fetch("/api/feeds/bulk-update-status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ feed_ids: selectedFeeds, new_status: newStatus }),
+  });
+};
 
 
 const toggleExpand = (feedId: number) => {
@@ -139,6 +169,10 @@ const toggleExpand = (feedId: number) => {
           onSortChange={handleSortChange}
           onOrderChange={handleOrderChange}
           onFilterChange={handleFilterChange}
+          selectedFeeds={selectedFeeds}
+          onBulkReparse={handleBulkReparse}
+          onBulkUpdateStatus={handleBulkUpdateStatus}
+          isBulkReparseLoading={isBulkReparseLoading}
         />
         <FeedTable
           feeds={filteredFeeds}
@@ -152,6 +186,8 @@ const toggleExpand = (feedId: number) => {
               { ...n, id: crypto.randomUUID() },
             ])
           }
+          selectedFeeds={selectedFeeds}
+          setSelectedFeeds={setSelectedFeeds}
         />
       </div>
     </AdminLayout>
