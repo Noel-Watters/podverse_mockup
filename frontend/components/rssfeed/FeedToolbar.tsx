@@ -1,6 +1,6 @@
 "use client";
-import React from "react";
-import { PlusIcon, TrashIcon, FunnelIcon, ArrowsUpDownIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import React, {useEffect, useState} from "react";
+import {FunnelIcon, ArrowsUpDownIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import ReparseButton from "../reparsefeed/ReparseButton";
 
 interface FeedToolbarProps {
@@ -9,7 +9,32 @@ interface FeedToolbarProps {
   onFilterChange: (filter: string, value: string) => void;
 }
 
+
+
 export default function FeedToolBar({ onSortChange, onOrderChange, onFilterChange }: FeedToolbarProps) {
+  const [feeds, setFeeds] = useState([]);
+  const [error, setError] = useState<string>("");
+  const [exportFormat, setExportFormat] = useState("csv");
+
+  // Export feeds
+const exportFeeds = async () => {
+  try {
+    const response = await fetch(`/api/feeds/export?format=${exportFormat}`);
+    if (!response.ok) throw new Error("Failed to export feeds");
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `feeds_export.${exportFormat}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    setError("Failed to export feeds");
+  }
+};
+
   return (
     <div className="flex flex-wrap items-center justify-between px-2 bg-white border-b border-gray-200 rounded-t-md">
       {/* Left: Sort & Filter controls */}
@@ -85,24 +110,23 @@ export default function FeedToolBar({ onSortChange, onOrderChange, onFilterChang
             loading={false} // Replace with actual loading state
             disabled
           />
-          {/* Delete Selected Button */}
-          <button
-            type="button"
-            className="border border-black bg-white text-black rounded-md w-9 h-9 flex items-center justify-center hover:bg-gray-100 transition"
-            disabled
-            aria-label="Delete Selected"
-          >
-            <TrashIcon className="h-5 w-5" />
-          </button>
           {/* Export Button*/}
           <button
+            onClick={exportFeeds}
             type="button"
             className="border border-black bg-white text-black rounded-md w-9 h-9 flex items-center justify-center hover:bg-gray-100 transition"
-            disabled
             aria-label="Export"
           >
             <ArrowDownTrayIcon className="h-5 w-5" />
           </button>
+                    <select
+            value={exportFormat}
+            onChange={e => setExportFormat(e.target.value)}
+            className="border border-black rounded-md px-2 py-1 text-base text-black bg-white focus:outline-none min-w-[90px] mr-2"
+          >
+            <option value="csv">CSV</option>
+            <option value="json">JSON</option>
+          </select>
         </div>
       </div>
     </div>
