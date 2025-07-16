@@ -18,6 +18,14 @@ services:
     networks:
       - podverse-network
 
+  redis:
+    image: redis/redis-stack:latest
+    container_name: podverse_redis
+    ports:
+      - "6380:6379"
+    networks:
+      - podverse-network
+
   backend:
     build:
       context: .
@@ -31,13 +39,74 @@ services:
       - ./backend/.env
     environment:
       FLASK_APP: main.py
-      FLASK_ENV: ${FLASK_ENV}
+      FLASK_ENV: development
       DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      REDIS_RESULT_BACKEND: ${REDIS_RESULT_BACKEND}
     volumes:
-      - ./backend/scripts:/app/scripts
       - ./backend/app:/app/app
+      - ./backend/scripts:/app/scripts
+      - ./backend/exports:/app/exports
     depends_on:
       - database
+      - redis
+    networks:
+      - podverse-network
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: podverse-backend:latest
+    container_name: podverse_celery
+    entrypoint: ""  # override entrypoint.sh
+    command: celery -A make_celery worker --loglevel=info
+    env_file:
+      - .env
+      - ./backend/.env
+    environment:
+      FLASK_APP: main.py
+      FLASK_ENV: ${FLASK_ENV}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      REDIS_RESULT_BACKEND: ${REDIS_RESULT_BACKEND}
+    depends_on:
+      - database
+      - redis
+      - backend
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/scripts:/app/scripts
+      - ./backend/exports:/app/exports
+    networks:
+      - podverse-network
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: podverse-backend:latest
+    container_name: podverse_celery_beat
+    entrypoint: ""  # override entrypoint.sh
+    command: celery -A make_celery beat --loglevel=info
+    env_file:
+      - .env
+      - ./backend/.env
+    environment:
+      FLASK_APP: main.py
+      FLASK_ENV: ${FLASK_ENV}
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      REDIS_RESULT_BACKEND: ${REDIS_RESULT_BACKEND}
+    depends_on:
+      - database
+      - redis
+      - backend
+      - celery
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/scripts:/app/scripts
+      - ./backend/exports:/app/exports
     networks:
       - podverse-network
 
@@ -53,13 +122,17 @@ services:
     networks:
       - podverse-network
 
-  redis:
-    image: redis:7
-    container_name: podverse_redis
+  parse-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.perse_service
+    image: podverse-parse-service:latest
+    container_name: podverse_parse_service
     ports:
-      - "6379:6379"
+      - "3001:3001"
     networks:
       - podverse-network
+
 
 volumes:
   pgdata:

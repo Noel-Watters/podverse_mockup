@@ -7,13 +7,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from faker import Faker
 import uuid
-
+from app.extensions import db
+from app.utils.request_logger import get_logger
 
 # Initialize Faker
 fake = Faker()
 
 # Setup database connection
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://podverse_admin:testest@database:5432/podverse_db")
+if not os.getenv("DATABASE_URL"):
+    raise ValueError("DATABASE_URL environment variable is required")
+
+DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -65,17 +69,17 @@ def unique_uuid_str():
 import time
 import traceback
 
-def run_seeder_with_retry(seeder_func, label="", retries=3, delay=3):
+def run_seeder_with_retry(seeder_func, label="", retries=3, delay=3, return_result=False):
     attempt = 0
     while attempt < retries:
         try:
-            print(f"🌱 Seeding {label} (Attempt {attempt + 1}/{retries})...")
-            seeder_func()
-            print(f"✅ {label} seeded successfully!\n")
-            return
+            print(f"Seeding {label} (Attempt {attempt + 1}/{retries})...")
+            result = seeder_func()
+            print(f"{label} seeded successfully!\n")
+            return result if return_result else None
         except Exception as e:
-            print(f"⚠️  Error seeding {label}: {e}")
+            print(f"Error seeding {label}: {e}")
             traceback.print_exc()
             attempt += 1
             time.sleep(delay)
-    print(f"❌ Failed to seed {label} after {retries} attempts.\n")
+    print(f"Failed to seed {label} after {retries} attempts.\n")

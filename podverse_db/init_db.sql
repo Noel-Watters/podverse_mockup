@@ -240,7 +240,7 @@ INSERT INTO medium (value) VALUES
 -- used internally for identifying and handling spam and other special flag statuses.
 CREATE TABLE feed_flag_status (
     id SERIAL PRIMARY KEY,
-    status TEXT UNIQUE CHECK (status IN ('active', 'always-parse', 'spam', 'pending-archive', 'archived', 'takedown')),
+    status TEXT UNIQUE CHECK (status IN ('active', 'always-parse', 'spam', 'pending-archive', 'archived', 'takedown', 'parse_error', 'fetch_error')),
     created_at server_time_with_default,
     updated_at server_time_with_default
 );
@@ -250,7 +250,9 @@ BEFORE UPDATE ON feed_flag_status
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at_field();
 
-INSERT INTO feed_flag_status (status) VALUES ('active'), ('always-parse'), ('spam'), ('pending-archive'), ('archived'), ('takedown');
+INSERT INTO feed_flag_status (status) VALUES 
+('active'), ('always-parse'), ('spam'), ('pending-archive'), ('archived'), ('takedown'),
+('parse_error'), ('fetch_error');
 
 --** FEED
 
@@ -281,6 +283,9 @@ CREATE TABLE feed (
 
     -- the run-time environment container id
     container_id VARCHAR(12),
+
+    -- Podcast Index ID for external podcast identification #0004 migration - Add podcast_index_id to feed table 
+    podcast_index_id INTEGER,
 
     created_at server_time_with_default,
     updated_at server_time_with_default
@@ -510,3 +515,61 @@ CREATE INDEX stats_aggregated_item_day_current_count_idx ON stats_aggregated_ite
 CREATE INDEX stats_aggregated_item_week_current_count_idx ON stats_aggregated_item(week_current_count);
 CREATE INDEX stats_aggregated_item_month_current_count_idx ON stats_aggregated_item(month_current_count);
 CREATE INDEX stats_aggregated_item_all_time_count_idx ON stats_aggregated_item(all_time_count);
+
+-- 0002 migration - Add new feed_log and account_location
+-- 0003 migration - Add export_logs table
+
+-- Replace old feed_log with new updated feed_log
+DROP TABLE IF EXISTS feed_log CASCADE;
+
+CREATE TABLE feed_log (
+    id SERIAL PRIMARY KEY,
+    feed_id INTEGER NOT NULL REFERENCES feed(id) ON DELETE CASCADE,
+    http_status INTEGER,
+    is_success BOOLEAN,
+    parse_errors INTEGER,
+    parse_error_message varchar_normal,
+    started_at server_time,
+    finished_at server_time,
+    parsed_by varchar_normal -- This should be an Auth0 ID
+);
+
+CREATE INDEX idx_feed_log_feed_id ON feed_log(feed_id);
+
+-- Location data for accounts
+-- Location data is saved a ISO 3166-1 Alpha-2 format
+-- Meaning it is saved as 2 capital letters
+CREATE TABLE account_location (
+    id SERIAL PRIMARY KEY,
+    account_id INTEGER UNIQUE REFERENCES account(id) ON DELETE CASCADE,
+    region CHAR(2) CHECK (region ~ '^[A-Z]{2}$')
+);
+
+-- Create export_logs table
+CREATE TABLE export_logs (
+    id SERIAL PRIMARY KEY,
+    export_by TEXT NOT NULL,                             -- who triggered it (manually or via system)
+    export_type TEXT NOT NULL CHECK (export_type IN ('channels', 'feeds', 'items')),
+    filters JSONB,                                         -- optional, if search terms used (e.g., search, sort_by)
+    status TEXT NOT NULL CHECK (status IN ('pending', 'success', 'failed', 'skipped', 'expired')),
+    file_path TEXT,                                        -- absolute or relative file path
+    format TEXT NOT NULL CHECK (format IN ('csv', 'json')),
+    channels_count INTEGER,                                -- result count for channels (if present)
+    feeds_count INTEGER,                                   -- result count for feeds (if present)
+    items_count INTEGER,                                   -- result count for items (if present)
+    created_at TIMESTAMP NOT NULL DEFAULT now(),           -- when task started
+    completed_at TIMESTAMP,                                -- when task finished
+    error_message TEXT                                     -- in case of failure
+);
+
+-- indexes for commonly queried fields
+CREATE INDEX idx_export_logs_export_by ON export_logs(export_by);
+CREATE INDEX idx_export_logs_export_type ON export_logs(export_type);
+CREATE INDEX idx_export_logs_status ON export_logs(status);
+CREATE INDEX idx_export_logs_created_at ON export_logs(created_at);
+CREATE INDEX idx_export_logs_created_at_desc ON export_logs(created_at DESC);
+
+--  permissions to read and read_write users
+GRANT SELECT ON export_logs TO read; -- for analytics or audit tools
+GRANT SELECT, INSERT, UPDATE ON export_logs TO read_write;
+GRANT USAGE, SELECT ON SEQUENCE export_logs_id_seq TO read_write;

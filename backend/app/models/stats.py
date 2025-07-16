@@ -86,7 +86,7 @@ class StatsTrackEventChannel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     channel_id: Mapped[int] = mapped_column(ForeignKey("channel.id"), nullable=False)
-    account_guid: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("stats_track_account_guid.account_guid"), nullable=True)
+    account_guid: Mapped[str] = mapped_column(UUID(as_uuid=False), ForeignKey("stats_track_account_guid.account_guid"), nullable=False)
     created_at: Mapped[DateTime] = mapped_column(DateTime, server_default=db.func.now())
 
     channel = relationship("Channel", back_populates="events")

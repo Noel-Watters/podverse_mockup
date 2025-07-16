@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from app.extensions import ValidationError
+from app.utils.error_exceptions import ValidationError
 from app.blueprints.feed.schemas import FeedSchema, FeedFlagStatusSchema, FeedLogSchema
 from app.models.feed import Feed, FeedFlagStatus, FeedLog
 

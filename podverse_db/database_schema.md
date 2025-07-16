@@ -47,10 +47,13 @@
 |-------|------|
 | id | SERIAL PRIMARY |
 | feed_id | INTEGER NOT |
-| last_http_status | INTEGER |
-| last_good_http_status_time | server_time |
-| last_finished_parse_time | server_time |
+| http_status | INTEGER |
+| is_success | BOOLEAN |
 | parse_errors | INTEGER DEFAULT |
+| parse_error_message | varchar_normal |
+| started_at | server_time |
+| finished_at | server_time |
+| parsed_by | varchar_normal |
 
 ---
 
@@ -120,6 +123,15 @@
 | id_text | short_id_v2 UNIQUE |
 | verified | BOOLEAN DEFAULT |
 | sharable_status_id | INTEGER NOT |
+
+---
+
+### **Table: `account_location`**
+| Field | Type |
+|-------|------|
+| id | SERIAL PRIMARY |
+| account_id | INTEGER NOT |
+| region | CHAR(2) |
 
 ---
 
@@ -200,6 +212,20 @@
 | month_current_count | INT NOT |
 | month_1_count | INT NOT |
 | all_time_count | INT NOT |
+
+### **Table: `export_logs`**
+| Field | Type |
+|-------|------|
+| id | SERIAL PRIMARY |
+| admin_email | varchar_normal NOT |
+| export_type | TEXT NOT |
+| filters | JSONB |
+| status | TEXT NOT |
+| file_path | TEXT |
+| created_at | server_time_with_default NOT |
+| completed_at | server_time |
+| error_message | TEXT |
+| format | TEXT NOT |
 
 ---
 
