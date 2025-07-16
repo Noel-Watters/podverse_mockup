@@ -30,3 +30,12 @@ export interface FeedFlagStatus {
   created_at: string;
   updated_at: string;
 }
+
+export interface FeedFilters {
+  feed_flag_status_id?: number;
+  parsing_priority?: number;
+  is_parsing?: boolean;
+  sort?: 'created_at' | 'updated_at' | 'parsing_priority' | 'feed_flag_status_id' | 'id';
+  order?: 'asc' | 'desc';
+  search?: string;
+}

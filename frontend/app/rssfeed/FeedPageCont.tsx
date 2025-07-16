@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchFeedLogs } from "@/redux/reparseSlice";
 import { fetchFeeds, resetFeeds } from "@/redux/feedSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
+import { setFilters } from "@/redux/feedSlice";
 
 export default function FeedsPageContent() {
   //const [feeds, setFeeds] = useState<Feed[]>([]);
@@ -22,6 +23,7 @@ export default function FeedsPageContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const { items: feeds, loading, error, offset, hasMore } = useSelector((state: RootState) => state.feeds);
+  const { filters } = useSelector((state: RootState) => state.feeds);
 
   const [notifies, setNotifies] = useState<
     {
@@ -44,7 +46,7 @@ useEffect(() => {
       hasMore &&
       !loading
     ) {
-      dispatch(fetchFeeds(offset));
+      dispatch(fetchFeeds());
     }
   };
   scrollContainer.addEventListener("scroll", onScroll);
@@ -53,9 +55,30 @@ useEffect(() => {
 
 useEffect(() => {
   dispatch(resetFeeds());
-  dispatch(fetchFeeds(0));
-}, [searchTerm, dispatch]);
+  dispatch(fetchFeeds());
+}, [searchTerm, filters, dispatch]);
 
+
+const handleSortChange = (sort: string) => {
+  dispatch(setFilters({ sort: sort as any }));
+};
+
+const handleOrderChange = (order: string) => {
+  dispatch(setFilters({ order: order as any }));
+};
+
+const handleFilterChange = (filterName: string, value: string) => {
+  let parsedValue: any = value;
+  if (filterName === "feed_flag_status_id" || filterName === "parsing_priority") {
+    parsedValue = value ? Number(value) : undefined;
+  }
+  if (filterName === "is_parsing") {
+    if (value === "true") parsedValue = true;
+    else if (value === "false") parsedValue = false;
+    else parsedValue = undefined;
+  }
+  dispatch(setFilters({ [filterName]: parsedValue }));
+};
 
 
 
@@ -112,7 +135,11 @@ const toggleExpand = (feedId: number) => {
 
       <div ref={scrollRef} className="overflow-y-auto h-[600px]">
         {/* Toolbar for bulk actions, add, sort, filter */}
-        <FeedToolBar  />
+        <FeedToolBar 
+          onSortChange={handleSortChange}
+          onOrderChange={handleOrderChange}
+          onFilterChange={handleFilterChange}
+        />
         <FeedTable
           feeds={filteredFeeds}
           expandedFeedId={expandedFeedId}
