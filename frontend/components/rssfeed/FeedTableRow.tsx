@@ -25,8 +25,12 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
   onNotify,
   checkbox,
 }) => (
-  <tr className="border-t border-podverse-border hover:bg-podverse-highlight transition">
-    <td>{checkbox}</td>
+  <tr 
+  onClick={onExpand}
+  style={{ cursor: "pointer" }} 
+  className={`border-t border-podverse-border hover:bg-podverse-highlight transition${expanded ? " bg-podverse-highlight" : ""}`}
+  >
+    <td onClick={e => e.stopPropagation()}>{checkbox}</td>
     <td className="px-4 py-2 font-medium">{feed.id}</td>
     <td className="px-4 py-2 truncate max-w-xs">{feed.url}</td>
     <td className="px-4 py-2">
@@ -38,14 +42,6 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
     </td>
     <td className="px-4 py-2 text-xs">
       {new Date(feed.updated_at ?? "").toLocaleString()}
-    </td>
-    <td className="px-4 py-2 text-sm">
-      <button
-        className="text-podverse-accent hover:underline text-xs"
-        onClick={onExpand}
-      >
-        {expanded ? "Hide Log" : "View Log"}
-      </button>
     </td>
     <td className="px-4 py-2">
       <ReparseFeed feedId={feed.id.toString()} onNotify={onNotify}>

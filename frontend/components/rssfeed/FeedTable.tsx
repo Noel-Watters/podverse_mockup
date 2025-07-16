@@ -11,8 +11,6 @@ interface FeedTableProps {
   feeds: Feed[];
   expandedFeedId: number | null;
   toggleExpand: (feedId: number) => void;
-  handleCopyLogs: (logs: FeedLog[]) => void;
-  handleDownloadLogs: (logs: FeedLog[], title: string) => void;
   onNotify: (n: {
     type: "success" | "error";
     message: string;
@@ -27,8 +25,6 @@ const FeedTable: React.FC<FeedTableProps> = ({
   feeds,
   expandedFeedId,
   toggleExpand,
-  handleCopyLogs,
-  handleDownloadLogs,
   onNotify,
   selectedFeeds,
   setSelectedFeeds
@@ -53,9 +49,11 @@ const FeedTable: React.FC<FeedTableProps> = ({
               type="checkbox"
               checked={feeds.length > 0 && selectedFeeds.length === feeds.length}
               onChange={e => setSelectedFeeds(e.target.checked ? feeds.map(f => f.id) : [])}
+              
+
             />
           </th>
-          {["ID", "URL", "Status", "Priority", "Created At", "Updated At", "Details", "Action"].map((header) => (
+          {["ID", "URL", "Status", "Priority", "Created At", "Updated At", "Action"].map((header) => (
             <th key={header} className="text-left px-4 py-2 font-semibold">
               {header}
             </th>
@@ -88,8 +86,6 @@ const FeedTable: React.FC<FeedTableProps> = ({
                   feed={{ ...feed, logs }} 
                   logLoading={logLoading}
                   logError={logError}
-                  handleCopyLogs={handleCopyLogs}
-                  handleDownloadLogs={handleDownloadLogs}
                 />
               )}
             </React.Fragment>

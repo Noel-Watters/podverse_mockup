@@ -6,16 +6,12 @@ interface FeedAuditLogRowProps {
   feed: Feed;
   logLoading: boolean;
   logError: string | null;
-  handleCopyLogs: (logs: FeedLog[]) => void;
-  handleDownloadLogs: (logs: FeedLog[], title: string) => void;
 }
 
 const FeedAuditLogRow: React.FC<FeedAuditLogRowProps> = ({
   feed,
   logLoading,
   logError,
-  handleCopyLogs,
-  handleDownloadLogs,
 }) => (
   <tr className="bg-podverse-surface">
     <td colSpan={8} className="px-6 py-3 border-t border-podverse-border">
@@ -62,20 +58,6 @@ const FeedAuditLogRow: React.FC<FeedAuditLogRowProps> = ({
           )}
         </div>
         <div className="space-x-2">
-          <button
-            className="text-xs bg-podverse-surface px-2 py-1 rounded hover:bg-podverse-highlight text-podverse-accent"
-            onClick={() => handleCopyLogs(feed.logs ?? [])}
-            disabled={!feed.logs || feed.logs.length === 0}
-          >
-            Copy Log
-          </button>
-          <button
-            className="text-xs bg-podverse-surface px-2 py-1 rounded hover:bg-podverse-highlight text-podverse-accent"
-            onClick={() => handleDownloadLogs(feed.logs ?? [], feed.id.toString())}
-            disabled={!feed.logs || feed.logs.length === 0}
-          >
-            Download Log
-          </button>
         </div>
       </div>
     </td>

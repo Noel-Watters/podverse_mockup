@@ -178,8 +178,6 @@ const toggleExpand = (feedId: number) => {
           feeds={filteredFeeds}
           expandedFeedId={expandedFeedId}
           toggleExpand={toggleExpand}
-          handleCopyLogs={handleCopyLogs}
-          handleDownloadLogs={handleDownloadLogs}
           onNotify={(n) =>
             setNotifies((prev) => [
               ...prev,
