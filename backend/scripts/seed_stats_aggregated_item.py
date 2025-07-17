@@ -25,28 +25,51 @@ def seed_stats_aggregated_item():
         aggregates = []
         for item in new_items:
             base = random.randint(20, 120)
-            week_base = base * 7
-            month_base = week_base * 4
+            day_1 = int(base * 0.95)
+            day_2 = int(base * 0.85)
+            day_3 = int(base * 0.75)
+            day_4 = int(base * 0.65)
+            day_5 = int(base * 0.55)
+            day_6 = int(base * 0.45)
+            day_7 = int(base * 0.35)
+            day_8 = int(base * 0.25)
+
+            # Week and Month Calcs
+            week_current = int(
+                base + day_1 + day_2 + day_3 + day_4 + day_5 + day_6 + day_7
+            )
+            week_1 = int(week_current * 0.6)
+            week_2 = int(week_current * 0.5)
+            week_3 = int(week_current * 0.4)
+            week_4 = int(week_current * 0.3)
+
+            month_current = int(
+                week_current + week_1 + week_2 + week_3
+            )
+
+            month_1 = int(
+                week_1 + week_2 + week_3 + week_4
+            )
 
             agg = StatsAggregatedItem(
                 item_id=item.id,
                 day_current_count=base,
-                day_1_count=int(base * 0.95),
-                day_2_count=int(base * 0.85),
-                day_3_count=int(base * 0.75),
-                day_4_count=int(base * 0.65),
-                day_5_count=int(base * 0.55),
-                day_6_count=int(base * 0.45),
-                day_7_count=int(base * 0.35),
-                day_8_count=int(base * 0.25),
-                week_current_count=week_base,
-                week_1_count=int(week_base * 0.9),
-                week_2_count=int(week_base * 0.8),
-                week_3_count=int(week_base * 0.7),
-                week_4_count=int(week_base * 0.6),
-                month_current_count=month_base,
-                month_1_count=int(month_base * 0.85),
-                all_time_count=month_base + random.randint(500, 2500)
+                day_1_count=day_1,
+                day_2_count=day_2,
+                day_3_count=day_3,
+                day_4_count=day_4,
+                day_5_count=day_5,
+                day_6_count=day_6,
+                day_7_count=day_7,
+                day_8_count=day_8,
+                week_current_count=week_current,
+                week_1_count=week_1,
+                week_2_count=week_2,
+                week_3_count=week_3,
+                week_4_count=week_4,
+                month_current_count=month_current,
+                month_1_count=month_1,
+                all_time_count=month_current + random.randint(200, 2000)
             )
             aggregates.append(agg)
 

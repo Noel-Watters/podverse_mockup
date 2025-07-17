@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import os
 from flask import redirect
 from app.utils.logger import get_logger
+from app.utils.migration_runner import run_sql_migrations
 
 load_dotenv() # loads .env from root
 
@@ -23,6 +24,8 @@ if __name__ == '__main__':
     try:
         logger.info("Starting Podverse backend application...")
         with app.app_context():
+            # Run Migrations before running create_all
+            run_sql_migrations()
             db.create_all()
             logger.info("Database tables created/verified successfully")
         logger.info("Starting Flask server on port 8000...")

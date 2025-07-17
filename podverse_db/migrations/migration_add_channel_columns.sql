@@ -35,10 +35,12 @@ ADD COLUMN IF NOT EXISTS has_value_time_splits BOOLEAN DEFAULT FALSE;
 -- Add foreign key constraint for medium_id if medium table exists
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'medium') THEN
-        ALTER TABLE channel 
-        ADD CONSTRAINT channel_medium_id_fkey 
-        FOREIGN KEY (medium_id) REFERENCES medium(id);
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'channel_medium_id_fkey'
+        ) THEN
+            ALTER TABLE channel 
+            ADD CONSTRAINT channel_medium_id_fkey FOREIGN KEY (medium_id) REFERENCES medium(id);
     END IF;
 END
 $$;
