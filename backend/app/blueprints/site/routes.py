@@ -1,4 +1,9 @@
-from flask import Blueprint, current_app, render_template_string, url_for
+# backend/app/blueprints/site/routes.py
+
+from flask import Blueprint, current_app, render_template, request, flash
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from app.extensions import db
 
 site_bp = Blueprint("site", __name__)
 
@@ -19,71 +24,28 @@ def site_home():
                 "url": rule.rule
             })
 
-    # Optional: Group routes by blueprint prefix
-    # grouped = defaultdict(list)
-    # for route in route_list:
-    #     prefix = route["url"].split("/")[2] if len(route["url"].split("/")) > 2 else "root"
-    #     grouped[prefix].append(route)
+    return render_template('sitemap.html', routes=sorted(route_list, key=lambda r: r["url"]))
 
-    html = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Admin Sitemap</title>
-        <style>
-            body {
-                background-color: #E5EAF2;
-                font-family: 'Inter', sans-serif;
-                color: #000000;
-                padding: 2rem;
-            }
-            h1 {
-                color: #741b47;
-                font-size: 2rem;
-                margin-bottom: 1rem;
-            }
-            ul {
-                list-style: none;
-                padding: 0;
-            }
-            li {
-                margin-bottom: 0.5rem;
-                background: #ffffff;
-                padding: 0.75rem 1rem;
-                border-left: 4px solid #0D7AB3;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                transition: background 0.2s ease;
-            }
-            li:hover {
-                background: #fae7b5;
-            }
-            a {
-                color: #0D7AB3;
-                text-decoration: none;
-                font-weight: 600;
-            }
-            a:hover {
-                text-decoration: underline;
-            }
-            .endpoint {
-                color: #A0A0A0;
-                font-size: 0.85rem;
-            }
-        </style>
-    </head>
-    <body>
-        <h1>Admin Sitemap</h1>
-        <ul>
-          {% for route in routes %}
-            <li>
-              <a href="{{ route.url }}">{{ route.url }}</a><br>
-              <span class="endpoint">(endpoint: {{ route.endpoint }})</span>
-            </li>
-          {% endfor %}
-        </ul>
-    </body>
-    </html>
-    """
+@site_bp.route('/sql-runner', methods=['GET', 'POST'])
+def sql_runner():
+    result = None
+    error = None
 
-    return render_template_string(html, routes=sorted(route_list, key=lambda r: r["url"]))
+    if request.method == 'POST':
+        sql_script = request.form.get('sql_script', '').strip()
+        if not sql_script:
+            flash('Please enter some SQL to execute.', 'warning')
+        else:
+            try:
+                with db.engine.begin() as conn:  
+                    res = conn.execute(text(sql_script))
+                    if res.returns_rows:
+                        rows = res.fetchall()
+                        columns = res.keys()
+                        result = [{'columns': columns, 'rows': rows, 'statement': sql_script}]
+                    else:
+                        result = [{'columns': [], 'rows': [], 'statement': sql_script, 'rowcount': res.rowcount}]
+            except SQLAlchemyError as e:
+                error = str(e)
+
+    return render_template('sql_runner.html', result=result, error=error)

@@ -28,6 +28,10 @@ class BaseConfig:
     AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
     API_AUDIENCE = os.getenv("API_AUDIENCE")
     ALGORITHMS = [os.getenv("ALGORITHMS", "RS256")]
+    
+    # Storage backend configuration
+    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local")  # or 's3'
+    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 
 
 class DevelopmentConfig(BaseConfig):

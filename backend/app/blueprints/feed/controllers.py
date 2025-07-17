@@ -1,5 +1,6 @@
 #app/blueprints/feed/controllers.py
 
+import os
 from flask import request, _request_ctx_stack, Response
 from app.blueprints.feed.services import (
     parse_and_update_feed,
@@ -17,6 +18,7 @@ from app.utils.request_logger import get_logger, log_database_operation
 from app.utils.export_response import generate_export_response
 from datetime import datetime
 from app.utils.export_logging import create_export_log_simple, finalize_export_log   
+from app.utils.file_system_helpers import ensure_export_directory
 import traceback
 
 logger = get_logger(__name__)
@@ -217,9 +219,17 @@ def export_single_feed_controller(feed_id: int) -> Response:
     Returns:
         Response: Flask response object with export file
     """
+    export_log = None
     try:
         logger.info(f"Exporting single feed: ID {feed_id}")
         log_database_operation(logger, "READ", "feeds", f"export_single_{feed_id}")
+
+        # create export log
+        export_log = create_export_log_simple(
+            export_type="feeds",
+            filters={"feed_id": feed_id},
+            export_by=get_current_auth0_id()
+        )
 
         feed = get_feed_by_id(feed_id)
         if not feed:
@@ -231,8 +241,18 @@ def export_single_feed_controller(feed_id: int) -> Response:
         # Generate filename
         filename = f"feed_{feed_id}_export_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
 
+        # get headers from schema
+        headers = {field: field for field in feed_export_schema.Meta.fields}
+        
+         # Create export response
+        response = generate_export_response(export_data, filename, headers)
+
+        # finalize export log with absolute file path
+        export_dir = ensure_export_directory()
+        absolute_file_path = os.path.abspath(os.path.join(export_dir, filename))
+        finalize_export_log(export_log.id, status="success", file_path=absolute_file_path, format=request.args.get("format", "csv"))
         logger.info(f"Generated single feed export file: {filename}")
-        return generate_export_response(export_data, filename)
+        return response
 
     except NotFoundError:
         raise
@@ -258,7 +278,7 @@ def bulk_export_feeds_controller() -> Response:
         sort_by, sort_order = get_sorting_params(request, ['id', 'url', 'updated_at'], default_field='id')
         search = get_search_query(request)
         format = request.args.get("format", "csv")
-        admin_email = request.args.get("admin_email", "system@podverse.com")
+        export_by = request.args.get("export_by", "system@podverse.com")
         feed_id = request.args.get("id", type=int)  # Add ID filter parameter
         podcast_index_id = request.args.get("podcast_index_id", type=int)  # Add podcast index ID filter parameter
         
@@ -269,10 +289,10 @@ def bulk_export_feeds_controller() -> Response:
         # create export log
         export_log = create_export_log_simple(
             export_type="feeds",
-            filters={"format": format, "admin_email": admin_email, "feed_id": feed_id, "podcast_index_id": podcast_index_id},
+            filters={"format": format, "export_by": export_by, "feed_id": feed_id, "podcast_index_id": podcast_index_id},
             status="pending",
             file_path=None,
-            export_by=admin_email
+            export_by=export_by
         )
 
         # Get feeds for export
@@ -284,11 +304,13 @@ def bulk_export_feeds_controller() -> Response:
         # Generate response
         response = generate_export_response(feeds, filename)
         
-        # Update export log with success
+        # Update export log with success and absolute file path
+        export_dir = ensure_export_directory()
+        absolute_file_path = os.path.abspath(os.path.join(export_dir, f"{filename}.{format}"))
         finalize_export_log(
             export_log.id,
             status="success",
-            file_path=f"/exports/{filename}.{format}",
+            file_path=absolute_file_path,
             format=format,
             feeds_count=len(feeds)
         )

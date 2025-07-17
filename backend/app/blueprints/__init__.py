@@ -12,9 +12,6 @@ from app.blueprints.item import item_bp
 from app.blueprints.stats import stats_bp
 from app.blueprints.site import site_bp
 
-# Utility/test blueprints
-from app.db_test import db_test_bp
-from app.sql_runner import sql_runner_bp
 
 def register_blueprints(app):
     # Top-level /admin blueprint
@@ -34,5 +31,3 @@ def register_blueprints(app):
 
     # Global routes (not under /admin)
     app.register_blueprint(health_bp)
-    app.register_blueprint(db_test_bp)
-    app.register_blueprint(sql_runner_bp)

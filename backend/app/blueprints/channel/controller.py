@@ -1,8 +1,7 @@
 # app/blueprints/channel/controller.py
 
-from typing import List, Optional, Dict, Any
+import os
 from flask import jsonify, request
-from sqlalchemy.orm import joinedload
 from app.blueprints.channel.services import get_channels_list, get_channel_detail, get_channels_for_export, get_channels_by_feed_ids
 from app.blueprints.channel.schemas import channels_schema, channel_exports_schema, channel_detail_schema
 from app.utils.query_params import get_pagination_params, get_sorting_params, get_search_query, get_multi_filter_param
@@ -11,6 +10,7 @@ from app.utils.request_logger import get_logger, log_database_operation
 from app.utils.export_response import generate_export_response
 from datetime import datetime
 from app.utils.export_logging import create_export_log_simple, finalize_export_log
+from app.services.data_export import ensure_export_directory
 
 logger = get_logger(__name__)
 
@@ -52,11 +52,6 @@ def export_channels():
     Reuses the same filtering logic as list_channels but without pagination.
     """
     try:
-        # # Get admin email from request args
-        # admin_email = request.args.get("admin_email")
-        # if not admin_email:
-        #     raise ValidationError("admin_email is required")
-        # Get admin email from request args (optional, defaults to system@podverse.com)
         export_by = request.args.get("export_by", "system@podverse.com")
 
         # Create export log
@@ -80,22 +75,24 @@ def export_channels():
         logger.info(f"Exporting channels - sort: {sort_by} {sort_order}, search: {search or 'none'}, max_rows: {max_rows}, id: {channel_id}, podcast_index_id: {podcast_index_id}")
         log_database_operation(logger, "READ", "channels", f"export_max_{max_rows}")
 
-        # Get channels for export
+        # Get and serialize channels
         channels = get_channels_for_export(search, sort_by, sort_order, max_rows, channel_id, podcast_index_id)
-        
-        # Serialize channels
         export_data = channel_exports_schema.dump(channels)
 
         # Generate filename with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename = f"channels_export_{timestamp}.csv"
         
-        # Create response
-        response = generate_export_response(export_data, filename)
+        # get headers from schema
+        headers = {field: field for field in channel_exports_schema.fields}
         
-        # finalize export log
-        finalize_export_log(log.id, status="success", file_path=f"/exports/{filename}", format=request.args.get("format", "csv")) # file name is set in generate_export_response
+        # Create export response
+        response = generate_export_response(export_data, filename, headers)
         
+        # finalize export log with absolute file path
+        export_dir = ensure_export_directory()
+        absolute_file_path = os.path.abspath(os.path.join(export_dir, filename))
+        finalize_export_log(log.id, status="success", file_path=absolute_file_path, format=request.args.get("format", "csv")) # file name is set in generate_export_response
         logger.info(f"Generated export file: {filename} with {len(export_data)} records")
         return response
 
