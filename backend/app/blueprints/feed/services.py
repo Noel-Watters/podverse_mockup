@@ -270,13 +270,13 @@ def parse_and_update_feed(feed_id: int):
     return parse_and_update_feed_object(feed)
         
 
-def get_all_feeds(page=1, limit=10, parsing_priority=None, is_parsing=None, status=None, feed_id=None, sort_by="id", sort_order="desc", search=None):
+def get_all_feeds(page=1, limit=10, parsing_priority=None, is_parsing=None, status=None, feed_id=None, podcast_index_id=None, sort_by="id", sort_order="desc", search=None):
     """
     Get all feeds with pagination and return structured response.
     
     This function supports:
     - Pagination with page and limit parameters
-    - Filtering by parsing priority, parsing status, feed status, and feed ID
+    - Filtering by parsing priority, parsing status, feed status, feed ID, and podcast index ID
     - Search functionality across feed ID, URL, channel title, and podcast index ID
     - Dynamic sorting with validation
     - Comprehensive error handling and logging
@@ -288,6 +288,7 @@ def get_all_feeds(page=1, limit=10, parsing_priority=None, is_parsing=None, stat
         is_parsing (bool, optional): Filter by parsing status
         status (str, optional): Filter by feed flag status
         feed_id (int, optional): Filter by specific feed ID
+        podcast_index_id (int, optional): Filter by podcast index ID
         sort_by (str): Field to sort by (default: "id")
         sort_order (str): Sort order - "asc" or "desc" (default: "desc")
         search (str, optional): Search term for ID, URL, title, or podcast_index_id
@@ -327,6 +328,16 @@ def get_all_feeds(page=1, limit=10, parsing_priority=None, is_parsing=None, stat
         if feed_id is not None:
             query = query.filter(Feed.id == feed_id)
             logger.info(f"Filtering feeds by ID: {feed_id}")
+            
+        if podcast_index_id is not None:
+            try:
+                podcast_index_int = int(podcast_index_id)
+                if podcast_index_int < 0:
+                    raise ValidationError("podcast_index_id must be non-negative")
+                query = query.filter(Channel.podcast_index_id == podcast_index_int)
+                logger.info(f"Filtering feeds by podcast_index_id: {podcast_index_int}")
+            except (ValueError, TypeError):
+                raise ValidationError("podcast_index_id must be a valid integer")
             
         if search:
             # Enhanced search: ID (exact), URL (exact), Channel title (partial), or podcast_index_id (exact)
@@ -435,7 +446,7 @@ def get_feed_logs(feed_id: int):
 
 #MARK: bulk endpoints
 
-def get_feeds_for_export(search=None, sort_by='id', sort_order='asc', max_rows=None, feed_id=None):
+def get_feeds_for_export(search=None, sort_by='id', sort_order='asc', max_rows=None, feed_id=None, podcast_index_id=None):
     """
     Retrieve feeds for export with optional search and sorting.
     
@@ -451,6 +462,7 @@ def get_feeds_for_export(search=None, sort_by='id', sort_order='asc', max_rows=N
         sort_order (str): Sort order (default: 'asc')
         max_rows (int, optional): Maximum number of rows to export (default: 10000)
         feed_id (int, optional): Optional feed ID to filter by
+        podcast_index_id (int, optional): Optional podcast index ID to filter by
         
     Returns:
         list: List of serialized feed dictionaries ready for export
@@ -468,6 +480,17 @@ def get_feeds_for_export(search=None, sort_by='id', sort_order='asc', max_rows=N
         if feed_id is not None:
             query = query.filter(Feed.id == feed_id)
             logger.info(f"Export query filtering by feed ID: {feed_id}")
+            
+        # Add podcast index ID filter if provided
+        if podcast_index_id is not None:
+            try:
+                podcast_index_int = int(podcast_index_id)
+                if podcast_index_int < 0:
+                    raise ValidationError("podcast_index_id must be non-negative")
+                query = query.filter(Channel.podcast_index_id == podcast_index_int)
+                logger.info(f"Export query filtering by podcast_index_id: {podcast_index_int}")
+            except (ValueError, TypeError):
+                raise ValidationError("podcast_index_id must be a valid integer")
              
         if search:
             # Enhanced search: ID (exact), URL (partial), Channel title (partial), or podcast_index_id (exact)

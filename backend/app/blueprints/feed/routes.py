@@ -106,6 +106,7 @@ def get_feeds():
         is_parsing (bool): Filter by parsing status
         status (str): Filter by feed flag status
         id (int): Filter by specific feed ID
+        podcast_index_id (int): Filter by podcast index ID
         
     Returns:
         JSON response with feeds data and pagination metadata
@@ -242,6 +243,7 @@ def bulk_export_feeds():
         sort_order (str): Sort order (asc, desc) (default: asc)
         search (str): Search term for filtering feeds
         id (int): Filter by specific feed ID
+        podcast_index_id (int): Filter by podcast index ID
         
     Returns:
         File response with export data

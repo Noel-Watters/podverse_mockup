@@ -81,7 +81,7 @@ const handleBulkReparse = async () => {
   setIsBulkReparseLoading(true);
   let failed: string[] = [];
   try {
-    await dispatch(bulkReparseFeeds(selectedFeeds.map(String))).unwrap();
+    await dispatch(bulkReparseFeeds(selectedFeeds.map(Number))).unwrap();
     await Promise.all(
       selectedFeeds.map(feedId => {
         dispatch(fetchFeedStatus(String(feedId)));

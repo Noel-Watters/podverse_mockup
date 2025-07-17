@@ -28,35 +28,37 @@ def channel_eagerload_options():
     )
     
 
-def get_channels_list(search, sort_by, sort_order, page, limit, channel_id=None):
+def get_channels_list(search, sort_by, sort_order, page, limit, channel_id=None, podcast_index_id=None):
     """
-    Retrieve a paginated list of channels with optional search and sorting.
+    Retrieve a paginated list of channels with optional search and filtering.
     Eager loads related feed, medium, categories, and stats.
     
+    Args:
+        search: Search term to filter by title only
+        sort_by: Field to sort by
+        sort_order: Sort order (asc/desc)
+        page: Page number for pagination
+        limit: Number of items per page
+        channel_id: Optional filter by specific channel ID
+        podcast_index_id: Optional filter by specific podcast index ID
     """
     try:
         query = db.session.query(Channel).options(*channel_eagerload_options())
         log_database_operation(logger, "READ", "channels", f"page_{page}_limit_{limit}")
         
+        # Apply dedicated filters
         if channel_id is not None:
             query = query.filter(Channel.id == channel_id)
             logger.info(f"Filtering channels by ID: {channel_id}")
         
+        if podcast_index_id is not None:
+            query = query.filter(Channel.podcast_index_id == podcast_index_id)
+            logger.info(f"Filtering channels by podcast_index_id: {podcast_index_id}")
+        
+        # Apply search filter (title only)
         if search:
-            # Try to parse as integer for ID and podcast_index_id search
-            try:
-                search_id = int(search)
-                query = query.filter(
-                    db.or_(
-                        Channel.id == search_id,
-                        Channel.podcast_index_id == search_id,
-                        Channel.title.ilike(f"%{search}%")
-                    )
-                )
-            except ValueError:
-                # If search is not a number, only search by title
-                query = query.filter(Channel.title.ilike(f"%{search}%"))
-            logger.info(f"Applying search filter for channels: {search}")
+            query = query.filter(Channel.title.ilike(f"%{search}%"))
+            logger.info(f"Applying search filter for channels title: {search}")
         
         query = apply_sorting(query, Channel, sort_by, sort_order)
         logger.info(f"Applying sort: {sort_by} {sort_order}")
@@ -71,9 +73,9 @@ def get_channels_list(search, sort_by, sort_order, page, limit, channel_id=None)
         raise DatabaseError(f"Failed to retrieve channels: {str(e)}")
 
 
-def get_channels_for_export(search=None, sort_by='id', sort_order='asc', max_rows=10000):
+def get_channels_for_export(search=None, sort_by='id', sort_order='asc', max_rows=10000, channel_id=None, podcast_index_id=None):
     """
-    Retrieve channels for export with optional search and sorting.
+    Retrieve channels for export with optional search and filtering.
     No pagination, but limited to max_rows for performance.
     Eager loads related feed, medium, categories, and stats.
     
@@ -82,6 +84,8 @@ def get_channels_for_export(search=None, sort_by='id', sort_order='asc', max_row
         sort_by: Field to sort by (default: 'id')
         sort_order: Sort order (default: 'asc')
         max_rows: Maximum number of rows to export (default: 10000)
+        channel_id: Optional filter by specific channel ID
+        podcast_index_id: Optional filter by specific podcast index ID
         
     Returns:
         List of Channel objects
@@ -90,6 +94,16 @@ def get_channels_for_export(search=None, sort_by='id', sort_order='asc', max_row
         query = db.session.query(Channel).options(*channel_eagerload_options())
         log_database_operation(logger, "READ", "channels", f"export_max_{max_rows}")
         
+        # Apply dedicated filters
+        if channel_id is not None:
+            query = query.filter(Channel.id == channel_id)
+            logger.info(f"Filtering export by channel ID: {channel_id}")
+        
+        if podcast_index_id is not None:
+            query = query.filter(Channel.podcast_index_id == podcast_index_id)
+            logger.info(f"Filtering export by podcast_index_id: {podcast_index_id}")
+        
+        # Apply search filter (title only)
         if search:
             query = query.filter(Channel.title.ilike(f"%{search}%"))
             logger.info(f"Applying search filter for export: {search}")
@@ -135,4 +149,47 @@ def get_channel_detail(channel_id):
     except Exception as e:
         logger.error(f"Error retrieving channel detail for ID {channel_id}: {str(e)}")
         raise DatabaseError(f"Failed to retrieve channel detail: {str(e)}")
+
+
+def get_channels_by_feed_ids(feed_ids, max_ids=100):
+    """
+    Retrieve channels by feed IDs with eager loading of related data.
+    
+    Args:
+        feed_ids: List of feed IDs to filter by
+        max_ids: Maximum number of feed IDs allowed per request (default: 100)
+        
+    Returns:
+        List of Channel objects matching the feed IDs
+    """
+    try:
+        # Validate input
+        if not feed_ids:
+            logger.info("No feed IDs provided, returning empty list")
+            return []
+        
+        if len(feed_ids) > max_ids:
+            logger.warning(f"Too many feed IDs requested: {len(feed_ids)}, limiting to {max_ids}")
+            feed_ids = feed_ids[:max_ids]
+        
+        log_database_operation(logger, "READ", "channels", f"by_feed_ids_{len(feed_ids)}")
+        
+        # Query channels with eager loading
+        channels = db.session.query(Channel).options(*channel_eagerload_options()).filter(
+            Channel.feed_id.in_(feed_ids)
+        ).all()
+        
+        logger.info(f"Retrieved {len(channels)} channels for {len(feed_ids)} feed IDs")
+        
+        # Log which feed IDs were found/not found for debugging
+        found_feed_ids = {channel.feed_id for channel in channels}
+        missing_feed_ids = set(feed_ids) - found_feed_ids
+        if missing_feed_ids:
+            logger.info(f"Feed IDs not found: {missing_feed_ids}")
+        
+        return channels
+        
+    except Exception as e:
+        logger.error(f"Error retrieving channels by feed IDs: {str(e)}")
+        raise DatabaseError(f"Failed to retrieve channels by feed IDs: {str(e)}")
     

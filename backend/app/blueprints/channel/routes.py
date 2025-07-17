@@ -2,7 +2,7 @@
 
 from flask import jsonify, g
 from . import channel_bp
-from app.blueprints.channel.controller import list_channels, get_channel_by_id, export_channels
+from app.blueprints.channel.controller import list_channels, get_channel_by_id, export_channels, get_channels_by_feed
 from app.utils.auth import requires_auth
 from app.utils.request_logger import get_logger, log_request, log_request_start, log_request_end
 from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
@@ -71,3 +71,20 @@ def get_single_channel(channel_id):
     except Exception as e:
         logger.error(f"Unexpected error in get_single_channel: {str(e)}")
         raise DatabaseError("Failed to retrieve channel")
+
+
+@channel_bp.route('/by-feed', methods=['GET'])
+@limiter.limit("30 per minute")
+#@requires_auth
+def get_channels_by_feed_route():
+    """Get channels by feed IDs"""
+    try:
+        log_request(logger, 'GET', '/channels/by-feed')
+        return get_channels_by_feed()
+        
+    except ValidationError as e:
+        logger.warning(f"Validation error in get_channels_by_feed_route: {str(e)}")
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in get_channels_by_feed_route: {str(e)}")
+        raise DatabaseError("Failed to retrieve channels by feed IDs")

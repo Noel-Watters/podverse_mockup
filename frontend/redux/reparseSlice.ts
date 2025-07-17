@@ -43,8 +43,8 @@ export const reparseFeed = createAsyncThunk(
 // Async thunk for bulk reparsing a feed
 export const bulkReparseFeeds = createAsyncThunk(
   'reparse/bulkReparseFeeds',
-  async (feedIds: string[]) => {
-    const response = await axios.post('/api/feed/bulk-reparse', {
+  async (feedIds: number[]) => {
+    const response = await axios.post('/api/feeds/bulk-reparse', {
       feed_ids: feedIds,
     });
     if (!response.data.success) throw new Error('Bulk reparse failed');

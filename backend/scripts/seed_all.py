@@ -9,6 +9,7 @@ from seed_user import seed_user
 from seed_feed_flag_status import seed_feed_flag_status
 from seed_feed import seed_feed
 from seed_channel import seed_channel
+from seed_channel_category import seed_channel_category
 from seed_item_flag_status import seed_item_flag_status
 from seed_item import seed_item
 from seed_sharable_status import seed_sharable_status
@@ -26,6 +27,7 @@ SEED_JOBS = [
     ("Feed Flag Status", seed_feed_flag_status),
     ("Feeds", seed_feed),
     ("Channels", seed_channel),
+    ("Channel Categories", seed_channel_category),
     ("Item Flag Status", seed_item_flag_status),
     ("Items", seed_item),
     ("Sharable Status", seed_sharable_status),
