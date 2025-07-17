@@ -38,6 +38,7 @@ const FeedTable: React.FC<FeedTableProps> = ({
   };
   // Get the entire reparse state once
   const reparse = useSelector((state: RootState) => state.reparse);
+  const channelsByFeedId = useSelector((state: RootState) => state.batchChannel.data);
 
   return (
     <table className="min-w-full bg-podverse-surface rounded shadow text-podverse-text text-sm">
@@ -65,19 +66,15 @@ const FeedTable: React.FC<FeedTableProps> = ({
           const logs = reparse[String(feed.id)]?.logs ?? [];
           const logLoading = reparse[String(feed.id)]?.loading ?? false;
           const logError = reparse[String(feed.id)]?.error ?? null;
+          const channels = channelsByFeedId[String(feed.id)] || [];
+          const channel = channels[0]
 
-          if (expandedFeedId === feed.id) {
-            console.log('FeedAuditLogRow props:', {
-              feed: { ...feed, logs },
-              logLoading,
-              logError
-            });
-          }
 
           return (
             <React.Fragment key={feed.id + '-' + idx}>
               <FeedTableRow
                 feed={feed}
+                channel={channel}
                 expanded={expandedFeedId === feed.id}
                 onExpand={() => toggleExpand(feed.id)}
                 onNotify={onNotify}
@@ -91,7 +88,8 @@ const FeedTable: React.FC<FeedTableProps> = ({
               />
               {expandedFeedId === feed.id && (
                 <FeedAuditLogRow
-                  feed={{ ...feed, logs }} 
+                  feed={{ ...feed, logs }}
+                  channel={channel} 
                   logLoading={logLoading}
                   logError={logError}
                 />

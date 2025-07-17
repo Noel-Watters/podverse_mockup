@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchFeedLogs, bulkReparseFeeds, fetchFeedStatus } from "@/redux/reparseSlice";
 import { fetchFeeds, resetFeeds, setFilters } from "@/redux/feedSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
+import { fetchChannelsByFeedIds } from "@/redux/batchChannelSlice";
 
 export default function FeedsPageContent() {
   const [isBulkReparseLoading, setIsBulkReparseLoading] = useState(false);
@@ -129,6 +130,12 @@ const toggleExpand = (feedId: number) => {
 
   // Filtering is done client-side after all loaded feeds
   const filteredFeeds = feeds.filter(feed => feed.url.toLowerCase().includes(searchTerm.toLowerCase()));
+
+  useEffect(() => {
+    if (feeds.length > 0) {
+      dispatch(fetchChannelsByFeedIds(feeds.map(f => f.id)));
+    }
+  }, [feeds, dispatch]);
 
 
 

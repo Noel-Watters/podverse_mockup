@@ -1,13 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 
 import reparseReducer from './reparseSlice';
-import channelReducer from './channelslice';
+import batchChannelReducer from './batchChannelSlice';
 import feedsReducer from './feedSlice';
 
 export const store = configureStore({
   reducer: {
     reparse: reparseReducer,
-    channel: channelReducer,
+    batchChannel: batchChannelReducer,
     feeds: feedsReducer,
   },
 });

@@ -12,15 +12,15 @@ export interface Channel {
     has_podcast_idex_value: boolean;
     has_value_time_splits: boolean
     category: Category[];
-    medium: Medium[];
+    medium: Medium;
 }
 
 export interface Category {
     id: number;
-    parent_id?: number;
     display_name: string;
-    slug: string;
     mapping_key: string;
+    parent_id?: number;
+    slug: string;
 }
 
 export interface Medium {

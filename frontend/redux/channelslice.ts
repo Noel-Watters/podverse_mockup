@@ -1,53 +1,51 @@
-
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
-import { Channel } from '@/types/channel'; 
+import { Channel } from '@/types/channel';
 
-
-// State for all channels, keyed by feedId
-interface ChannelState {
-  data: { [feedId: string]: Channel | undefined };
-  loading: { [feedId: string]: boolean };
-  error: { [feedId: string]: string | null };
+// State for a single channel, keyed by channelId
+interface SingleChannelState {
+  data: { [channelId: string]: Channel | undefined };
+  loading: { [channelId: string]: boolean };
+  error: { [channelId: string]: string | null };
 }
 
-const initialState: ChannelState = {
+const initialState: SingleChannelState = {
   data: {},
   loading: {},
   error: {},
 };
 
-// Async thunk to fetch channel info by feedId
-export const fetchChannelByFeedId = createAsyncThunk(
-  'channel/fetchChannelByFeedId',
-  async (feedId: string) => {
-    const response = await axios.get(`/api/channels/${feedId}`);
-    return { feedId, channel: response.data };
+// Async thunk to fetch a channel by channelId
+export const fetchChannelById = createAsyncThunk(
+  'channel/fetchChannelById',
+  async (channelId: string | number) => {
+    const response = await axios.get(`/api/channels/${channelId}`);
+    return { channelId, channel: response.data };
   }
 );
 
-const channelSlice = createSlice({
-  name: 'channel',
+const singleChannelSlice = createSlice({
+  name: 'singleChannel',
   initialState,
   reducers: {},
   extraReducers: builder => {
     builder
-      .addCase(fetchChannelByFeedId.pending, (state, action) => {
-        state.loading[action.meta.arg] = true;
-        state.error[action.meta.arg] = null;
+      .addCase(fetchChannelById.pending, (state, action) => {
+        state.loading[String(action.meta.arg)] = true;
+        state.error[String(action.meta.arg)] = null;
       })
-      .addCase(fetchChannelByFeedId.fulfilled, (state, action) => {
-        const { feedId, channel } = action.payload;
-        state.data[feedId] = channel;
-        state.loading[feedId] = false;
-        state.error[feedId] = null;
+      .addCase(fetchChannelById.fulfilled, (state, action) => {
+        const { channelId, channel } = action.payload;
+        state.data[String(channelId)] = channel;
+        state.loading[String(channelId)] = false;
+        state.error[String(channelId)] = null;
       })
-      .addCase(fetchChannelByFeedId.rejected, (state, action) => {
-        const feedId = action.meta.arg;
-        state.loading[feedId] = false;
-        state.error[feedId] = action.error.message || 'Failed to fetch channel';
+      .addCase(fetchChannelById.rejected, (state, action) => {
+        const channelId = String(action.meta.arg);
+        state.loading[channelId] = false;
+        state.error[channelId] = action.error.message || 'Failed to fetch channel';
       });
   },
 });
 
-export default channelSlice.reducer;
+export default singleChannelSlice.reducer;

@@ -1,16 +1,18 @@
 "use client";
 import React from "react";
-import { Feed, FeedLog } from "@/types/feed";
-import { log } from "console";
+import { Feed } from "@/types/feed";
+import { Channel } from "@/types/channel";
 
 interface FeedAuditLogRowProps {
   feed: Feed;
+  channel: Channel;
   logLoading: boolean;
   logError: string | null;
 }
 
 const FeedAuditLogRow: React.FC<FeedAuditLogRowProps> = ({
   feed,
+  channel,
   logLoading,
   logError,
 }) => (

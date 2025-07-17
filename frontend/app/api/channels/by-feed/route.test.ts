@@ -27,7 +27,7 @@ describe('/api/channels/[feed_id] API Route', () => {
 
   it('GET returns a channel by ID', async () => {
     const req = {} as NextRequest;
-    const res = await GET(req, mockParams);
+    const res = await GET(req);
     const json = await res.json();
     expect(res.status).toBe(200);
     expect(json).toHaveProperty('id', 1);
