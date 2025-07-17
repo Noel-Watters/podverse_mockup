@@ -36,20 +36,24 @@ export default function FeedsPageContent() {
   >([]);
 
 
-const handleScroll = (e: { currentTarget: HTMLDivElement | null }) => {
-  if (!e.currentTarget) return;
-  const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-  console.log('scroll', scrollTop, clientHeight, scrollHeight);
-  console.log('scroll', scrollTop, clientHeight, scrollHeight, 'hasMore:', hasMore, 'loading:', loading, 'offset:', offset);
-  if (scrollTop + clientHeight >= scrollHeight - 20 && hasMore && !loading) {
+
+// Infinite scroll handler for feeds container
+const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const target = e.currentTarget;
+  if (!target) return;
+  const { scrollTop, scrollHeight, clientHeight } = target;
+  // If near bottom, not loading, and more feeds available, fetch next page
+  if (scrollTop + clientHeight >= scrollHeight - 40 && hasMore && !loading) {
     dispatch(fetchFeeds());
   }
 };
 
+
+// Reset feeds and fetch first page when filters/search change
 useEffect(() => {
   dispatch(resetFeeds());
   dispatch(fetchFeeds());
-}, [searchTerm, filters]);
+}, [searchTerm, filters, dispatch]);
 
 
 const handleSortChange = (sort: string) => {
@@ -122,64 +126,72 @@ const toggleExpand = (feedId: number) => {
 };
 
 
+
+  // Filtering is done client-side after all loaded feeds
   const filteredFeeds = feeds.filter(feed => feed.url.toLowerCase().includes(searchTerm.toLowerCase()));
 
-useEffect(() => {
-  console.log('feeds length:', feeds.length, 'filteredFeeds length:', filteredFeeds.length);
-}, [feeds, filteredFeeds]);
+
 
   return (
     <AdminLayout
       searchValue={searchTerm}
       onSearchChange={(e) => setSearchTerm(e.target.value)}
     >
-      <div ref={scrollContainerRef} onScroll={handleScroll} className = "overflow-y-auto h-[80vh] p-4">
-  <div className="p-4">
-        <button className="text-black"onClick={() => handleScroll({ currentTarget: scrollContainerRef.current })}>
-  Test Scroll Trigger
-</button>
-</div>
-      {notifies.map((notify) => (
-        <ReparseNotify
-          key={notify.id}
-          type={notify.type}
-          message={notify.message}
-          duration={notify.duration}
-          details={notify.details}
-          onClose={() => setNotifies(notifies.filter(n => n.id !== notify.id))}
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="overflow-y-auto h-[80vh] p-4"
+        style={{ position: "relative" }}
+      >
+        {/* Notifications */}
+        {notifies.map((notify) => (
+          <ReparseNotify
+            key={notify.id}
+            type={notify.type}
+            message={notify.message}
+            duration={notify.duration}
+            details={notify.details}
+            onClose={() => setNotifies(notifies.filter(n => n.id !== notify.id))}
+          />
+        ))}
+
+        <AddRssFeedModal open={modalOpen} onClose={() => setModalOpen(false)} />
+
+        {error && (
+          <div className="text-red-500 font-semibold mb-4">{error}</div>
+        )}
+
+        {/* Toolbar for bulk actions, add, sort, filter */}
+        <FeedToolBar
+          onSortChange={handleSortChange}
+          onOrderChange={handleOrderChange}
+          onFilterChange={handleFilterChange}
+          selectedFeeds={selectedFeeds}
+          onBulkReparse={handleBulkReparse}
+          onBulkUpdateStatus={handleBulkUpdateStatus}
+          isBulkReparseLoading={isBulkReparseLoading}
         />
-      ))}
+        <FeedTable
+          feeds={filteredFeeds}
+          expandedFeedId={expandedFeedId}
+          toggleExpand={toggleExpand}
+          onNotify={(n) =>
+            setNotifies((prev) => [
+              ...prev,
+              { ...n, id: crypto.randomUUID() },
+            ])
+          }
+          selectedFeeds={selectedFeeds}
+          setSelectedFeeds={setSelectedFeeds}
+        />
 
-      <AddRssFeedModal open={modalOpen} onClose={() => setModalOpen(false)} />
-
-      {error && (
-        <div className="text-red-500 font-semibold mb-4">{error}</div>
-      )}
-
-      {/* Toolbar for bulk actions, add, sort, filter */}
-      <FeedToolBar 
-        onSortChange={handleSortChange}
-        onOrderChange={handleOrderChange}
-        onFilterChange={handleFilterChange}
-        selectedFeeds={selectedFeeds}
-        onBulkReparse={handleBulkReparse}
-        onBulkUpdateStatus={handleBulkUpdateStatus}
-        isBulkReparseLoading={isBulkReparseLoading}
-      />
-      <FeedTable
-        feeds={filteredFeeds}
-        expandedFeedId={expandedFeedId}
-        toggleExpand={toggleExpand}
-        onNotify={(n) =>
-          setNotifies((prev) => [
-            ...prev,
-            { ...n, id: crypto.randomUUID() },
-          ])
-        }
-        selectedFeeds={selectedFeeds}
-        setSelectedFeeds={setSelectedFeeds}
-      />
-
+        {/* Infinite scroll loader indicator */}
+        {loading && (
+          <div className="text-center py-4 text-podverse-muted">Loading more feeds...</div>
+        )}
+        {!hasMore && (
+          <div className="text-center py-4 text-podverse-muted">No more feeds to load.</div>
+        )}
       </div>
     </AdminLayout>
   );
