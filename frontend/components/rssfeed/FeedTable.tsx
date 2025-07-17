@@ -66,6 +66,14 @@ const FeedTable: React.FC<FeedTableProps> = ({
           const logLoading = reparse[String(feed.id)]?.loading ?? false;
           const logError = reparse[String(feed.id)]?.error ?? null;
 
+          if (expandedFeedId === feed.id) {
+            console.log('FeedAuditLogRow props:', {
+              feed: { ...feed, logs },
+              logLoading,
+              logError
+            });
+          }
+
           return (
             <React.Fragment key={feed.id + '-' + idx}>
               <FeedTableRow

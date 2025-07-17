@@ -46,11 +46,13 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
     <td className="px-4 py-2">
       <ReparseFeed feedId={feed.id.toString()} onNotify={onNotify}>
         {({ onReparse, loading, status }) => (
+          <span onClick = {e => e.stopPropagation()}>
           <ReparseButton
             onClick={onReparse}
             loading={loading}
             status={status}
           />
+          </span>
         )}
       </ReparseFeed>
     </td>

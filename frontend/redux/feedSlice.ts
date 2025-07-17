@@ -64,30 +64,18 @@ export const fetchFeeds = createAsyncThunk<
     const { offset, limit, filters } = getState().feeds;
     const queryString = buildQueryParams(filters, offset, limit);
     // Debug logging for frontend request
-    console.log('[FEEDS] Fetching feeds with:', {
-      offset,
-      limit,
-      filters,
-      queryString
-    });
     try {
       const response = await axios.get(`/api/feeds?${queryString}`);
       // Debug logging for backend response
-      console.log('[FEEDS] Backend response:', {
-        data: response.data,
-        meta: response.data?.meta
-      });
       // Handle both array and object response shapes
       let feeds, meta;
       if (Array.isArray(response.data)) {
         feeds = response.data;
         meta = undefined;
-        console.warn('[FEEDS] Backend returned array, not object:', response.data);
       } else {
         feeds = response.data.data;
         meta = response.data.meta;
         if (!Array.isArray(feeds) || typeof meta !== 'object') {
-          console.warn('[FEEDS] Unexpected backend response structure:', response.data);
         }
       }
       return { data: feeds, meta };

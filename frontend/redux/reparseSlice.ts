@@ -71,9 +71,9 @@ export const fetchFeedStatus = createAsyncThunk(
 export const fetchFeedLogs = createAsyncThunk(
   'reparse/fetchFeedLogs',
   async (feedId: string) => {
-    const response = await axios.get(`/api/feeds/${feedId}`);
+    const response = await axios.get(`/api/feeds/${feedId}/logs`);
     // Adjust this if your logs are under a different key
-    return { feedId, logs: response.data.recent_logs || [] };
+    return { feedId, logs: response.data.logs || [] };
   }
 );
 
@@ -170,9 +170,10 @@ const reparseSlice = createSlice({
       })
       // Fetch logs for a specific feed
       .addCase(fetchFeedLogs.fulfilled, (state, action) => {
-         const { feedId, logs } = action.payload;
+        const { feedId, logs } = action.payload;
         if (!state[feedId]) state[feedId] = { status: 'idle', loading: false, error: null, success: false, logs: [] };
         state[feedId].logs = logs;
+        console.log('Redux logs updated for feed', feedId, logs);
       })
       // Bulk reparse state handling
       .addCase(bulkReparseFeeds.pending, (state, action) => {

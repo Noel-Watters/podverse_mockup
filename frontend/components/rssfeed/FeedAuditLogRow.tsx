@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { Feed, FeedLog } from "@/types/feed";
+import { log } from "console";
 
 interface FeedAuditLogRowProps {
   feed: Feed;
@@ -19,14 +20,10 @@ const FeedAuditLogRow: React.FC<FeedAuditLogRowProps> = ({
         <h3 className="font-semibold text-sm text-podverse-text mb-2">
           Audit Log
         </h3>
-        <div className="flex flex-col gap-2 mb-4 max-h-60 overflow-y-auto bg-gray-50 rounded p-2">
+                <div className="flex flex-col gap-2 mb-4 max-h-60 overflow-y-auto bg-gray-50 rounded p-2">
           {logLoading ? (
             <div className="text-podverse-muted">Loading logs...</div>
-          ) : logError ? (
-            <div className="text-red-500">{logError}</div>
-          ) : !feed.logs || feed.logs.length === 0 ? (
-            <div className="text-podverse-muted">No logs available</div>
-          ) : (
+          ) : feed.logs && feed.logs.length > 0 ? (
             feed.logs.map((log, i) => (
               <div key={i} className="text-xs border-b border-gray-200 py-2">
                 <div>
@@ -55,10 +52,13 @@ const FeedAuditLogRow: React.FC<FeedAuditLogRowProps> = ({
                 </div>
               </div>
             ))
+          ) : logError ? (
+            <div className="text-red-500">{logError}</div>
+          ) : (
+            <div className="text-podverse-muted">No logs available</div>
           )}
         </div>
-        <div className="space-x-2">
-        </div>
+     
       </div>
     </td>
   </tr>
