@@ -3,8 +3,6 @@ import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { Feed, FeedFilters } from '@/types/feed'; 
 
-
-
 interface FeedState {
   items: Feed[];
   offset: number;
@@ -21,7 +19,7 @@ const initialState: FeedState = {
   limit: 50,
   loading: false,
   filters: {
-    feed_flag_status_id: undefined,
+    status: "",
     parsing_priority: undefined,
     is_parsing: undefined,
     sort: 'id', // Only allow: 'id', 'url', 'updated_at'
@@ -34,12 +32,10 @@ const initialState: FeedState = {
 const buildQueryParams = (filters: FeedFilters, offset: number, limit: number) => {
   const params = new URLSearchParams();
 
-  if (filters.feed_flag_status_id !== undefined)
-    params.append('feed_flag_status_id', filters.feed_flag_status_id.toString());
-
+  if (filters.status !== undefined && filters.status !== "")
+    params.append('status', filters.status);
   if (filters.parsing_priority !== undefined)
     params.append('parsing_priority', filters.parsing_priority.toString());
-
   if (filters.is_parsing !== undefined)
     params.append('is_parsing', filters.is_parsing.toString());
 
@@ -48,7 +44,7 @@ const buildQueryParams = (filters: FeedFilters, offset: number, limit: number) =
   const sortField = allowedSorts.includes(filters.sort ?? '') ? (filters.sort ?? 'id') : 'id';
   params.append('sort_by', sortField);
   params.append('sort_order', filters.order ?? 'desc');
-
+  //panigation params
   params.append('limit', limit.toString());
   params.append('offset', offset.toString());
 

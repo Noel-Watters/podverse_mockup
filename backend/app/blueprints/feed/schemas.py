@@ -50,7 +50,7 @@ class BaseFeedSchema(ma.SQLAlchemyAutoSchema):
     flag_status = ma.Method("get_flag_status")
     channel_title = ma.Method("get_channel_title")
     channel_podcast_index_id = ma.Method("get_channel_podcast_index_id")
-    parsing_priority = ma.Method("suggest_priority_for_feed")
+    parsing_priority = ma.Integer(attribute="parsing_priority")
 
     class Meta:
         model = Feed

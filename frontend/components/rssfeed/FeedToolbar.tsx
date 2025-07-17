@@ -77,14 +77,19 @@ const exportFeeds = async () => {
           <ArrowsUpDownIcon className="h-5 w-5 absolute right-2 top-2 text-black pointer-events-none" />
         </div>
           <div className="relative">
-          <select onChange={e => onFilterChange('feed_flag_status_id', e.target.value)}
+          <select onChange={e => onFilterChange('status', e.target.value)}
             className="border border-black rounded-md px-4 py-2 text-base text-black bg-white focus:outline-none min-w-[120px]"
             defaultValue=""
           >
             <option value="">All Statuses</option>
-            <option value="1">Flagged</option>
-            <option value="2">Unflagged</option>
-            <option value="3">Disabled</option>
+            <option value="active">Active </option>
+            <option value="always-parse">always-parse</option>
+            <option value="spam">spam</option>
+            <option value="pending-archive">pending-archive</option>
+            <option value="archived">archived</option>
+            <option value="takedown">takedown</option>
+            <option value="parse_error">parse_error</option>
+            <option value="fetch_error">fetch_error</option>
           </select>
           <FunnelIcon className="h-5 w-5 absolute right-2 top-2 text-black pointer-events-none" />
         </div>
@@ -94,9 +99,11 @@ const exportFeeds = async () => {
             defaultValue=""
           >
             <option value="">All Priorities</option>
-            <option value="1">High</option>
-            <option value="2">Medium</option>
-            <option value="3">Low</option>
+            <option value="1">Very Low</option>
+            <option value="2">Low</option>
+            <option value="3">Medium</option>
+            <option value="4">High</option>
+            <option value="5">Very High</option>
           </select>
           <FunnelIcon className="h-5 w-5 absolute right-2 top-2 text-black pointer-events-none" />
         </div>

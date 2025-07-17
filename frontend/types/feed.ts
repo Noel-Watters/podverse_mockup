@@ -13,7 +13,7 @@ export interface FeedLog {
 
 export interface Feed {
   id: number;
-  feed_flag_status_id: number;
+  flag_status: string;
   url: string;
   last_parsed_file_hash?: string;
   parsing_priority?: number;
@@ -32,10 +32,10 @@ export interface FeedFlagStatus {
 }
 
 export interface FeedFilters {
-  feed_flag_status_id?: number;
+  status: string;
   parsing_priority?: number;
   is_parsing?: boolean;
-  sort?: 'created_at' | 'updated_at' | 'parsing_priority' | 'feed_flag_status_id' | 'id';
+  sort?: 'created_at' | 'updated_at' | 'parsing_priority' | 'status' | 'id';
   order?: 'asc' | 'desc';
   search?: string;
 }

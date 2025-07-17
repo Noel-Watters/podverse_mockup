@@ -33,7 +33,7 @@ export default function DashboardPage() {
   // Show only most recent flagged or error feeds
   const handleRecentFlagged = (feeds: Feed[]) => {
     return feeds
-      .filter(feed => feed.feed_flag_status_id === 2 || feed.feed_flag_status_id === 3)
+      .filter(feed => feed.flag_status === "parse_error" || feed.flag_status === "fetch_error")
       .sort((a, b) => new Date(b.updated_at ?? "").getTime() - new Date(a.updated_at ?? "").getTime())
       .slice(0, 6);
   };
@@ -68,8 +68,8 @@ const handleSearch = () => {
 
   // --- Stats calculations ---
   const totalFeeds = feeds.length;
-  const flaggedFeeds = feeds.filter(f => f.feed_flag_status_id === 2 || f.feed_flag_status_id === 3).length;
-  const healthyFeeds = feeds.filter(f => f.feed_flag_status_id !== 2 && f.feed_flag_status_id !== 3).length;
+  const flaggedFeeds = feeds.filter(f => f.flag_status === "parse_error" || f.flag_status === "fetch_error").length;
+  const healthyFeeds = feeds.filter(f => f.flag_status !== "parse_error" && f.flag_status !== "fetch_error").length;
   const flaggedPercent = totalFeeds > 0 ? Math.round((flaggedFeeds / totalFeeds) * 100) : 0;
 
   return (
@@ -102,7 +102,7 @@ const handleSearch = () => {
                   className={`flex justify-between items-center p-3 rounded mb-3 cursor-pointer ${
                     feed.id === selectedFeedId
                       ? "bg-blue-100 border border-blue-400"
-                      : feed.feed_flag_status_id === 2
+                      : feed.flag_status === "parse_error"
                       ? "bg-yellow-100"
                       : "bg-red-100"
                   }`}
@@ -116,13 +116,13 @@ const handleSearch = () => {
                     <span
                       className={`flex items-center justify-center w-24 px-0 py-1 rounded-full shadow-md text-sm font-semibold select-none
                         ${
-                          feed.feed_flag_status_id === 2
+                          feed.flag_status === "parse_error"
                             ? "bg-yellow-400 text-yellow-900"
                             : "bg-red-500 text-white"
                         }
                       `}
                     >
-                      {feed.feed_flag_status_id === 2 ? "Flagged" : "Error"}
+                      {feed.flag_status === "parse_error" ? "Flagged" : "Error"}
                     </span>
                     {/* Reparse button with Heroicon */}
                     <button
