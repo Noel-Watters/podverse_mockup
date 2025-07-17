@@ -1,30 +1,29 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Feed, FeedLog } from "@/types/feed";
 import AdminLayout from "@/layouts/AdminLayout";
-import { useSearchParams } from "next/navigation";
 import AddRssFeedModal from "@/components/AddRssFeedModal";
 import FeedTable from "@/components/rssfeed/FeedTable";
 import ReparseNotify from "@/components/reparsefeed/ReparseNotify";
 import FeedToolBar from "@/components/rssfeed/FeedToolbar";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchFeedLogs, bulkReparseFeeds, fetchFeedStatus } from "@/redux/reparseSlice";
-import { fetchFeeds, resetFeeds, setFilters } from "@/redux/feedSlice";
+import { fetchFeeds, resetFeeds, setFilters, setSearchTerm } from "@/redux/feedSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { fetchChannelsByFeedIds } from "@/redux/batchChannelSlice";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export default function FeedsPageContent() {
+  const dispatch = useDispatch<AppDispatch>();
   const [isBulkReparseLoading, setIsBulkReparseLoading] = useState(false);
   const [expandedFeedId, setExpandedFeedId] = useState<number | null>(null);
   const [selectedFeeds, setSelectedFeeds] = useState<number[]>([]);
-  const searchParams = useSearchParams();
-  const initialSearch = searchParams.get("search") || "";
-  const [searchTerm, setSearchTerm] = useState<string>(initialSearch);
   const [modalOpen, setModalOpen] = useState(false);
-  const dispatch = useDispatch<AppDispatch>();
   const { items: feeds, loading, error, offset, hasMore } = useSelector((state: RootState) => state.feeds);
   const { filters } = useSelector((state: RootState) => state.feeds);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const searchTerm = useSelector((state: RootState) => state.feeds.searchTerm);
+  const [inputValue, setInputValue] = useState(searchTerm);
+  const debouncedSearch = useDebounce(inputValue, 300);
 
   const [notifies, setNotifies] = useState<
     {
@@ -50,11 +49,20 @@ const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
 };
 
 
-// Reset feeds and fetch first page when filters/search change
+
+// Only initialize inputValue from Redux on mount
 useEffect(() => {
+  setInputValue(searchTerm);
+}, []);
+
+
+// Debounce inputValue and update Redux searchTerm, then fetch feeds
+useEffect(() => {
+  dispatch(setSearchTerm(debouncedSearch));
   dispatch(resetFeeds());
   dispatch(fetchFeeds());
-}, [searchTerm, filters, dispatch]);
+  console.log('[DEBUG] Search triggered:', debouncedSearch);
+}, [debouncedSearch, dispatch, filters]);
 
 
 const handleSortChange = (sort: string) => {
@@ -128,9 +136,6 @@ const toggleExpand = (feedId: number) => {
 
 
 
-  // Filtering is done client-side after all loaded feeds
-  const filteredFeeds = feeds.filter(feed => feed.url.toLowerCase().includes(searchTerm.toLowerCase()));
-
   useEffect(() => {
     if (feeds.length > 0) {
       dispatch(fetchChannelsByFeedIds(feeds.map(f => f.id)));
@@ -141,8 +146,8 @@ const toggleExpand = (feedId: number) => {
 
   return (
     <AdminLayout
-      searchValue={searchTerm}
-      onSearchChange={(e) => setSearchTerm(e.target.value)}
+      searchValue={inputValue}
+      onSearchChange={(e) => setInputValue(e.target.value)}
     >
       <div
         ref={scrollContainerRef}
@@ -179,7 +184,7 @@ const toggleExpand = (feedId: number) => {
           isBulkReparseLoading={isBulkReparseLoading}
         />
         <FeedTable
-          feeds={filteredFeeds}
+          feeds={feeds}
           expandedFeedId={expandedFeedId}
           toggleExpand={toggleExpand}
           onNotify={(n) =>

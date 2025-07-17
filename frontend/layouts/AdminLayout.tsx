@@ -4,6 +4,9 @@ import React, { ReactNode} from "react";
 import {useRouter} from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
+
 
 
 type Props = {
@@ -15,13 +18,16 @@ type Props = {
 
 export default function AdminLayout({ children, searchValue, onSearchChange, onSearchSubmit }: Props) {
   const router = useRouter();
+  const searchTerm = useSelector((state: RootState) => state.feeds.searchTerm);
+
 
   // Logout handler 
   const handleLogout = () => {
     router.push("/auth/logout");
-
-
   };
+
+
+
   return (
     <div className="flex h-screen bg-podverse-background text-white">
       <Sidebar />

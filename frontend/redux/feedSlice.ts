@@ -11,6 +11,7 @@ interface FeedState {
   filters: FeedFilters;
   hasMore: boolean;
   error?: string;
+  searchTerm:string;
 }
 
 const initialState: FeedState = {
@@ -26,11 +27,19 @@ const initialState: FeedState = {
     order: 'desc'
   },
   hasMore: true,
+  searchTerm: "",
 };
 
+
+
 // Helper to build query params from filters and pagination
-const buildQueryParams = (filters: FeedFilters, offset: number, limit: number) => {
+const buildQueryParams = (filters: FeedFilters, offset: number, limit: number, searchTerm: string) => {
   const params = new URLSearchParams();
+
+  if (searchTerm && searchTerm.trim() !== "") {
+    params.append('search', searchTerm.trim());
+  }
+
 
   //Add Filters
   if (filters.status !== undefined && filters.status !== "")
@@ -61,8 +70,8 @@ export const fetchFeeds = createAsyncThunk<
 >(
   'feeds/fetchFeeds',
   async (_, { getState, rejectWithValue }) => {
-    const { offset, limit, filters } = getState().feeds;
-    const queryString = buildQueryParams(filters, offset, limit);
+    const { offset, limit, filters, searchTerm } = getState().feeds;
+    const queryString = buildQueryParams(filters, offset, limit, searchTerm);
     // Debug logging for frontend request
     try {
       const response = await axios.get(`/api/feeds?${queryString}`);
@@ -102,6 +111,9 @@ const feedsSlice = createSlice({
         state.items = []; 
         state.hasMore = true; 
     },
+      setSearchTerm(state, action: PayloadAction<string>) {
+      state.searchTerm = action.payload;
+    }
   },
   extraReducers: builder => {
     builder
@@ -152,5 +164,5 @@ const feedsSlice = createSlice({
   },
 });
 
-export const { resetFeeds, setFilters } = feedsSlice.actions;
+export const { resetFeeds, setFilters, setSearchTerm } = feedsSlice.actions;
 export default feedsSlice.reducer;
