@@ -1,7 +1,7 @@
 // frontend/app/layout.tsx
-
 import '../styles/globals.css';
 import { ReactNode } from "react";
+import ClientProviders from "./ClientProviders";
 
 export const metadata = {
   title: 'Podverse Admin',
@@ -16,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="bg-podverse-background text-podverse-text font-sans min-h-screen">
-        {children}
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

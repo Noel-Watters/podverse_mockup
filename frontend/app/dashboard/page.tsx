@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Feed, RecentLog } from "@/types/feed";
+import { Feed, FeedLog } from "@/types/feed";
 import FeedStatsChart from "../../components/FeedStatsChart";
 import AdminLayout from "@/layouts/AdminLayout";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,7 @@ export default function DashboardPage() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [error, setError] = useState<string>("");
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
-  const [selectedFeedLogs, setSelectedFeedLogs] = useState<RecentLog[]>([]);
+  const [selectedFeedLogs, setSelectedFeedLogs] = useState<FeedLog[]>([]);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -19,7 +19,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchFeeds = async () => {
       try {
-        const response = await fetch("/api/feeds?limit=2000");
+        const response = await fetch("/api/feeds");
         if (!response.ok) throw new Error("Failed to load feeds");
         const data = await response.json();
         setFeeds(data);
@@ -33,8 +33,8 @@ export default function DashboardPage() {
   // Show only most recent flagged or error feeds
   const handleRecentFlagged = (feeds: Feed[]) => {
     return feeds
-      .filter(feed => feed.feed_flag_status_id === 2 || feed.feed_flag_status_id === 3)
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .filter(feed => feed.flag_status === "parse_error" || feed.flag_status === "fetch_error")
+      .sort((a, b) => new Date(b.updated_at ?? "").getTime() - new Date(a.updated_at ?? "").getTime())
       .slice(0, 6);
   };
 
@@ -68,8 +68,8 @@ const handleSearch = () => {
 
   // --- Stats calculations ---
   const totalFeeds = feeds.length;
-  const flaggedFeeds = feeds.filter(f => f.feed_flag_status_id === 2 || f.feed_flag_status_id === 3).length;
-  const healthyFeeds = feeds.filter(f => f.feed_flag_status_id !== 2 && f.feed_flag_status_id !== 3).length;
+  const flaggedFeeds = feeds.filter(f => f.flag_status === "parse_error" || f.flag_status === "fetch_error").length;
+  const healthyFeeds = feeds.filter(f => f.flag_status !== "parse_error" && f.flag_status !== "fetch_error").length;
   const flaggedPercent = totalFeeds > 0 ? Math.round((flaggedFeeds / totalFeeds) * 100) : 0;
 
   return (
@@ -102,7 +102,7 @@ const handleSearch = () => {
                   className={`flex justify-between items-center p-3 rounded mb-3 cursor-pointer ${
                     feed.id === selectedFeedId
                       ? "bg-blue-100 border border-blue-400"
-                      : feed.feed_flag_status_id === 2
+                      : feed.flag_status === "parse_error"
                       ? "bg-yellow-100"
                       : "bg-red-100"
                   }`}
@@ -116,13 +116,13 @@ const handleSearch = () => {
                     <span
                       className={`flex items-center justify-center w-24 px-0 py-1 rounded-full shadow-md text-sm font-semibold select-none
                         ${
-                          feed.feed_flag_status_id === 2
+                          feed.flag_status === "parse_error"
                             ? "bg-yellow-400 text-yellow-900"
                             : "bg-red-500 text-white"
                         }
                       `}
                     >
-                      {feed.feed_flag_status_id === 2 ? "Flagged" : "Error"}
+                      {feed.flag_status === "parse_error" ? "Flagged" : "Error"}
                     </span>
                     {/* Reparse button with Heroicon */}
                     <button
@@ -158,10 +158,9 @@ const handleSearch = () => {
               ) : (
                 selectedFeedLogs.map((log, i) => (
                   <div key={i} className="p-3 rounded bg-white border border-gray-200">
-                    <p className="font-semibold text-black break-words">{log.message}</p>
+                    <p className="font-semibold text-black break-words">{log.parse_error_message ?? ""}</p>
                     <p className="text-xs text-gray-400">{new Date(
                       log.last_finished_parse_time ||
-                      log.last_good_http_status_time ||
                       ""
                     ).toLocaleString()}</p>
                     <span className={log.parse_errors === 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
