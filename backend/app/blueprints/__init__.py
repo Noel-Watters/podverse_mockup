@@ -11,6 +11,7 @@ from app.blueprints.export_logs import export_logs_bp
 from app.blueprints.item import item_bp
 from app.blueprints.stats import stats_bp
 from app.blueprints.site import site_bp
+from app.blueprints.report_builder import report_builder_bp
 
 # Utility/test blueprints
 from app.db_test import db_test_bp
@@ -28,6 +29,7 @@ def register_blueprints(app):
     admin_bp.register_blueprint(item_bp, url_prefix="/items")
     admin_bp.register_blueprint(stats_bp, url_prefix="/stats")
     admin_bp.register_blueprint(site_bp, url_prefix="/site")
+    admin_bp.register_blueprint(report_builder_bp, url_prefix="/reports")
 
     # Register the grouped admin routes
     app.register_blueprint(admin_bp)
