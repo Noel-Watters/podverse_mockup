@@ -19,6 +19,7 @@ interface FeedTableProps {
   }) => void;
   selectedFeeds: number[];
   setSelectedFeeds: (ids: number[]) => void;
+  
 }
 
 const FeedTable: React.FC<FeedTableProps> = ({
@@ -41,27 +42,13 @@ const FeedTable: React.FC<FeedTableProps> = ({
   const channelsByFeedId = useSelector((state: RootState) => state.batchChannel.data);
 
   return (
-    <table className="min-w-full bg-podverse-surface rounded shadow text-podverse-text text-sm">
-      <thead className="bg-podverse-accent text-black">
-        <tr>
-          <th>
-            {/* Select All Checkbox */}
-            <input
-              type="checkbox"
-              checked={feeds.length > 0 && selectedFeeds.length === feeds.length}
-              onChange={e => setSelectedFeeds(e.target.checked ? feeds.map(f => f.id) : [])}
-              
+    <div className="min-w-full bg-podverse-surface rounded text-black shadow text-sm">
+      <div className="bg-podverse-accent text-black">
 
-            />
-          </th>
-          {["ID", "URL", "Status", "Priority", "Created At", "Updated At", "Action"].map((header) => (
-            <th key={header} className="text-left px-4 py-2 font-semibold">
-              {header}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
+
+
+      </div>
+      <div className= "py-2 px-2 gap-2">
         {feeds.map((feed, idx) => {
           const logs = reparse[String(feed.id)]?.logs ?? [];
           const logLoading = reparse[String(feed.id)]?.loading ?? false;
@@ -79,11 +66,23 @@ const FeedTable: React.FC<FeedTableProps> = ({
                 onExpand={() => toggleExpand(feed.id)}
                 onNotify={onNotify}
                 checkbox={
+                  <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
+                    className="peer appearance-none h-5 w-5 rounded-md bg-[var(--pv-cream)] border border-black checked:bg-black checked:border-black focus:outline-none" 
                     checked={selectedFeeds.includes(feed.id)}
                     onChange={e => handleCheckboxChange(feed.id, e.target.checked)}
                   />
+                  <svg
+                    className="absolute w-4 h-4 text-[var(--pv-cream)] pointer-events-none left-0.5 top-0.5 opacity-0 peer-checked:opacity-100 transition"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    viewBox="0 0 24 24"
+                    >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  </label>
                 }
               />
               {expandedFeedId === feed.id && (
@@ -98,18 +97,10 @@ const FeedTable: React.FC<FeedTableProps> = ({
           );
         })}
         {feeds.length === 0 && (
-          <tr>
-            <td
-              colSpan={8}
-              className="text-center text-podverse-muted py-4"
-            >
-              No feeds found.
-            </td>
-          </tr>
+            <h2 className="text-center text-podverse-muted py-4" > No feeds found. </h2>
         )}
-
-      </tbody>
-    </table>
+    </div>
+    </div>
   );
 };
 

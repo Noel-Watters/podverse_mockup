@@ -175,10 +175,12 @@ const toggleExpand = (feedId: number) => {
 
         {/* Toolbar for bulk actions, add, sort, filter */}
         <FeedToolBar
+          feeds={feeds}
           onSortChange={handleSortChange}
           onOrderChange={handleOrderChange}
           onFilterChange={handleFilterChange}
           selectedFeeds={selectedFeeds}
+          setSelectedFeeds={setSelectedFeeds}
           onBulkReparse={handleBulkReparse}
           onBulkUpdateStatus={handleBulkUpdateStatus}
           isBulkReparseLoading={isBulkReparseLoading}

@@ -1,6 +1,11 @@
 "use client";
 import { CalendarIcon, RssIcon } from "@heroicons/react/24/outline";
 import { ChannelData } from "@/types/channel";
+import ReparseFeed from "../reparsefeed/ReparseFeed";
+import ReparseButton from "../reparsefeed/ReparseButton";
+import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import FeedStatusBadge from "@/components/rssfeed/FeedStatusBadge";
+
 
 export default function ChannelHeader({ data }: { data: ChannelData }) {
   return (
@@ -11,7 +16,27 @@ export default function ChannelHeader({ data }: { data: ChannelData }) {
           <p className="text-sm text-black">Podcast Index ID: {data.podcast_index_id}</p>
           <p className="text-sm text-black">Status: {data.feed.flag_status}</p>
         </div>
-        <button className="bg-podverse-accent text-white px-4 py-1 rounded-md">Reparse</button>
+            <div className="flex items-center space-x-2">
+            <ReparseFeed feedId={data.feed.id.toString()} onNotify={() => {}}>
+                {({ onReparse, loading, status }) => (
+                <span onClick={e => e.stopPropagation()}>
+                    <ReparseButton
+                        onClick={onReparse}
+                        loading={loading}
+                        status={status}
+                    />
+                </span>
+                )}
+            </ReparseFeed>
+            <button
+                onClick={() => {}}
+                type="button"
+                className="border border-black bg-white text-black rounded-md w-9 h-9 flex items-center justify-center hover:bg-gray-100 transition"
+                aria-label="Export"
+            >
+            <ArrowDownTrayIcon className="h-5 w-5" />
+          </button>
+          </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -29,6 +54,7 @@ export default function ChannelHeader({ data }: { data: ChannelData }) {
           <CalendarIcon className="h-4 w-4 mr-1" />
           Launched: {data.feed.created_at ? new Date(data.feed.created_at).toLocaleDateString() : "-"}
         </span>
+        <FeedStatusBadge feed={data.feed} />
       </div>
     </div>
   );

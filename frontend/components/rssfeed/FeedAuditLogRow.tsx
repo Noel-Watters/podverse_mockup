@@ -16,7 +16,7 @@ const FeedAuditLogRow: React.FC<FeedAuditLogRowProps> = ({
   logLoading,
   logError,
 }) => (
-  <tr className="bg-podverse-surface">
+  <div className="bg-podverse-surface">
     <td colSpan={8} className="px-6 py-3 border-t border-podverse-border">
       <div>
         <h3 className="font-semibold text-sm text-podverse-text mb-2">
@@ -63,7 +63,7 @@ const FeedAuditLogRow: React.FC<FeedAuditLogRowProps> = ({
      
       </div>
     </td>
-  </tr>
+  </div>
 );
 
 export default FeedAuditLogRow;
