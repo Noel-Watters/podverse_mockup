@@ -29,7 +29,7 @@ export default function AdminLayout({ children, searchValue, onSearchChange, onS
 
 
   return (
-    <div className="flex h-screen bg-podverse-background text-white">
+    <div className="flex h-screen text-black">
       <Sidebar />
       <div className="flex-1 flex flex-col">
         <TopBar

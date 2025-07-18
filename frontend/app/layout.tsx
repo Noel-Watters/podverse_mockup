@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-podverse-background text-podverse-text font-sans min-h-screen">
+      <body className=" text-black font-sans min-h-screen">
         <ClientProviders>
           {children}
         </ClientProviders>

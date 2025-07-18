@@ -103,8 +103,6 @@ const handleSearch = () => {
                     feed.id === selectedFeedId
                       ? "bg-blue-100 border border-blue-400"
                       : feed.flag_status === "parse_error"
-                      ? "bg-yellow-100"
-                      : "bg-red-100"
                   }`}
                 >
                   <div>

@@ -6,22 +6,24 @@
 
 @layer base {
   :root {
-    --pv-bg: #0f172a;         /* podverse.background */
-    --pv-surface: #1e293b;    /* podverse.surface */
-    --pv-border: #334155;     /* podverse.border */
-    --pv-text: #f1f5f9;       /* podverse.text */
-    --pv-muted: #94a3b8;      /* podverse.muted */
+    --pv-bg: #ffffff;         /* Primary background */
+    --pv-surface: #f3f6fb;    /* Secondary background */
+    --pv-border: #000000;     /* Black border */
+    --pv-text: #000000;       /* Default text */
+    --pv-muted: #4b4b4b;      /* Secondary text (dark grey) */
 
-    --pv-primary: #3b82f6;
-    --pv-secondary: #0ea5e9;
-    --pv-accent: #6366f1;
-    --pv-highlight: #c084fc;
-    --pv-cream: #fef3c7;
+    --pv-primary: #0d7ab3;    /* Primary accent color */
+    --pv-accent: #b1cae3;     /* Highlight color */
 
-    --pv-success: #22c55e;
-    --pv-warning: #facc15;
-    --pv-error: #ef4444;
-    --pv-info: #38bdf8;
+    --pv-success: #22c55e;    /* Live */
+    --pv-warning: #facc15;    /* Flagged */
+    --pv-error: #ef4444;      /* Error */
+    --pv-info: #38bdf8;       /* Pending */
+    --pv-archived: #9ca3af;   /* Archived (Grey) */
+
+    --pv-topbar: #e5eaf2;     /* Topbar and sidebar */
+    --pv-sidebar: #e5eaf2;
+    --pv-chart: #0d7ab3;      /* Line/Bar color */
   }
 
   body {

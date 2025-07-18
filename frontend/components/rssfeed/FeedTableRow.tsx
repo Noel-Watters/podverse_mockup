@@ -5,6 +5,9 @@ import ReparseFeed from "@/components/reparsefeed/ReparseFeed";
 import ReparseButton from "@/components/reparsefeed/ReparseButton";
 import { Feed } from "@/types/feed";
 import { Channel } from "@/types/channel";
+import HealthDuration from "./HealthDuration";
+import FeedUpdated from "./FeedUpdated";
+import Healthbadge from "./Healthbadge";
 
 interface FeedTableRowProps {
   feed: Feed;
@@ -28,27 +31,46 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
   onNotify,
   checkbox,
 }) => (
-  <tr 
+  <div 
   onClick={onExpand}
   style={{ cursor: "pointer" }} 
-  className={`border-t border-podverse-border hover:bg-podverse-highlight transition${expanded ? " bg-podverse-highlight" : ""}`}
+  className={`grid grid-cols-[40px_1fr_100px_175px_140px_60px] gap-4 my-3 py-1 items-center bg-row rounded-lg border border-gray-300 hover:bg-accent transition${expanded ? " bg-accent" : ""}`}
   >
-    <td onClick={e => e.stopPropagation()}>{checkbox}</td>
-    <td className="px-4 py-2 font-medium">{feed.id}</td>
-    <td className="px-4 py-2 truncate max-w-xs">{channel?.title || feed.url}</td>
-    <td className="px-4 py-2 truncate max-w-xs">{channel?.id || "-"}</td>
 
-    <td className="px-4 py-2">
-      <FeedStatusBadge feed={feed} />
-    </td>
-    <td className="px-4 py-2">{feed.parsing_priority}</td>
-    <td className="px-4 py-2 text-xs">
-      {new Date(feed.created_at ?? "").toLocaleString()}
-    </td>
-    <td className="px-4 py-2 text-xs">
-      {new Date(feed.updated_at ?? "").toLocaleString()}
-    </td>
-    <td className="px-4 py-2">
+      {/* Checkbox */}
+    <div>
+      <p className="px-2" onClick={e => e.stopPropagation()}>{checkbox}</p>
+    </div>
+
+
+      {/* Feed Info */}
+    <div>
+      <p className="font-semibold text-base">{channel?.title || feed.url}</p>
+      <p className="text-xs text-muted">Feed ID: {feed.id}</p>
+    </div>
+
+      {/* Dates */}
+    <div>
+        <HealthDuration recent_logs={(feed.recent_logs ?? []).map(log => ({
+          ...log,
+          finished_at: log.finished_at ?? "",
+        }))} />
+    </div>
+    <div>
+        <FeedUpdated updated_at={feed.updated_at ?? ""} />
+    </div>
+
+    {/* Feed Status */}
+    <div>
+      <Healthbadge recent_logs={(feed.recent_logs ?? []).map(log => ({
+        ...log,
+        finished_at: log.finished_at ?? "",
+        parse_errors: log.parse_errors ?? 0,
+      }))} />
+    </div>
+
+    {/* Reparse Button */}
+    <div>
       <ReparseFeed feedId={feed.id.toString()} onNotify={onNotify}>
         {({ onReparse, loading, status }) => (
           <span onClick = {e => e.stopPropagation()}>
@@ -60,8 +82,9 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
           </span>
         )}
       </ReparseFeed>
-    </td>
-  </tr>
+    </div>
+
+  </div>
 );
 
 export default FeedTableRow;
