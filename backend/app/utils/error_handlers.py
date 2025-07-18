@@ -40,6 +40,12 @@ def handle_errors(route_func):
         except DatabaseError as e:
             current_app.logger.error(f"Database error in {route_func.__name__}: {str(e)}")
             return jsonify({"error": str(e)}), getattr(e, "status_code", 500)
+        except AuthError as e:
+            if getattr(e, 'error', {}).get("code") == "authorization_header_missing":
+                current_app.logger.debug(f"Missing auth header in {route_func.__name__}: {str(e)}")
+            else:
+                current_app.logger.warning(f"Auth error in {route_func.__name__}: {str(e)}")
+            return jsonify({"error": e.error}), e.status_code
         except Exception as e:
             current_app.logger.error(f"Unexpected error in {route_func.__name__}: {str(e)}")
             current_app.logger.error(f"Full traceback: {traceback.format_exc()}")

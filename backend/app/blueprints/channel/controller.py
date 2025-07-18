@@ -162,7 +162,7 @@ def get_channels_by_feed():
         }
         
         logger.info(f"Successfully retrieved {len(channels)} channels for {len(feed_ids)} feed IDs")
-        return jsonify(result)
+        return result
         
     except ValidationError as e:
         logger.warning(f"Validation error in get_channels_by_feed: {str(e)}")

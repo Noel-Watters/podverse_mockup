@@ -68,11 +68,13 @@ def reparse_feed_controller_sync(feed_id: int) -> dict:
         raise NotFoundError("Feed not found")
         
     if feed.is_parsing:
-        logger.warning(f"Feed {feed_id} is already being parsed")
+        logger.info(f"Feed {feed_id} is already being parsed — skipping reparse")
         raise ValidationError("Feed is already being parsed", status_code=409)
-    
+
     if feed.flag_status.status.lower() not in ["active", "always-parse"]:
-        raise ValidationError("Feed is not eligible for parsing")
+        logger.info(f"Skipping reparse — Feed {feed_id} not eligible (status={feed.flag_status.status})")
+        raise ValidationError("Feed is not eligible for parsing", status_code=400)
+
 
     try:
         result = parse_and_update_feed(feed_id)

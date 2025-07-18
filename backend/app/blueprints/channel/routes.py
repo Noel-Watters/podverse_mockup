@@ -6,6 +6,7 @@ from app.utils.auth import requires_auth
 from app.utils.request_logger import get_logger, log_request, log_request_start, log_request_end
 from app.extensions import limiter
 from app.utils.error_handlers import handle_errors
+from flask import jsonify
 
 logger = get_logger(__name__)
 
@@ -56,4 +57,5 @@ def get_single_channel(channel_id):
 def get_channels_by_feed_route():
     """Get channels by feed IDs"""
     log_request(logger, 'GET', '/channels/by-feed')
-    return get_channels_by_feed()
+    result = get_channels_by_feed()
+    return jsonify(result), 200
