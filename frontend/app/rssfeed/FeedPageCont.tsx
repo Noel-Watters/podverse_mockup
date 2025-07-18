@@ -66,11 +66,11 @@ useEffect(() => {
 
 
 const handleSortChange = (sort: string) => {
-  dispatch(setFilters({ sort: sort as any }));
+  dispatch(setFilters({ sort_by: sort as any }));
 };
 
 const handleOrderChange = (order: string) => {
-  dispatch(setFilters({ order: order as any }));
+  dispatch(setFilters({ sort_order: order as any }));
 };
 
 const handleFilterChange = (filterName: string, value: string) => {
