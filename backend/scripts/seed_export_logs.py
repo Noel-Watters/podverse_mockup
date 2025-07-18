@@ -40,6 +40,25 @@ def seed_export_logs(n=25):
             if status == 'success':
                 timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
                 file_path = f"/app/exports/{export_type}_export_{timestamp}_{str(unique_uuid())[:8]}.{format_type}"
+                
+                # Ensure exports directory exists
+                os.makedirs('/app/exports', exist_ok=True)
+                
+                # Create the actual export file
+                try:
+                    with open(file_path, 'w', newline='') as f:
+                        if format_type == 'csv':
+                            writer = csv.writer(f)
+                            writer.writerow([
+                                'id', 'export_by', 'export_type', 'status', 'format', 
+                                'file_path', 'created_at', 'completed_at', 'feeds_count', 'channels_count', 'items_count', 'error_message'
+                            ])
+                        else:  # json
+                            import json
+                            f.write('[\n]')  # Empty JSON array
+                except Exception as e:
+                    print(f"Warning: Could not create export file {file_path}: {e}")
+                    file_path = None  # Reset file_path if creation fails
             
             # Generate error message for failed exports
             error_message = None
@@ -82,64 +101,77 @@ def seed_export_logs(n=25):
         session.commit()
         print(f"Seeded {n} export logs successfully")
         
+        # Populate the created files with actual export log data
+        populate_export_files(session)
+        
     except IntegrityError as e:
         session.rollback()
         print("Integrity error while inserting export logs:", str(e))
     finally:
         session.close()
 
-# backend/scripts/fix_export_files.py
-
-def fix_export_files():
-    """Fix the export files to have the correct export log format"""
-    session = get_db_session()
-    
+def populate_export_files(session):
+    """Populate the created export files with actual data"""
     try:
         # Get all export logs that have file paths
         logs_with_files = session.query(ExportLog).filter(ExportLog.file_path.isnot(None)).all()
         
         for log in logs_with_files:
-            # Extract filename from the file_path
-            filename = os.path.basename(log.file_path)
-            filepath = os.path.join('/app/exports', filename)
-            
-            # Create the correct CSV format with export log data
-            def write_export_log_data(f):
-                writer = csv.writer(f)
-                writer.writerow([
-                    'id', 'export_by', 'export_type', 'status', 'format', 
-                    'file_path', 'created_at', 'completed_at', 'feeds_count', 'channels_count', 'items_count', 'error_message'
-                ])
+            if not os.path.exists(log.file_path):
+                continue
                 
-                # Write the current log data
-                writer.writerow([
-                    log.id,
-                    log.export_by,
-                    log.export_type,
-                    log.status,
-                    log.format,
-                    log.file_path or "",
-                    log.created_at.isoformat() if log.created_at else "",
-                    log.completed_at.isoformat() if log.completed_at else "",
-                    log.feeds_count or "",
-                    log.channels_count or "",
-                    log.items_count or "",
-                    log.error_message or ""
-                ])
-            
-            # Write the file
-            with open(filepath, 'w', newline='') as f:
-                write_export_log_data(f)
-            
-            print(f"✅ Fixed export file: {filename}")
-        
-        print(f"✅ Successfully fixed {len(logs_with_files)} export files")
-        
+            # Populate the file with export log data
+            try:
+                with open(log.file_path, 'w', newline='') as f:
+                    if log.format == 'csv':
+                        writer = csv.writer(f)
+                        writer.writerow([
+                            'id', 'export_by', 'export_type', 'status', 'format', 
+                            'file_path', 'created_at', 'completed_at', 'feeds_count', 'channels_count', 'items_count', 'error_message'
+                        ])
+                        
+                        # Write the current log data
+                        writer.writerow([
+                            log.id,
+                            log.export_by,
+                            log.export_type,
+                            log.status,
+                            log.format,
+                            log.file_path or "",
+                            log.created_at.isoformat() if log.created_at else "",
+                            log.completed_at.isoformat() if log.completed_at else "",
+                            log.feeds_count or "",
+                            log.channels_count or "",
+                            log.items_count or "",
+                            log.error_message or ""
+                        ])
+                    else:  # json
+                        import json
+                        data = {
+                            'id': log.id,
+                            'export_by': log.export_by,
+                            'export_type': log.export_type,
+                            'status': log.status,
+                            'format': log.format,
+                            'file_path': log.file_path,
+                            'created_at': log.created_at.isoformat() if log.created_at else None,
+                            'completed_at': log.completed_at.isoformat() if log.completed_at else None,
+                            'feeds_count': log.feeds_count,
+                            'channels_count': log.channels_count,
+                            'items_count': log.items_count,
+                            'error_message': log.error_message
+                        }
+                        json.dump([data], f, indent=2)
+                        
+                print(f"✅ Populated export file: {os.path.basename(log.file_path)}")
+                
+            except Exception as e:
+                print(f"Warning: Could not populate export file {log.file_path}: {e}")
+                
     except Exception as e:
-        print(f"❌ Failed to fix export files: {str(e)}")
-        raise
-    finally:
-        session.close()
+        print(f"Warning: Could not populate export files: {e}")
+
+# Note: fix_export_files() function has been moved to fix_export_files.py
 
 if __name__ == "__main__":
     seed_export_logs() 

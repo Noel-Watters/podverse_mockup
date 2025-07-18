@@ -21,6 +21,20 @@ def get_auth0_config() -> Dict[str, Any]:
         "ALGORITHMS": [current_app.config.get("ALGORITHMS", "RS256")]
     }
 
+def get_current_auth0_id() -> str:
+    """
+    Get the current user's Auth0 ID from the Flask request context.
+    
+    Returns:
+        str: The Auth0 user ID (sub claim) or "flask" as fallback
+    """
+    try:
+        if hasattr(_request_ctx_stack.top, 'current_user'):
+            return _request_ctx_stack.top.current_user.get('sub', 'flask')
+    except Exception:
+        pass
+    return 'flask'
+
 def get_token_auth_header() -> str:
     """Extract and validate bearer token from request headers.
     

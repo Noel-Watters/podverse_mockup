@@ -11,10 +11,13 @@ from app.utils.export_response import generate_export_response
 from datetime import datetime
 from app.utils.export_logging import create_export_log_simple, finalize_export_log
 from app.services.data_export import ensure_export_directory
+from app.utils.auth import get_current_auth0_id
+import traceback
 
 logger = get_logger(__name__)
 
 def list_channels():
+    """List channels with pagination, filtering, and search capabilities. See API.md for query params and status codes."""
     try:
         page, limit = get_pagination_params(request)
         sort_by, sort_order = get_sorting_params(request, ['id', 'title'], default_field='id')
@@ -52,7 +55,8 @@ def export_channels():
     Reuses the same filtering logic as list_channels but without pagination.
     """
     try:
-        export_by = request.args.get("export_by", "system@podverse.com")
+        # Use current user ID for manual exports, but allow override via export_by parameter
+        export_by = request.args.get("export_by") or get_current_auth0_id()
 
         # Create export log
         log = create_export_log_simple(
@@ -80,8 +84,9 @@ def export_channels():
         export_data = channel_exports_schema.dump(channels)
 
         # Generate filename with timestamp
+        format = request.args.get("format", "csv")
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"channels_export_{timestamp}.csv"
+        filename = f"channels_export_{timestamp}.{format}"
         
         # get headers from schema
         headers = {field: field for field in channel_exports_schema.fields}
@@ -101,9 +106,17 @@ def export_channels():
         raise
     except Exception as e:
         logger.error(f"Unexpected error in export_channels: {str(e)}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        if log:
+            finalize_export_log(
+                log.id,
+                status="failed",
+                error_message=str(e)
+            )
         raise DatabaseError("Failed to export channels")
 
 def get_channel_by_id(channel_id):
+    """Get a single channel by ID. See API.md for status codes."""
     try:   
         logger.info(f"Retrieving channel details for ID: {channel_id}")
         log_database_operation(logger, "READ", "channels", channel_id)
@@ -126,10 +139,7 @@ def get_channel_by_id(channel_id):
 
 
 def get_channels_by_feed():
-    """
-    Get channels by feed IDs.
-    Accepts a comma-separated list of feed IDs and returns all channels associated with those feeds.
-    """
+    """Get channels by feed IDs. Accepts a comma-separated list of feed IDs and returns all channels associated with those feeds. See API.md for status codes."""
     try:
         # Get feed IDs from query parameter
         feed_ids = get_multi_filter_param(request, 'feed_ids', type_func=int)

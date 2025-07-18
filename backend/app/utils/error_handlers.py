@@ -7,8 +7,44 @@ from werkzeug.exceptions import HTTPException
 from app.utils.error_exceptions import APIException, ValidationError, NotFoundError, DatabaseError
 from app.utils.auth import AuthError
 from app.utils.security_logger import log_network_event
+from functools import wraps
 import traceback
 import socket
+
+def handle_errors(route_func):
+    """
+    Universal error handler decorator for route functions.
+    
+    This decorator wraps route functions to provide consistent error handling
+    without requiring try/except blocks in every route. It catches common
+    exceptions and returns appropriate HTTP responses.
+    
+    Usage:
+        @feed_bp.route('/<int:feed_id>', methods=['GET'])
+        @limiter.limit("80 per minute")
+        @handle_errors
+        def get_feed_by_id(feed_id):
+            result = get_feed_by_id_controller(feed_id)
+            return jsonify(result), 200
+    """
+    @wraps(route_func)
+    def wrapper(*args, **kwargs):
+        try:
+            return route_func(*args, **kwargs)
+        except ValidationError as e:
+            current_app.logger.warning(f"Validation error in {route_func.__name__}: {str(e)}")
+            return jsonify({"error": str(e)}), getattr(e, "status_code", 400)
+        except NotFoundError as e:
+            current_app.logger.warning(f"Not found error in {route_func.__name__}: {str(e)}")
+            return jsonify({"error": str(e) if str(e) else "Resource not found"}), 404
+        except DatabaseError as e:
+            current_app.logger.error(f"Database error in {route_func.__name__}: {str(e)}")
+            return jsonify({"error": str(e)}), getattr(e, "status_code", 500)
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error in {route_func.__name__}: {str(e)}")
+            current_app.logger.error(f"Full traceback: {traceback.format_exc()}")
+            return jsonify({"error": "Internal server error"}), 500
+    return wrapper
 
 def register_error_handlers(app):
     
