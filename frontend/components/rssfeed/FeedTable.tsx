@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import FeedTableRow from "./FeedTableRow";
-import FeedAuditLogRow from "./FeedAuditLogRow";
+import FeedAuditLogRow from "./FeedExpandedRow";
 import { Feed } from "@/types/feed";
 import { useSelector } from "react-redux";
 import { RootState } from "@/redux/store";
@@ -42,13 +42,8 @@ const FeedTable: React.FC<FeedTableProps> = ({
   const channelsByFeedId = useSelector((state: RootState) => state.batchChannel.data);
 
   return (
-    <div className="min-w-full bg-podverse-surface rounded text-black shadow text-sm">
-      <div className="bg-podverse-accent text-black">
-
-
-
-      </div>
-      <div className= "py-2 px-2 gap-2">
+    <div className="min-w-full rounded text-black shadow text-sm">
+      <div className= "px-2 gap-2">
         {feeds.map((feed, idx) => {
           const logs = reparse[String(feed.id)]?.logs ?? [];
           const logLoading = reparse[String(feed.id)]?.loading ?? false;
@@ -86,12 +81,7 @@ const FeedTable: React.FC<FeedTableProps> = ({
                 }
               />
               {expandedFeedId === feed.id && (
-                <FeedAuditLogRow
-                  feed={{ ...feed, logs }}
-                  channel={channel} 
-                  logLoading={logLoading}
-                  logError={logError}
-                />
+                <FeedAuditLogRow logs={logs} feed={feed} channel={channel} />
               )}
             </React.Fragment>
           );

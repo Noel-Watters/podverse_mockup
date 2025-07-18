@@ -57,12 +57,12 @@ const exportFeeds = async () => {
 };
 
   return (
-    <div className="flex flex-col py-3 w-full "> {/* Container */}
+    <div className="flex flex-col pt-2 w-full "> {/* Container */}
     <div className="flex flex-col  w-full"> {/* Col 1 */}
       {/* Top Row: Sort & Filter controls */}
       <div className="flex flex-row flex-wrap w-full"> {/* Header Row*/}
 
-        <div className="flex px-2">
+        <div className="flex px-2 ">
             <label className="relative inline-flex items-center cursor-pointer">
             <input
               type="checkbox"
@@ -89,7 +89,7 @@ const exportFeeds = async () => {
         {/* Sort by */}
         <div className="relative">
           <select onChange={(e) => onSortChange(e.target.value)}
-            className="border border-black rounded-md px-2 py-1 text-sm text-black focus:outline-none min-w-[90px] h-8"
+            className="appearance-none border border-black rounded-md px-2 py-1 w-32 text-left text-sm text-black focus:outline-none min-w-[90px] h-8"
             defaultValue=""
           >
             <option value="">Sort by</option>
@@ -97,26 +97,30 @@ const exportFeeds = async () => {
             <option value="id">Feed ID</option>
             <option value="url">Feed URL</option>
           </select>
-          <ArrowsUpDownIcon className="h-4 w-4 absolute left-1 top-1 text-black pointer-events-none" />
+          <ArrowsUpDownIcon className="h-4 w-4 absolute right-1 top-2 text-black pointer-events-none" />
         </div>
         {/* Status */}
         <div className="relative">
           <select onChange={e => onFilterChange('status', e.target.value)}
-            className="border border-black rounded-md px-2 py-1 text-sm text-black bg-white focus:outline-none min-w-[90px] h-8"
+            className="appearance-none border border-black rounded-md w-32 px-4 py-1 text-left text-sm text-black bg-white focus:outline-none min-w-[90px] h-8"
             defaultValue=""
           >
-            <option value="">All Statuses</option>
-            <option value="active,always-parse">Live </option>
-            <option value="spam,takedown,archive-pending">Flagged</option>
-            <option value="fetch_error,parse_error">Error</option>
+            <option value="">Flag Statuses</option>
+            <option value="active">Active </option>
+            <option value="always-parse">Always Parse</option>
+            <option value="spam">Spam</option>
+            <option value="takedown">Take Down</option>
+            <option value="pending-archive">Pending</option>
+            <option value="fetch_error">Fetch Error</option>
+            <option value="parse_error">Parse Error</option>
             <option value="archived">Archived</option>
           </select>
-          <FunnelIcon className="h-4 w-4 absolute right-1 top-1 text-black pointer-events-none" />
+          <FunnelIcon className="h-4 w-4 absolute right-1 top-2 text-black pointer-events-none" />
         </div>
         {/* Priorities */}
         <div className="relative">
           <select onChange={e => onFilterChange('parsing_priority', e.target.value)}
-            className="border border-black rounded-md px-2 py-1 text-sm text-black bg-white focus:outline-none min-w-[90px] h-8"
+            className="appearance-none w-32 text-left border border-black rounded-md px-2 py-1 text-sm text-black bg-white focus:outline-none min-w-[90px] h-8"
             defaultValue=""
           >
             <option value="">All Priorities</option>
@@ -126,7 +130,7 @@ const exportFeeds = async () => {
             <option value="4">High</option>
             <option value="5">Very High</option>
           </select>
-          <FunnelIcon className="h-4 w-4 absolute right-1 top-1 text-black pointer-events-none" />
+          <FunnelIcon className="h-4 w-4 absolute right-1 top-2 text-black pointer-events-none" />
           </div>
         </div>
         <div className="flex ml-20 gap-2 "> {/* Row two*/}

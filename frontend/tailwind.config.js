@@ -22,7 +22,9 @@ module.exports = {
         error: "#ef4444",
         info: "#38bdf8",
         archived: "#9ca3af",
-        highlight: "B1CAE3"
+        highlight: "#B1CAE3",
+        row:"#d9d9d96b"
+
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],

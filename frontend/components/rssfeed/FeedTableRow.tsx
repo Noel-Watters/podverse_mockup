@@ -5,6 +5,9 @@ import ReparseFeed from "@/components/reparsefeed/ReparseFeed";
 import ReparseButton from "@/components/reparsefeed/ReparseButton";
 import { Feed } from "@/types/feed";
 import { Channel } from "@/types/channel";
+import HealthDuration from "./HealthDuration";
+import FeedUpdated from "./FeedUpdated";
+import Healthbadge from "./Healthbadge";
 
 interface FeedTableRowProps {
   feed: Feed;
@@ -31,7 +34,7 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
   <div 
   onClick={onExpand}
   style={{ cursor: "pointer" }} 
-  className={`grid grid-cols-[40px_1fr_125px__120px_120px_60px] gap-4 my-2 items-center rounded border border-border hover:bg-gray-300 transition${expanded ? " bg-accent" : ""}`}
+  className={`grid grid-cols-[40px_1fr_100px_175px_140px_60px] gap-4 my-3 py-1 items-center bg-row rounded-lg border border-gray-300 hover:bg-accent transition${expanded ? " bg-accent" : ""}`}
   >
 
       {/* Checkbox */}
@@ -42,25 +45,28 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
 
       {/* Feed Info */}
     <div>
-      <p className="font-semibold">{channel?.title || feed.url}</p>
+      <p className="font-semibold text-base">{channel?.title || feed.url}</p>
       <p className="text-xs text-muted">Feed ID: {feed.id}</p>
     </div>
 
       {/* Dates */}
     <div>
-      <p className="px-4 py-2 text-xs">
-        {new Date(feed.created_at ?? "").toLocaleString()}
-      </p>
+        <HealthDuration recent_logs={(feed.recent_logs ?? []).map(log => ({
+          ...log,
+          finished_at: log.finished_at ?? "",
+        }))} />
     </div>
     <div>
-      <p className="px-4 py-2 text-xs">
-        {new Date(feed.updated_at ?? "").toLocaleString()}
-      </p>
+        <FeedUpdated updated_at={feed.updated_at ?? ""} />
     </div>
 
     {/* Feed Status */}
     <div>
-      <FeedStatusBadge feed={feed} />
+      <Healthbadge recent_logs={(feed.recent_logs ?? []).map(log => ({
+        ...log,
+        finished_at: log.finished_at ?? "",
+        parse_errors: log.parse_errors ?? 0,
+      }))} />
     </div>
 
     {/* Reparse Button */}

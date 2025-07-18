@@ -44,17 +44,17 @@ export default function ChannelLayout({ data }: { data: ChannelData }) {
 
   
   return (
-    <div>
       <AdminLayout
             searchValue={inputValue}
             onSearchChange={(e) => setInputValue(e.target.value)}
             onSearchSubmit={handleSearch}
       >
-        <ChannelHeader data={data} />
-        <ChannelStats stats={data.stats[0]} />
-        <EpisodeLogSection items={data.items} logs={data.feed.recent_logs ?? []} />
-        <ChannelStatsCharts stats={data.stats[0]} />
+        <div className="p-4">
+          <ChannelHeader data={data} />
+          <ChannelStats stats={data.stats[0]} />
+          <EpisodeLogSection items={data.items} logs={data.feed.recent_logs ?? []} />
+          <ChannelStatsCharts stats={data.stats[0]} />
+        </div>
       </AdminLayout>
-    </div>
   );
 }

@@ -152,7 +152,7 @@ const toggleExpand = (feedId: number) => {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="overflow-y-auto h-[80vh] p-4"
+        className="overflow-y-auto h-[80vh] p-2"
         style={{ position: "relative" }}
       >
         {/* Notifications */}
