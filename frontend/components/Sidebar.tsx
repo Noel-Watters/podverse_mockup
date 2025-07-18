@@ -16,7 +16,6 @@ function cn(...classes: (string | false | undefined)[]) {
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: "/Dark_Podverse_Logo.svg" },
   { href: "/rssfeed", label: "Feeds", icon: <RssIcon className="w-6 h-6" /> },
-  { href: "/statistics", label: "Podverse Statistics", icon: <ChartBarIcon className="w-6 h-6" />,},
 
 
 
