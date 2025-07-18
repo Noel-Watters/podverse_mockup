@@ -36,6 +36,8 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
     <td onClick={e => e.stopPropagation()}>{checkbox}</td>
     <td className="px-4 py-2 font-medium">{feed.id}</td>
     <td className="px-4 py-2 truncate max-w-xs">{channel?.title || feed.url}</td>
+    <td className="px-4 py-2 truncate max-w-xs">{channel?.id || "-"}</td>
+
     <td className="px-4 py-2">
       <FeedStatusBadge feed={feed} />
     </td>

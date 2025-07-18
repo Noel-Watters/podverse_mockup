@@ -4,6 +4,9 @@ from app.extensions import ma, fields, validate
 from app.models.channel import Channel
 from app.models.item import Item
 from app.models.stats import StatsAggregatedChannel, StatsAggregatedItem
+from app.blueprints.feed.schemas import FeedSchema
+from app.blueprints.item.schemas import ItemSchema
+
 
 class StatsChannelSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -24,7 +27,14 @@ class ChannelDetailsSchema(ma.SQLAlchemyAutoSchema):
         model = Channel
         include_relationships = True
         include_fk = True
-        include_fields = ('id', 'title', 'slug', 'description', 'stats', 'raw_event_count')
+        include_fields = (
+            'id', 'title', 'slug', 'description', 'stats', 'raw_event_count',
+            'items', 'categories', 'feed', 'medium'
+        )
+
+    stats = ma.Nested(StatsChannelSchema, many=True)
+    items = ma.Nested(ItemSchema, many=True)
+    feed = ma.Nested(FeedSchema)
 
 class ChannelDailyStatsOnlySchema(ma.SQLAlchemyAutoSchema):
     class Meta:
