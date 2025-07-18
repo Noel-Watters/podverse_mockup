@@ -1,4 +1,6 @@
-
+import { Feed } from './feed';
+import {Item} from './item';
+import {Stats} from './stats';
 export interface Channel {
     id: number;
     id_text: string;
@@ -26,4 +28,17 @@ export interface Category {
 export interface Medium {
     id: number;
     value: string;
+}
+
+export interface ChannelData {
+  id: number;
+  title: string;
+  podcast_index_id: number;
+  id_text: string;
+  slug: string;
+  medium_id: number;
+  categories: number[];
+  feed: Feed;
+  items: Item[];
+  stats: Stats[];
 }

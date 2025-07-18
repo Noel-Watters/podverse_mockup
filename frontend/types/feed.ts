@@ -22,6 +22,7 @@ export interface Feed {
   updated_at?: string;
   is_parsing?: boolean;
   logs?: FeedLog[];
+  recent_logs?: FeedLog[];
 }
 
 export interface FeedFlagStatus {
