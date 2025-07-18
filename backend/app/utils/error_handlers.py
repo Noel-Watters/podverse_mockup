@@ -126,10 +126,13 @@ def register_error_handlers(app):
 
         # If it is a network related issue log the event 
         if network_related:
+            # Get admin_id from request context or use 'unknown' if not authenticated
+            admin_id = getattr(getattr(request, "admin", None), "sub", "unknown")
             log_network_event(
                 current_app.logger,
                 "NETWORK_ISSUE",
-                details=f"{type(error).__name__}: {str(error)}"
+                admin_id,
+                f"{type(error).__name__}: {str(error)}"
             )
 
         return jsonify({

@@ -95,7 +95,7 @@ def get_all_feeds(page=1, limit=10, parsing_priority=None, is_parsing=None, stat
     except Exception as e:
         logger.error(f"Error in get_all_feeds: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        log_error("get_all_feeds", e)
+        log_error("get_all_feeds", "unknown", e)
         raise DatabaseError(f"Failed to retrieve feeds: {str(e)}")
 
 
@@ -134,5 +134,5 @@ def get_feed_logs(feed_id: int):
     except Exception as e:
         logger.error(f"Error in get_feed_logs: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        log_error("get_feed_logs", e)
+        log_error("get_feed_logs", "unknown", e)
         raise DatabaseError(f"Failed to retrieve feed logs: {str(e)}") 

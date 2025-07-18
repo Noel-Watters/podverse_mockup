@@ -145,7 +145,7 @@ def cleanup_old_export_files() -> str:
                 if os.path.exists(log.file_path):
                     os.remove(log.file_path)
         except Exception as e:
-            log_error(f"Failed to delete export file: {log.file_path} | Error: {str(e)}")
+            log_error(f"Failed to delete export file: {log.file_path} | Error: {str(e)}", "system@podverse.com", e)
             continue
 
         # Update log metadata

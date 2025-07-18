@@ -83,5 +83,5 @@ def get_feeds_for_export(search=None, sort_by='id', sort_order='asc', max_rows=N
     except Exception as e:
         logger.error(f"Error in get_feeds_for_export: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        log_error("get_feeds_for_export", e)
+        log_error("get_feeds_for_export", "unknown", e)
         raise DatabaseError(f"Failed to retrieve feeds for export: {str(e)}") 
