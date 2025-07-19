@@ -50,7 +50,6 @@ class BaseFeedSchema(ma.SQLAlchemyAutoSchema):
     flag_status = ma.Method("get_flag_status")
     channel_title = ma.Method("get_channel_title")
     channel_podcast_index_id = ma.Method("get_channel_podcast_index_id")
-    parsing_priority = ma.Method("suggest_priority_for_feed")
 
     class Meta:
         model = Feed
@@ -101,45 +100,11 @@ class BaseFeedSchema(ma.SQLAlchemyAutoSchema):
         Returns:
             int: The podcast index ID, or None if no channels exist
         """
-        return feed_obj.channels[0].podcast_index_id if feed_obj.channels else None
-    
-    def suggest_priority_for_feed(self, feed_obj) -> int:
-        """
-        Suggest parsing priority based on errors and last updated time.
-        
-        This method analyzes recent logs and update patterns to suggest
-        an appropriate parsing priority for the feed.
-        
-        Priority levels:
-        - 10: High priority (2+ recent errors)
-        - 5: Medium priority (30+ days since update)
-        - 1: Low priority (default)
-        
-        Args:
-            feed_obj (Feed): The feed object
-            
-        Returns:
-            int: Suggested parsing priority (1, 5, or 10)
-        """
-        if not feed_obj.logs:
-            return 0
-        recent_errors = sum(1 for log in feed_obj.logs[:3] if log.is_success is False)
-        days_since_update = (datetime.utcnow() - feed_obj.updated_at).days
-
-        if recent_errors >= 2:
-            return 10  
-        if days_since_update > 30:
-            return 5   
-        return 1       
+        return feed_obj.channels[0].podcast_index_id if feed_obj.channels else None     
 
 
 class FeedSchema(BaseFeedSchema):
-    """
-    Schema for serializing individual Feed objects with recent logs.
-    
-    This schema includes recent logs and is used for detailed feed views
-    where recent parsing history is relevant.
-    """
+    """ Schema for serializing individual Feed objects with recent logs. """
     recent_logs = ma.Method("get_recent_logs")
 
     class Meta(BaseFeedSchema.Meta):

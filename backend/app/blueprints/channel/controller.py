@@ -1,8 +1,7 @@
 # app/blueprints/channel/controller.py
 
-from typing import List, Optional, Dict, Any
+import os
 from flask import jsonify, request
-from sqlalchemy.orm import joinedload
 from app.blueprints.channel.services import get_channels_list, get_channel_detail, get_channels_for_export, get_channels_by_feed_ids
 from app.blueprints.channel.schemas import channels_schema, channel_exports_schema, channel_detail_schema
 from app.utils.query_params import get_pagination_params, get_sorting_params, get_search_query, get_multi_filter_param
@@ -11,10 +10,14 @@ from app.utils.request_logger import get_logger, log_database_operation
 from app.utils.export_response import generate_export_response
 from datetime import datetime
 from app.utils.export_logging import create_export_log_simple, finalize_export_log
+from app.services.data_export import ensure_export_directory
+from app.utils.auth import get_current_auth0_id
+import traceback
 
 logger = get_logger(__name__)
 
 def list_channels():
+    """List channels with pagination, filtering, and search capabilities. See API.md for query params and status codes."""
     try:
         page, limit = get_pagination_params(request)
         sort_by, sort_order = get_sorting_params(request, ['id', 'title'], default_field='id')
@@ -52,12 +55,8 @@ def export_channels():
     Reuses the same filtering logic as list_channels but without pagination.
     """
     try:
-        # # Get admin email from request args
-        # admin_email = request.args.get("admin_email")
-        # if not admin_email:
-        #     raise ValidationError("admin_email is required")
-        # Get admin email from request args (optional, defaults to system@podverse.com)
-        export_by = request.args.get("export_by", "system@podverse.com")
+        # Use current user ID for manual exports, but allow override via export_by parameter
+        export_by = request.args.get("export_by") or get_current_auth0_id()
 
         # Create export log
         log = create_export_log_simple(
@@ -80,22 +79,25 @@ def export_channels():
         logger.info(f"Exporting channels - sort: {sort_by} {sort_order}, search: {search or 'none'}, max_rows: {max_rows}, id: {channel_id}, podcast_index_id: {podcast_index_id}")
         log_database_operation(logger, "READ", "channels", f"export_max_{max_rows}")
 
-        # Get channels for export
+        # Get and serialize channels
         channels = get_channels_for_export(search, sort_by, sort_order, max_rows, channel_id, podcast_index_id)
-        
-        # Serialize channels
         export_data = channel_exports_schema.dump(channels)
 
         # Generate filename with timestamp
+        format = request.args.get("format", "csv")
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"channels_export_{timestamp}.csv"
+        filename = f"channels_export_{timestamp}.{format}"
         
-        # Create response
-        response = generate_export_response(export_data, filename)
+        # get headers from schema
+        headers = {field: field for field in channel_exports_schema.fields}
         
-        # finalize export log
-        finalize_export_log(log.id, status="success", file_path=f"/exports/{filename}", format=request.args.get("format", "csv")) # file name is set in generate_export_response
+        # Create export response
+        response = generate_export_response(export_data, filename, headers)
         
+        # finalize export log with absolute file path
+        export_dir = ensure_export_directory()
+        absolute_file_path = os.path.abspath(os.path.join(export_dir, filename))
+        finalize_export_log(log.id, status="success", file_path=absolute_file_path, format=request.args.get("format", "csv")) # file name is set in generate_export_response
         logger.info(f"Generated export file: {filename} with {len(export_data)} records")
         return response
 
@@ -104,9 +106,17 @@ def export_channels():
         raise
     except Exception as e:
         logger.error(f"Unexpected error in export_channels: {str(e)}")
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        if log:
+            finalize_export_log(
+                log.id,
+                status="failed",
+                error_message=str(e)
+            )
         raise DatabaseError("Failed to export channels")
 
 def get_channel_by_id(channel_id):
+    """Get a single channel by ID. See API.md for status codes."""
     try:   
         logger.info(f"Retrieving channel details for ID: {channel_id}")
         log_database_operation(logger, "READ", "channels", channel_id)
@@ -129,10 +139,7 @@ def get_channel_by_id(channel_id):
 
 
 def get_channels_by_feed():
-    """
-    Get channels by feed IDs.
-    Accepts a comma-separated list of feed IDs and returns all channels associated with those feeds.
-    """
+    """Get channels by feed IDs. Accepts a comma-separated list of feed IDs and returns all channels associated with those feeds. See API.md for status codes."""
     try:
         # Get feed IDs from query parameter
         feed_ids = get_multi_filter_param(request, 'feed_ids', type_func=int)
@@ -155,7 +162,7 @@ def get_channels_by_feed():
         }
         
         logger.info(f"Successfully retrieved {len(channels)} channels for {len(feed_ids)} feed IDs")
-        return jsonify(result)
+        return result
         
     except ValidationError as e:
         logger.warning(f"Validation error in get_channels_by_feed: {str(e)}")

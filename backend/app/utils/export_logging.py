@@ -52,6 +52,9 @@ def create_export_log_simple(export_type: str, filters: dict = None, status: str
         Returns:
             The created ExportLog instance.
     """
+    # If export_type is a list, join it
+    if isinstance(export_type, list):
+        export_type = ",".join(export_type)
     data = {
         "export_by": export_by,
         "export_type": export_type,
@@ -59,6 +62,5 @@ def create_export_log_simple(export_type: str, filters: dict = None, status: str
         "status": status,
         "file_path": file_path,
         "format": format 
-        # Todo json format
     }
     return create_export_log(data)

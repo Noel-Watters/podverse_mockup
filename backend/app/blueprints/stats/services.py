@@ -134,6 +134,10 @@ def get_channel_stats_detail(channel_id: int, start: Optional[datetime] = None,
         channel = (
             db.session.query(Channel)
             .options(joinedload(Channel.stats))
+            .options(joinedload(Channel.items))
+            .options(joinedload(Channel.feed))
+            .options(joinedload(Channel.categories))
+            .options(joinedload(Channel.medium))
             .filter(Channel.id == channel_id)
             .first()
         )

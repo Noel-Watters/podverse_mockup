@@ -1,23 +1,28 @@
 export interface FeedLog {
   id: number;
   feed_id: number;
-  message?: string;
-  created_at?: string;
+  http_status?: number;
+  is_success?: boolean;
+  parse_errors?: number;
+  parse_error_message?: string;
+  started_at?: string;
+  finished_at?: string;
+  parsed_by?: string;
+  last_finished_parse_time?: string;
 }
 
 export interface Feed {
   id: number;
-  feed_flag_status_id: number;
+  flag_status: string;
   url: string;
-  is_parsing: boolean;
-  parsing_priority: number;
-  last_parsed_file_hash: string;
-  container_id: string;
-  created_at: string;
-  updated_at: string;
-  FeedFlagStatus?: FeedFlagStatus[];
+  last_parsed_file_hash?: string;
+  parsing_priority?: number;
+  container_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  is_parsing?: boolean;
   logs?: FeedLog[];
-  recent_logs?: RecentLog[];
+  recent_logs?: FeedLog[];
 }
 
 export interface FeedFlagStatus {
@@ -27,12 +32,11 @@ export interface FeedFlagStatus {
   updated_at: string;
 }
 
-export interface RecentLog {
-  id: number;
-  feed_id: number;
-  last_finished_parse_time?: string;
-  last_good_http_status_time?: string;
-  last_http_status?: number;
-  message: string;
-  parse_errors?: number;
+export interface FeedFilters {
+  status: string;
+  parsing_priority?: number;
+  is_parsing?: boolean;
+  sort?: 'created_at' | 'updated_at' | 'parsing_priority' | 'status' | 'id';
+  order?: 'asc' | 'desc';
+  searchTerm?: string;
 }

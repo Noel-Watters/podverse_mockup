@@ -4,6 +4,7 @@ from flask import Flask
 from app.extensions import ma, db, limiter, migrate
 from app.blueprints import register_blueprints
 from flask_cors import CORS
+from flask_talisman import Talisman
 from config import config_by_name
 from app.utils.request_logger import register_logging
 from app.utils.error_handlers import register_error_handlers
@@ -18,7 +19,23 @@ def create_app(config_name=None):
     app = Flask(__name__)
     app.config.from_object(config_by_name[config_name])
 
-    
+    # Minimal but essential security headers
+    Talisman(
+        app,
+        content_security_policy={
+            'default-src': ["'self'"],
+            'script-src': ["'self'", 'https://unpkg.com'],
+            'style-src': ["'self'", 'https://unpkg.com'],
+            'img-src': ["'self'", "data:", "https:", "https://cdn-images-3.listennotes.com"],
+            'font-src': ["'self'", 'https://fonts.gstatic.com'],
+            'frame-src': ["'none'"],
+            'object-src': ["'none'"],
+        },
+        force_https=config_name == "production",  # Auto-enable HTTPS in production
+        strict_transport_security=True,
+        strict_transport_security_max_age=31536000,
+        referrer_policy='strict-origin-when-cross-origin'
+    )
 
     # initialize extensions
     ma.init_app(app)

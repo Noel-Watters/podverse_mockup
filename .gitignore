@@ -20,6 +20,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+.pytest_cache/
 
 # Virtual Environment
 venv/
@@ -54,7 +55,7 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # Project specific
-notes.md
+NOTES.md
 *.log
 logs/
 exports/
