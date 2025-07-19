@@ -8,7 +8,7 @@ def handle_custom_report(data):
     export_result = export_custom_report(
         user_email=validated["exported_by"],
         source=validated["source"],
-        fields=validated["fields"],
+        fields=validated["selected_fields"],
         filters=validated["filters"],
         export_format=validated["format"]
     )

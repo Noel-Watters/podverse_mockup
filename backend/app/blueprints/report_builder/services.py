@@ -2,7 +2,7 @@ import csv, os, json
 from datetime import datetime
 from app.models.export_logs import ExportLog
 from app.utils.file_system_helpers import safe_write_file
-from query_builder import build_dynamic_query
+from app.blueprints.report_builder.query_builder import build_dynamic_query
 from app.extensions import db
 
 def export_custom_report(user_email, source, fields, filters, export_format):

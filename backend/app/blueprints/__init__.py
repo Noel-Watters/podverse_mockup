@@ -11,9 +11,6 @@ from app.blueprints.item import item_bp
 from app.blueprints.stats import stats_bp
 from app.blueprints.report_builder import report_builder_bp
 
-# Utility/test blueprints
-from app.db_test import db_test_bp
-from app.sql_runner import sql_runner_bp
 
 def register_blueprints(app):
     # Top-level /admin blueprint
