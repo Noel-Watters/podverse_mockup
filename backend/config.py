@@ -39,7 +39,7 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
 
 class TestingConfig(BaseConfig):
-    SQLALCHEMY_DATABASE_URI = os.getenv("TEST_DATABASE_URL")
+    SQLALCHEMY_DATABASE_URI = "sqlite://"
     TESTING = True
     DEBUG = True
 
