@@ -7,8 +7,8 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
 
 //Reparse a specific feed by ID
-export async function POST(_request: Request, context: any) {
-  const { feed_id } = await context.params;
+export async function POST(_request: Request, { params }: { params: Promise<{ feed_id: string }> }) {
+  const { feed_id } = await params;
   const session = await auth0.getSession();
   try {
     const response = await axios.post(`${BACKEND_URL}/admin/feeds/${feed_id}/reparse`);

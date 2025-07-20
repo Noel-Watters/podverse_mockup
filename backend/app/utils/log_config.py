@@ -1,3 +1,5 @@
+# backend/app/utils/log_config.py
+
 import logging
 import os
 from logging.handlers import RotatingFileHandler

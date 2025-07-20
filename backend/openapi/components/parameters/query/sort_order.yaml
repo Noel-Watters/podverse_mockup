@@ -1,0 +1,7 @@
+name: sort_order
+in: query
+schema:
+  type: string
+  enum: [asc, desc]
+  default: desc
+description: Sort order (ascending or descending).

@@ -80,5 +80,5 @@ def bulk_update_feeds(feed_ids: list, updates: dict):
         db.session.rollback()
         logger.error(f"Error in bulk_update_feeds: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        log_error("bulk_update_feeds", e)
+        log_error("bulk_update_feeds", "unknown", e)
         raise DatabaseError(f"Failed to bulk update feeds: {str(e)}") 

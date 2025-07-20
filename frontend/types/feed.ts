@@ -36,7 +36,9 @@ export interface FeedFilters {
   status: string;
   parsing_priority?: number;
   is_parsing?: boolean;
-  sort?: 'created_at' | 'updated_at' | 'parsing_priority' | 'status' | 'id';
-  order?: 'asc' | 'desc';
+  sort_by?: string;
+  sort_order?: string;
   searchTerm?: string;
+  limit?: number;
+  page?: number;
 }

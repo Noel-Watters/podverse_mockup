@@ -6,8 +6,8 @@ import { NextResponse } from "next/server";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 
 // Fetch a specific channel by channel ID
-export async function GET(_request: Request, context: any) {
-  const { channel_id } = await context.params;
+export async function GET(_request: Request, { params }: { params: Promise<{ channel_id: string }> }) {
+  const { channel_id } = await params;
   const url = `${BACKEND_URL}/admin/stats/channels/${channel_id}`;
   console.log("API route /api/channels/id called with URL:", url);
   try {

@@ -66,11 +66,11 @@ useEffect(() => {
 
 
 const handleSortChange = (sort: string) => {
-  dispatch(setFilters({ sort: sort as any }));
+  dispatch(setFilters({ sort_by: sort as any }));
 };
 
 const handleOrderChange = (order: string) => {
-  dispatch(setFilters({ order: order as any }));
+  dispatch(setFilters({ sort_order: order as any }));
 };
 
 const handleFilterChange = (filterName: string, value: string) => {
@@ -152,7 +152,7 @@ const toggleExpand = (feedId: number) => {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="overflow-y-auto h-[80vh] p-4"
+        className="overflow-y-auto h-[80vh] p-2"
         style={{ position: "relative" }}
       >
         {/* Notifications */}
@@ -175,10 +175,12 @@ const toggleExpand = (feedId: number) => {
 
         {/* Toolbar for bulk actions, add, sort, filter */}
         <FeedToolBar
+          feeds={feeds}
           onSortChange={handleSortChange}
           onOrderChange={handleOrderChange}
           onFilterChange={handleFilterChange}
           selectedFeeds={selectedFeeds}
+          setSelectedFeeds={setSelectedFeeds}
           onBulkReparse={handleBulkReparse}
           onBulkUpdateStatus={handleBulkUpdateStatus}
           isBulkReparseLoading={isBulkReparseLoading}

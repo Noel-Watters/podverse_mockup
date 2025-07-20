@@ -78,12 +78,16 @@ def log_request_end(logger: Logger, response: Response) -> Response:
         # Log security events for suspicious status codes
         if response.status_code in [401, 403]:
             from app.utils.security_logger import log_security_event
-            log_security_event(logger, 'ACCESS_DENIED', 
-                            details=f'{request.method} {request.path} returned {response.status_code}')
+            # Get admin_id from request context or use 'unknown' if not authenticated
+            admin_id = getattr(getattr(request, "admin", None), "sub", "unknown")
+            log_security_event(logger, 'ACCESS_DENIED', admin_id,
+                            f'{request.method} {request.path} returned {response.status_code}')
         elif response.status_code == 429:
             from app.utils.security_logger import log_security_event
-            log_security_event(logger, 'RATE_LIMIT_HIT', 
-                            details=f'{request.method} {request.path}')
+            # Get admin_id from request context or use 'unknown' if not authenticated
+            admin_id = getattr(getattr(request, "admin", None), "sub", "unknown")
+            log_security_event(logger, 'RATE_LIMIT_HIT', admin_id,
+                            f'{request.method} {request.path}')
     
     return response
 

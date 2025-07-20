@@ -2,10 +2,6 @@
 #Request-parsing utils - Parse request.args safely
 
 from flask import request
-from typing import Optional, Dict, Any, Tuple
-from sqlalchemy.orm import Query
-from sqlalchemy import desc
-
 from app.utils.error_exceptions import ValidationError
 from app.utils.request_logger import get_logger
 
@@ -13,7 +9,7 @@ from app.utils.request_logger import get_logger
 logger = get_logger(__name__)
 
 
-def get_pagination_params(request, default_page=1, default_limit=10, max_limit=50):
+def get_pagination_params(request, default_page=1, default_limit=20, max_limit=100):
     """
         Extract and validate pagination parameters from request arguments
         
@@ -25,19 +21,46 @@ def get_pagination_params(request, default_page=1, default_limit=10, max_limit=5
         
         Returns:
             tuple: (page, limit)
+            
+        Raises:
+            ValidationError: If page or limit parameters are invalid
     """
     
-    # Get 'page' from the query string (?page=2), default to 1 if missing
-    page = request.args.get('page', default_page, type=int) 
-    limit = request.args.get('limit', default_limit, type=int) 
+    # Get raw string values first
+    page_str = request.args.get('page')
+    limit_str = request.args.get('limit')
     
-    # Ensure page is always at least 1
-    page = max(1, page)
+    # Convert page parameter to int
+    if page_str is not None:
+        try:
+            page = int(page_str)
+        except (ValueError, TypeError):
+            raise ValidationError("Page parameter must be a valid integer")
+    else:
+        page = default_page
+    
+    # Convert limit parameter
+    if limit_str is not None:
+        try:
+            limit = int(limit_str)
+        except (ValueError, TypeError):
+            raise ValidationError("Limit parameter must be a valid integer")
+    else:
+        limit = default_limit
+    
+    # Validate page is positive
+    if page < 1:
+        raise ValidationError("Page must be a positive integer")
+    
+    # Validate limit is positive
+    if limit < 1:
+        raise ValidationError("Limit must be a positive integer")
 
     # writing this way so if limit exceed we can raise error with logging prevent abuse (not limit = min(limit, max_limit))
     if limit > max_limit:
         logger.warning(f"Client requested too many items: {limit}, capped to {max_limit}")
         limit = max_limit
+        
     return page, limit
 
 def get_sorting_params(request, allowed_fields, default_field='id', default_order='asc'):

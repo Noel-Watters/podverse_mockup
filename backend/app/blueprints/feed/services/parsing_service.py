@@ -70,13 +70,8 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
                 response = requests.post("http://parse-service:3001/trigger-parse", json=payload, timeout=5)
                 response.raise_for_status()
                 break
-            except requests.Timeout as e:
-                logger.warning(f"Timeout on attempt {attempt + 1}: {e}")
-                message = "Parser request timed out"
-                if attempt == 1:
-                    raise
-            except requests.ConnectionError as e:
-                logger.warning(f"Connection error on attempt {attempt + 1}: {e}")
+            except Exception as e:
+                logger.warning(f"Request error on attempt {attempt + 1}: {e}")
                 if attempt == 1:
                     raise
                 # exponential backoff with random jitter - base delay doubles on each try
@@ -87,14 +82,24 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
         is_success = result.get("success", False)
         message = result.get("message", None)
         http_status = response.status_code
+        
+        # If the parser service returned an error, provide a more descriptive message
+        if not is_success:
+            if message:
+                message = f"Parser service error: {message}"
+            else:
+                message = "Parser service returned an error but no message was provided."
 
     except Exception as e:
         logger.error(f"Error calling Node trigger: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        result = {"status": "error", "error": str(e), "feed_id": feed.id}
-        is_success = False
-        message = str(e)
+        
+        # Use a simple error message approach
+        message = f"Parsing failed: {str(e)}"
         http_status = None
+        
+        result = {"status": "error", "message": message, "feed_id": feed.id}
+        is_success = False
 
     finally:
         # Get the current user's Auth0 ID

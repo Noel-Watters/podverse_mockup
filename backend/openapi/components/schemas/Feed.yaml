@@ -3,17 +3,11 @@ type: object
 required:
   - id
   - url
-  - feed_flag_status_id
 properties:
   id:
     type: integer
     description: Feed ID (primary key)
     example: 104
-
-  feed_flag_status_id:
-    type: integer
-    description: Foreign key to feed_flag_status table (status type)
-    example: 1
 
   url:
     type: string
@@ -67,10 +61,25 @@ properties:
     example: 2025-06-18T14:05:00Z
 
   flag_status:
-    $ref: "./FeedFlagStatus.yaml"
+    type: string
+    description: Human-readable flag status (e.g., active, archived, spam, parse_error)
+    example: "active"
+    enum: ["active", "archived", "spam", "parse_error", "fetch_error", "always-parse", "pending-archive", "takedown"]
 
-  logs:
+  channel_title:
+    type: string
+    nullable: true
+    description: Title of the associated channel (first channel if multiple exist)
+    example: "Example Podcast"
+
+  channel_podcast_index_id:
+    type: integer
+    nullable: true
+    description: Podcast Index ID of the associated channel
+    example: 12345
+
+  recent_logs:
     type: array
     items:
       $ref: "./FeedLog.yaml"
-    description: Feed parsing logs
+    description: The 2 most recent parsing logs for this feed

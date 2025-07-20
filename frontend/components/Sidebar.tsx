@@ -6,9 +6,6 @@ import { useRouter, usePathname } from "next/navigation";
 import {
   ChartBarIcon,
   RssIcon,
-  BellIcon,
-  UserIcon,
-  SwatchIcon,
 } from "@heroicons/react/24/outline";
 
 // Simple class name joiner utility
@@ -19,31 +16,10 @@ function cn(...classes: (string | false | undefined)[]) {
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: "/Dark_Podverse_Logo.svg" },
   { href: "/rssfeed", label: "Feeds", icon: <RssIcon className="w-6 h-6" /> },
-  {
-    href: "/statistics",
-    label: "Podverse Statistics",
-    icon: <ChartBarIcon className="w-6 h-6" />,
-  },
-  {
-    href: "/notifications",
-    label: "Notifications",
-    icon: <BellIcon className="w-6 h-6" />,
-  },
-  {
-    href: "/profile",
-    label: "Profile",
-    icon: <UserIcon className="w-6 h-6" />,
-  },
-  {
-    href: "/theme",
-    label: "Theme Editor",
-    icon: <SwatchIcon className="w-6 h-6" />,
-  },
-  {
-    href: "/reports",
-    label: "Reports",
-    icon: <ChartBarIcon className="w-6 h-6" />, // You can change this to a different icon if desired
-  },
+
+
+
+
 ];
 
 export default function Sidebar() {
@@ -51,15 +27,15 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-18 bg-podverse-surface p-4 space-y-4">
+    <aside className="w-18 bg-bar p-4 space-y-4">
       <nav className="flex flex-col gap-2">
         {navLinks.map(({ href, label, icon }) => (
           <Link key={href} href={href}>
             <span
               className={cn(
-                "px-2 py-2 rounded hover:bg-podverse-highlight transition cursor-pointer flex items-center gap-2",
+                "px-2 py-2 rounded hover:bg-accent transition cursor-pointer flex items-center gap-2",
                 pathname === href
-                  ? "bg-podverse-highlight text-podverse-text font-semibold"
+                  ? "bg-accent text-black font-semibold "
                   : "text-black"
               )}
               title={label}

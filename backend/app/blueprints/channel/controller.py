@@ -1,17 +1,12 @@
 # app/blueprints/channel/controller.py
 
-import os
 from flask import jsonify, request
 from app.blueprints.channel.services import get_channels_list, get_channel_detail, get_channels_for_export, get_channels_by_feed_ids
 from app.blueprints.channel.schemas import channels_schema, channel_exports_schema, channel_detail_schema
 from app.utils.query_params import get_pagination_params, get_sorting_params, get_search_query, get_multi_filter_param
 from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.request_logger import get_logger, log_database_operation
-from app.utils.export_response import generate_export_response
-from datetime import datetime
-from app.utils.export_logging import create_export_log_simple, finalize_export_log
-from app.services.data_export import ensure_export_directory
-from app.utils.auth import get_current_auth0_id
+from app.utils.export_utils import *
 import traceback
 
 logger = get_logger(__name__)
@@ -55,11 +50,11 @@ def export_channels():
     Reuses the same filtering logic as list_channels but without pagination.
     """
     try:
-        # Use current user ID for manual exports, but allow override via export_by parameter
-        export_by = request.args.get("export_by") or get_current_auth0_id()
+        # Get export format and user
+        format, export_by = get_export_format_and_user()
 
         # Create export log
-        log = create_export_log_simple(
+        log = create_export_log_with_filters(
             export_type="channels",
             filters=request.args.to_dict(),
             export_by=export_by
@@ -83,21 +78,13 @@ def export_channels():
         channels = get_channels_for_export(search, sort_by, sort_order, max_rows, channel_id, podcast_index_id)
         export_data = channel_exports_schema.dump(channels)
 
-        # Generate filename with timestamp
-        format = request.args.get("format", "csv")
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"channels_export_{timestamp}.{format}"
-        
-        # get headers from schema
-        headers = {field: field for field in channel_exports_schema.fields}
+        # Generate filename and headers
+        filename = generate_export_filename("channels", export_by)
+        headers = create_export_headers_from_schema(channel_exports_schema.fields)
         
         # Create export response
-        response = generate_export_response(export_data, filename, headers)
-        
-        # finalize export log with absolute file path
-        export_dir = ensure_export_directory()
-        absolute_file_path = os.path.abspath(os.path.join(export_dir, filename))
-        finalize_export_log(log.id, status="success", file_path=absolute_file_path, format=request.args.get("format", "csv")) # file name is set in generate_export_response
+        response, file_path = generate_export_response_with_path(export_data, filename, format, headers)
+        finalize_export_success(log.id, file_path, format, channels_count=len(export_data))
         logger.info(f"Generated export file: {filename} with {len(export_data)} records")
         return response
 
@@ -108,11 +95,7 @@ def export_channels():
         logger.error(f"Unexpected error in export_channels: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
         if log:
-            finalize_export_log(
-                log.id,
-                status="failed",
-                error_message=str(e)
-            )
+            finalize_export_failure(log.id, str(e))
         raise DatabaseError("Failed to export channels")
 
 def get_channel_by_id(channel_id):

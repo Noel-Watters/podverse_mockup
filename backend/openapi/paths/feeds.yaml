@@ -6,15 +6,50 @@
       Supports optional search, limit, and offset parameters for pagination and filtering.
       Data is sourced from the `feed` table, joined with `feed_flag_status` for human-readable status labels.
       
-      **Enhanced Search**: Search across feed ID (exact match), feed URL (partial), channel title (partial), and podcast index ID (exact match).
+      **Search**: Search across feed ID (exact match), feed URL (partial), channel title (partial), and podcast index ID (exact match).
+      **Sorting**: Sort by feed ID, feed URL, or updated at.
+      
+      **Filtering Options**:
+      - `status`: Filter by flag status (active, archived, spam, parse_error, fetch_error, always-parse, pending-archive, takedown)
+      - `is_parsing`: Filter by parsing state (true/false)
+      - `parsing_priority`: Filter by parsing priority (0-5)
+      - `podcast_index_id`: Filter by podcast index ID
+      - `feed_id`: Filter by specific feed ID
+
+      **Rate Limiting**: 50 requests per minute
     tags:
       - Feeds
     security:
       - Auth0Bearer: []
     parameters:
       - $ref: "../components/parameters/query/limit.yaml"
-      - $ref: "../components/parameters/query/offset.yaml"
+      - $ref: "../components/parameters/query/page.yaml"
       - $ref: "../components/parameters/query/search.yaml"
+      - $ref: "../components/parameters/query/id_filter.yaml"
+      - $ref: "../components/parameters/query/podcast_index_id.yaml"
+      - $ref: "../components/parameters/query/sort_order.yaml"
+      - $ref: "../components/parameters/query/sort_by.yaml"
+      - name: status
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [active, archived, spam, parse_error, fetch_error, always-parse, pending-archive, takedown]
+        description: Filter feeds by flag status
+      - name: is_parsing
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: Filter feeds by parsing state
+      - name: parsing_priority
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 5
+        description: Filter feeds by parsing priority (0=rarely, 5=frequently)
     responses:
       '200':
         description: List of feeds returned
@@ -30,264 +65,670 @@
                 meta:
                   type: object
                   properties:
-                    total:
+                    total_items:
                       type: integer
+                      description: Total number of feeds matching the query
+                    total_pages:
+                      type: integer
+                      description: Total number of pages
+                    page:
+                      type: integer
+                      description: Current page number
                     limit:
                       type: integer
-                    offset:
-                      type: integer
+                      description: Number of items per page
+                    has_next:
+                      type: boolean
+                      description: Whether there are more pages
+                    has_prev:
+                      type: boolean
+                      description: Whether there are previous pages
+      '400':
+        $ref: "../components/responses/BadRequest.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml"
 
 /feeds/{feed_id}:
   get:
-    summary: Retrieve a feed by ID
+    summary: Get a specific feed by ID
     description: |
-      Fetches complete feed metadata by `id`.
-
-      This includes:
-      - `url`: The RSS feed address
-      - `feed_flag_status_id`: Links to `feed_flag_status` table (e.g. active, spam)
-      - `is_parsing`: Timestamp set when feed is being parsed
-      - `parsing_priority`: Integer from 0 to 5 used to schedule parsing frequency
+      Retrieves detailed information about a specific RSS feed by its ID.
       
-      Optional joins with `channel` for UI display, but this route is scoped to the `feed` table.
+      **Response includes:**
+      - Basic feed information (ID, URL, parsing priority, timestamps)
+      - Channel information (title, podcast index ID)
+      - Flag status as human-readable string
+      - Recent parsing logs (2 most recent entries)
+      - Parsing state and metadata
+      
+      **Computed Fields:**
+      - `channel_title`: Title of the associated channel
+      - `channel_podcast_index_id`: Podcast Index ID of the channel  
+      - `flag_status`: Human-readable status (e.g., active, archived, spam)
+      - `recent_logs`: Array of the 2 most recent parsing logs
+      
+      This endpoint provides comprehensive feed information for detailed views
+      and feed management operations.
+
+      **Rate Limiting**: 50 requests per minute
     tags:
       - Feeds
     security:
       - Auth0Bearer: []
     parameters:
-      - name: feed_id
-        in: path
-        required: true
-        schema:
-          type: integer
-    responses:  
+      - $ref: "../components/parameters/path/feed_id.yaml"
+    responses:
       '200':
-        description: Feed details
+        description: Feed retrieved successfully
         content:
           application/json:
             schema:
               $ref: "../components/schemas/Feed.yaml"
       '404':
         $ref: "../components/responses/NotFound.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
 
 /feeds/{feed_id}/reparse:
   post:
-    summary: Trigger RSS feed re-parse
+    summary: Trigger manual reparse of a specific feed
     description: |
-      This sets the `is_parsing` field on the `feed` table to true, indicating that the feed should be re-fetched and reprocessed.
+      Manually triggers parsing of a specific RSS feed. This endpoint allows immediate parsing
+      of feeds without waiting for the scheduled parsing cycle.
+      
+      **Eligibility Rules**:
+      - Only feeds with status `active`, `always-parse`, or `parse_error` are eligible
+      - Feeds with status `archived`, `spam`, `fetch_error`, `pending-archive`, or `takedown` are rejected
+      - Feeds that are already being parsed (`is_parsing=true`) return a 409 conflict
+      
+      **Async vs Sync**:
+      - Default behavior (sync): Returns immediate result with feed_id and success status
+      - With `async=true`: Queues the reparse and returns `{"status": "queued"}`
+      
+      **Response Patterns**:
+      - Success (sync): `{"feed_id": 5, "message": "...", "status": "success", "success": true}`
+      - Success (async): `{"status": "queued"}`
+      - Conflict: `{"error": "Feed is already being parsed"}`
+      - Not eligible: `{"error": "Feed is not eligible for parsing (status: archived)"}`
 
-      This is useful if a feed appears stuck or failed to parse previously.
-
-      NOTE: Actual parsing happens asynchronously in a worker, not in response to this call. The `is_parsing` flag will be set back to false when processing completes.
+      **Rate Limiting**: 10 requests per minute
     tags:
       - Feeds
     security:
       - Auth0Bearer: []
     parameters:
-      - name: feed_id
-        in: path
-        required: true
+      - $ref: "../components/parameters/path/feed_id.yaml"
+      - name: async
+        in: query
+        required: false
         schema:
-          type: integer
+          type: boolean
+          default: false
+        description: Whether to run the reparse asynchronously
     responses:
       '200':
-        description: Reparse triggered
+        description: Reparse initiated successfully
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    feed_id:
+                      type: integer
+                      description: ID of the feed being reparsed
+                    message:
+                      type: string
+                      description: Status message from the parser
+                    status:
+                      type: string
+                      enum: [success]
+                      description: Status of the reparse operation
+                    success:
+                      type: boolean
+                      description: Whether the reparse was successful
+                  required: [feed_id, message, status, success]
+                - type: object
+                  properties:
+                    status:
+                      type: string
+                      enum: [queued]
+                      description: Status indicating the reparse was queued
+                  required: [status]
+      '400':
+        description: Feed is not eligible for parsing
         content:
           application/json:
             schema:
               type: object
               properties:
-                message:
+                error:
                   type: string
-                  example: "Feed reparse has been scheduled."
+                  example: "Feed is not eligible for parsing (status: archived)"
       '404':
         $ref: "../components/responses/NotFound.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
-
-/feeds/import:
-  post:
-    summary: Import feeds from OPML file
-    description: |
-      Accepts an OPML file upload containing RSS feed URLs.
-      Extracts feed URLs from the OPML file and creates new feed entries in the system.
-      
-      The OPML file should follow standard OPML 2.0 format with <outline> elements containing xmlUrl attributes.
-      Duplicate feeds (matching URLs) will be skipped.
-    tags:
-      - Feeds
-    security:
-      - Auth0Bearer: []
-    requestBody:
-      required: true
-      content:
-        multipart/form-data:
-          schema:
-            type: object
-            properties:
-              file:
-                type: string
-                format: binary
-                description: OPML file containing feed URLs
-    responses:
-      '200':
-        description: Import results
+      '409':
+        description: Feed is already being parsed
         content:
           application/json:
             schema:
               type: object
               properties:
-                imported:
-                  type: integer
-                  description: Number of feeds successfully imported
-                skipped:
-                  type: integer
-                  description: Number of feeds skipped (duplicates)
-                failed:
-                  type: integer
-                  description: Number of feeds that failed to import
-      '400':
-        $ref: "../components/responses/BadRequest.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
+                error:
+                  type: string
+                  example: "Feed is already being parsed"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
 
-/feeds/export:
+/feeds/{feed_id}/logs:
   get:
-    summary: Export feeds as OPML or CSV metadata
+    summary: Retrieve parsing logs for a specific feed
     description: |
-      Exports feed data in either OPML or CSV format:
-
-      OPML format:
-      - Standard OPML 2.0 specification
-      - Contains <outline> elements with xmlUrl attributes
-      - Includes basic feed metadata (title, url)
-
-      CSV format includes comprehensive metadata:
-      - Basic info: id, url, title
-      - Parsing state: parsing_priority, is_parsing, last_parsed_at
-      - Timestamps: created_at, updated_at
-      - Status: feed_flag_status and related metadata
+      Returns parsing logs for a specific feed with pagination and filtering options.
+      Logs are sorted by finished_at in descending order (newest first).
       
-      This endpoint is useful for:
-      - Importing feeds into other podcast systems (OPML)
-      - Reviewing feed parsing states and errors (CSV)
-      - Bulk feed management and auditing (CSV)
+      **Pagination**: Supports `page` and `limit` parameters for paginated results
+      **Filtering**: Supports `success_only` and `error_only` parameters to filter by parsing success (mutually exclusive)
+      
+      **Response Structure**:
+      - `logs`: Array of parsing log entries
+      - `meta`: Pagination metadata (page, limit, total_items, total_pages, has_next, has_prev)
+      - Each log contains parsing metadata, HTTP status, success/failure status, and error messages
+      
+      **Rate Limiting**: 50 requests per minute
     tags:
       - Feeds
     security:
       - Auth0Bearer: []
     parameters:
-      - name: format
+      - $ref: "../components/parameters/path/feed_id.yaml"
+      - name: page
         in: query
-        required: true
+        required: false
         schema:
-          type: string
-          enum: [opml, csv]
-          default: opml
-        description: Export format (OPML or CSV)
-      - name: status
+          type: integer
+          minimum: 1
+          default: 1
+        description: Page number for pagination
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+        description: Number of logs per page
+      - name: success_only
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: Filter to show only successful parsing attempts (mutually exclusive with error_only)
+      - name: error_only
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: Filter to show only failed parsing attempts (mutually exclusive with success_only)
+    responses:
+      '200':
+        description: Feed logs retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                logs:
+                  type: array
+                  items:
+                    $ref: "../components/schemas/FeedLog.yaml"
+                  description: Array of parsing logs for the current page
+                meta:
+                  type: object
+                  properties:
+                    page:
+                      type: integer
+                      description: Current page number
+                    limit:
+                      type: integer
+                      description: Number of logs per page
+                    total_items:
+                      type: integer
+                      description: Total number of logs matching the filter
+                    total_pages:
+                      type: integer
+                      description: Total number of pages
+                    has_next:
+                      type: boolean
+                      description: Whether there are more pages
+                    has_prev:
+                      type: boolean
+                      description: Whether there are previous pages
+      '400':
+        $ref: "../components/responses/BadRequest.yaml"
+      '404':
+        $ref: "../components/responses/NotFound.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
+
+/feeds/{feed_id}/export:
+  get:
+    summary: Export a single feed
+    description: |
+      Exports a single feed in CSV or JSON format with comprehensive metadata including:
+      - Basic feed information (ID, URL, parsing priority, timestamps)
+      - Channel information (title, podcast index ID, channel issues)
+      - Parsing history and error tracking (last parse error, error count, last successful parse)
+      - Flag status and operational metadata
+      
+      **Export Formats**:
+      - **CSV** (default): Comma-separated values with headers, suitable for spreadsheet analysis
+      - **JSON**: Array containing feed object with all metadata, suitable for programmatic use
+      
+      **CSV Fields**:
+      - id, url, parsing_priority, is_parsing, created_at, updated_at
+      - flag_status, channel_title, channel_podcast_index_id
+      - last_parse_error, parse_error_count, last_successful_parse_at, channel_issue
+      
+      **Use Cases**:
+      - Individual feed analysis and debugging
+      - Feed metadata review and auditing
+      - Exporting feed data for external tools
+      - Generating reports for specific feeds
+      
+      **Features**:
+      - Redis locking prevents concurrent exports of the same feed (5-minute timeout)
+      - Automatic export logging for audit trails
+      - Filename includes timestamp and user ID for tracking
+      - Comprehensive error handling with detailed messages
+      - Concurrent access protection with automatic lock release
+      
+      **Rate Limiting**: 10 requests per minute (protects against large download spam)
+      **Authentication**: Requires Auth0Bearer token
+      **Audit**: All exports are logged for compliance and monitoring
+    tags:
+      - Feeds
+    security:
+      - Auth0Bearer: []
+    parameters:
+      - $ref: "../components/parameters/path/feed_id.yaml"
+      - name: format
         in: query
         required: false
         schema:
           type: string
-          enum: [active, inactive, error, all]
-          default: all
-        description: Filter feeds by status
-      - $ref: "../components/parameters/query/search.yaml"
+          enum: [csv, json]
+          default: csv
+        description: Export format (csv or json)
     responses:
       '200':
-        description: Feed data exported successfully
-        content:
-          application/xml:
+        description: Feed exported successfully
+        headers:
+          Content-Disposition:
             schema:
               type: string
-              description: OPML format (when format=opml)
+              example: "attachment; filename=feed_1_export_20250720_041101_283207_flask.csv"
+            description: Filename for download with timestamp and user ID
+          Content-Type:
+            schema:
+              type: string
+              enum: ["text/csv", "application/json"]
+            description: MIME type based on format
+        content:
           text/csv:
             schema:
               type: string
-              description: CSV format (when format=csv)
+              description: CSV format with headers and feed data
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../components/schemas/FeedExport.yaml"
+              description: JSON array containing feed export data
       '400':
-        $ref: "../components/responses/BadRequest.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
+        description: Invalid request parameters
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Unsupported format. Use 'csv', 'json'"
+      '404':
+        description: Feed not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Feed not found (Status Code: 404)"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
+
+/feeds/export:
+  get:
+    summary: Export feeds as CSV or JSON metadata
+    description: |
+      Exports feed data in either CSV or JSON format with comprehensive metadata:
+
+      **Export Formats**:
+      - **CSV** (default): Comma-separated values with headers, suitable for spreadsheet analysis
+      - **JSON**: Array containing feed objects with all metadata, suitable for programmatic use
+
+      **CSV Fields**:
+      - Basic info: id, url, parsing_priority, is_parsing
+      - Timestamps: created_at, updated_at
+      - Status: flag_status, channel_title, channel_podcast_index_id
+      - Error tracking: last_parse_error, parse_error_count, last_successful_parse_at, channel_issue
+
+      **Use Cases**:
+      - Bulk feed analysis and reporting
+      - Feed management and auditing
+      - Data analysis and external tool integration
+      - Exporting feed data for compliance or backup
+
+      **Features**:
+      - Redis locking prevents concurrent bulk exports (10-minute timeout)
+      - Automatic export logging for audit trails
+      - Filename includes timestamp and user ID for tracking
+      - Comprehensive filtering and sorting options
+      - Performance optimized with row limits (max 10,000 feeds)
+      - Search term for filtering feeds (ID, URL, channel title, or podcast index ID)
+      - Sorting options (ID, URL, updated_at)
+
+      **Rate Limiting**: 10 requests per minute
+      **Audit**: All exports are logged for compliance and monitoring
+    tags:
+      - Feeds
+    security:
+      - Auth0Bearer: []
+    parameters:
+      - $ref: "../components/parameters/query/export_format.yaml"
+      - $ref: "../components/parameters/query/search.yaml"
+      - $ref: "../components/parameters/query/id_filter.yaml"
+      - $ref: "../components/parameters/query/podcast_index_id.yaml"
+      - $ref: "../components/parameters/query/export_by.yaml"
+      - $ref: "../components/parameters/query/sort_order.yaml"
+      - $ref: "../components/parameters/query/sort_by.yaml"
+    responses:
+      '200':
+        description: Feed data exported successfully
+        headers:
+          Content-Disposition:
+            schema:
+              type: string
+              example: "attachment; filename=feeds_export_20250720_041301_925901_flask.csv"
+            description: Filename for download with timestamp and user ID
+          Content-Type:
+            schema:
+              type: string
+              enum: ["text/csv", "application/json"]
+            description: MIME type based on format
+        content:
+          text/csv:
+            schema:
+              type: string
+              description: CSV format with headers and feed data
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../components/schemas/FeedExport.yaml"
+              description: JSON array containing feed export data
+      '400':
+        description: Invalid request parameters
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Invalid format. Use 'csv' or 'json'"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
       '500':
         $ref: "../components/responses/InternalServerError.yaml"
 
 /feeds/bulk-update:
   post:
-    summary: Bulk update feed properties
+    summary: Bulk update multiple feeds
     description: |
-      Updates multiple feeds' properties in a single operation.
-      Can modify parsing priority, flag status, or other operational properties.
-      Useful for batch operations like disabling multiple feeds or changing parsing schedules.
-    tags:
-      - Feeds
-    security:
-      - Auth0Bearer: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "../components/schemas/FeedBulkUpdate.yaml"
-    responses:
-      '200':
-        description: Feeds updated successfully
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                updated:
-                  type: integer
-                  description: Number of feeds successfully updated
-                skipped:
-                  type: integer
-                  description: Number of feeds skipped (not found)
-      '400':
-        $ref: "../components/responses/BadRequest.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
-
-/feeds/bulk-delete:
-  post:
-    summary: Delete multiple feeds in bulk
-    description: |
-      Deletes multiple feeds simultaneously.
+      Updates properties of multiple feeds simultaneously.
       This is useful for batch operations like:
-      - Removing inactive or broken feeds
-      - Cleaning up spam feeds
-      - Mass feed removal operations
+      - Changing parsing priority for multiple feeds
+      - Updating metadata across multiple feeds
+      - Bulk feed configuration changes
       
-      Note: This operation is irreversible.
+      **Request Structure**:
+      - `feed_ids`: Array of feed IDs to update (required, non-empty)
+      - `updates`: Object containing fields to update (required, non-empty)
+      
+      **Allowed Update Fields**:
+      - `parsing_priority`: Integer (0-5) - Frequency tier for parsing (0=rarely, 5=frequently)
+      - `feed_flag_status_id`: Integer - Must be a valid flag status ID from the database
+      - `container_id`: String - Container ID for internal grouping (e.g., regions)
+      
+      **Validation Rules**:
+      - Only the above fields are allowed for updates
+      - `feed_flag_status_id` must reference an existing flag status
+      - Invalid fields will result in a 400 error
+      
+      **Status Values**:
+      - `updated`: Feed was successfully updated
+      - `not_found`: Feed ID doesn't exist
+      
+      **Rate Limiting**: 4 requests per minute
     tags:
       - Feeds
     security:
       - Auth0Bearer: []
+    parameters:
+      - name: async
+        in: query
+        required: false
+        description: Whether to run updates asynchronously (note response format may not change)
+        schema:
+          type: boolean
+          default: false
     requestBody:
       required: true
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/FeedBulkDelete.yaml"
+            type: object
+            required:
+              - feed_ids
+              - updates
+            properties:
+              feed_ids:
+                type: array
+                items:
+                  type: integer
+                minItems: 1
+                description: List of feed IDs to update
+              updates:
+                type: object
+                minProperties: 1
+                description: Object containing fields to update
+                properties:
+                  parsing_priority:
+                    type: integer
+                    minimum: 0
+                    maximum: 5
+                    description: Parsing priority (0=rarely, 5=frequently)
+                  feed_flag_status_id:
+                    type: integer
+                    description: Flag status ID for the feed (must be a valid ID from the database)
+                  container_id:
+                    type: string
+                    description: Container ID for the feed
     responses:
       '200':
-        description: Feeds deleted successfully
+        description: Bulk update completed successfully
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/FeedBulkUpdate.yaml"
+      '400':
+        description: Invalid request parameters
         content:
           application/json:
             schema:
               type: object
               properties:
-                deleted:
-                  type: integer
-                  description: Number of feeds successfully deleted
-                skipped:
-                  type: integer
-                  description: Number of feeds skipped (not found)
-                reason:
+                error:
                   type: string
-                  description: Reason provided for deletion (for audit logs)
+                  example: "updates must be a non-empty object"
+                  description: |
+                    Possible error messages:
+                    - "updates must be a non-empty object"
+                    - "feed_ids must be a non-empty list" 
+                    - "Invalid update fields: {'invalid_field'}"
+                    - "Invalid feed_flag_status_id: 999"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml"
+
+/feeds/bulk-reparse:
+  post:
+    summary: Bulk reparse multiple feeds
+    description: |
+      Triggers reparse for multiple feeds simultaneously.
+      This is useful for batch operations like:
+      - Refreshing multiple feeds that may have stale content
+      - Retrying feeds that previously failed to parse
+      - Bulk feed maintenance operations
+      
+      **Eligibility Rules**:
+      - Only feeds with status `active`, `always-parse`, or `parse_error` are eligible
+      - Feeds with status `archived`, `spam`, `fetch_error`, `pending-archive`, or `takedown` are skipped
+      - Feeds that are already being parsed return `already_parsing` status
+      
+      **Async vs Sync**:
+      - Default behavior (sync): Returns detailed results for each feed
+      - With `async=true`: Queues the operation and returns `{"status": "queued"}`
+      
+      **Status Values**:
+      - `success`: Feed was successfully queued for reparse
+      - `skipped_flag`: Feed was skipped due to ineligible status
+      - `not_found`: Feed ID doesn't exist
+      - `error`: Database error (e.g., invalid feed ID format)
+      - `already_parsing`: Feed is currently being parsed
+      
+      **Rate Limiting**: 4 requests per minute
+    tags:
+      - Feeds
+    security:
+      - Auth0Bearer: []
+    parameters:
+      - name: async
+        in: query
+        required: false
+        description: Whether to run reparses asynchronously
+        schema:
+          type: boolean
+          default: false
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - feed_ids
+            properties:
+              feed_ids:
+                type: array
+                items:
+                  type: integer
+                minItems: 1
+                description: List of feed IDs to reparse
+              async:
+                type: boolean
+                default: false
+                description: Whether to run reparses asynchronously (redundant with query param)
+    responses:
+      '200':
+        description: Bulk reparse completed successfully
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "../components/schemas/FeedBulkReparse.yaml"
+                - type: object
+                  properties:
+                    status:
+                      type: string
+                      enum: [queued]
+                      description: Status indicating the bulk reparse was queued
+                  required: [status]
       '400':
-        $ref: "../components/responses/BadRequest.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml" 
+        description: Invalid request parameters
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "feed_ids must be a non-empty list"
+                  description: |
+                    Possible error messages:
+                    - "feed_ids must be a non-empty list"
+                    - "Request body is required"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml"
+
+/feeds/auto-reparse-status:
+  get:
+    summary: Get auto-reparse system status
+    description: |
+      Returns information about the auto-reparse system status.
+      This endpoint provides insights into the automated feed parsing system.
+      
+      **Response Structure**:
+      - `auto_reparse_running`: Boolean indicating if auto-reparse is currently active
+      - `status`: Human-readable status ("running" or "idle")
+      
+      **Status Meanings**:
+      - `"running"`: The automated feed parsing system is currently active and processing feeds
+      - `"idle"`: The automated feed parsing system is not currently active (waiting/idle)
+      
+      This endpoint is useful for monitoring the automated feed parsing system
+      and checking if background tasks are currently active.
+
+      **Rate Limiting**: 10 requests per minute
+    tags:
+      - Feeds
+    security:
+      - Auth0Bearer: []
+    responses:
+      '200':
+        description: Auto-reparse status retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                auto_reparse_running:
+                  type: boolean
+                  description: Whether the auto-reparse system is currently running
+                  example: false
+                status:
+                  type: string
+                  enum: [running, idle]
+                  description: Human-readable status of the auto-reparse system
+                  example: "idle"
+              required: [auto_reparse_running, status]
+      '429':
+        $ref: "../components/responses/RateLimit.yaml" 

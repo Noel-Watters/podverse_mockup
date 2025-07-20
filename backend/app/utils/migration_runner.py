@@ -1,3 +1,5 @@
+# backend/app/utils/migration_runner.py
+
 import os
 from sqlalchemy import text
 from app.extensions import db

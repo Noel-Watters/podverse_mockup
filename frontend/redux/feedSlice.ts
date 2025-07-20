@@ -23,8 +23,8 @@ const initialState: FeedState = {
     status: "",
     parsing_priority: undefined,
     is_parsing: undefined,
-    sort: 'id', // Only allow: 'id', 'url', 'updated_at'
-    order: 'desc'
+    sort_by: 'id', // Only allow: 'id', 'url', 'updated_at'
+    sort_order: 'desc'
   },
   hasMore: true,
   searchTerm: "",
@@ -51,9 +51,9 @@ const buildQueryParams = (filters: FeedFilters, offset: number, limit: number, s
 
   // Sort by and order
   const allowedSorts = ['id', 'url', 'updated_at'];
-  const sortField = allowedSorts.includes(filters.sort ?? '') ? (filters.sort ?? 'id') : 'id';
+  const sortField = allowedSorts.includes(filters.sort_by ?? '') ? (filters.sort_by ?? 'id') : 'id';
   params.append('sort_by', sortField);
-  params.append('sort_order', filters.order ?? 'desc');
+  params.append('sort_order', filters.sort_order ?? 'desc');
   //panigation params
   params.append('limit', limit.toString());
   const page = Math.floor(offset / limit) + 1;

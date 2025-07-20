@@ -1,3 +1,5 @@
+# openapi/components/responses/Unauthorized.yaml
+
 description: Unauthorized (401)
 content:
   application/json:

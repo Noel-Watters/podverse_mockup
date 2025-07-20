@@ -68,7 +68,8 @@ def trigger_node_parser(url: str, podcast_index_id: int = None):
             response = requests.post("http://parse-service:3001/trigger-parse", json=payload, timeout=5)
             response.raise_for_status()
             return response.json()
-        except requests.RequestException as e:
+        except Exception as e:
+            # For any exception, retry once then re-raise
             if attempt == 1:
                 raise
             time.sleep(1) 

@@ -19,7 +19,7 @@
       - Auth0Bearer: []
     parameters:
       - $ref: "../components/parameters/query/limit.yaml"
-      - $ref: "../components/parameters/query/offset.yaml"
+      - $ref: "../components/parameters/query/page.yaml"
       - $ref: "../components/parameters/query/search.yaml"
       - name: channel_id
         in: query

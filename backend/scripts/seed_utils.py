@@ -66,6 +66,44 @@ def unique_uuid_str():
     """Returns a UUID as string for cases that need string representation"""
     return str(uuid.uuid4())
 
+def clear_existing_channels():
+    """Safely clear existing channel data to prevent duplicate key violations"""
+    session = get_db_session()
+    try:
+        from app.models.channel import Channel
+        count = session.query(Channel).count()
+        if count > 0:
+            print(f"Found {count} existing channels. Clearing...")
+            session.query(Channel).delete()
+            session.commit()
+            print("✅ Existing channels cleared successfully")
+        else:
+            print("No existing channels found")
+        return True
+    except Exception as e:
+        session.rollback()
+        print(f"❌ Error clearing channels: {e}")
+        return False
+    finally:
+        session.close()
+
+def check_existing_data(model_class, label=""):
+    """Check if data already exists for a given model"""
+    session = get_db_session()
+    try:
+        count = session.query(model_class).count()
+        if count > 0:
+            print(f"⚠️  Found {count} existing {label or model_class.__name__} records")
+            return True
+        else:
+            print(f"✅ No existing {label or model_class.__name__} records found")
+            return False
+    except Exception as e:
+        print(f"❌ Error checking existing {label or model_class.__name__}: {e}")
+        return False
+    finally:
+        session.close()
+
 import time
 import traceback
 

@@ -61,30 +61,6 @@ def test_export_no_types():
 @patch("app.services.data_export.safe_write_file", return_value=(True, None))
 @patch("app.services.data_export.zip_files")
 def test_export_feeds_only(
-    mock_zip, mock_write, mock_feeds_dump,
-    mock_get_feeds, temp_export_dir
-):
-    mock_export_data = [{'id': 1, 'title': 'Sample'}]
-    mock_feeds_dump.return_value = mock_export_data
-
-    with patch("config.BaseConfig.STORAGE_BACKEND", "local"):
-        result = export_data_to_csv(
-            export_dir=temp_export_dir,
-            export_types=["feeds"]
-        )
-
-    assert result["feeds_count"] == 1
-    assert "channels_count" not in result
-    assert result["zip_file"].endswith(".zip")
-    assert result["storage_type"] == "local"
-
-
-
-@patch("app.services.data_export.get_feeds_for_export")
-@patch("app.services.data_export.feeds_export_schema.dump")
-@patch("app.services.data_export.safe_write_file", return_value=(True, None))
-@patch("app.services.data_export.zip_files")
-def test_export_feeds_only(
     mock_zip, mock_write, mock_feeds_dump, 
     mock_get_feeds, mock_export_data, temp_export_dir
 ):

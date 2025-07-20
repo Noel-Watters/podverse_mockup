@@ -8,21 +8,23 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        podverse: {
-          // Original base colors
-          background: "#FFFFFF",//White
-          surface: "#E5EAF2",
-          text: "#000000", //Black
-          muted: "#A0A0A0",
-          border: "#2a2a2a",
+        primary: "#0d7ab3",
+        accent: "#b1cae3",
+        background: "#ffffff",
+        surface: "#f3f6fb",
+        border: "#000000",
+        text: "#000000",
+        muted: "#4b4b4b",
+        bar: "#e5eaf2",
+        chart: "#0d7ab3",
+        success: "#22c55e",
+        warning: "#facc15",
+        error: "#ef4444",
+        info: "#38bdf8",
+        archived: "#9ca3af",
+        highlight: "#B1CAE3",
+        row:"#d9d9d96b"
 
-          // Updated palette for podverse.fm vibe
-          primary: "#000000",      // Black
-          secondary: "#741b47",    // Burgundy
-          accent: "#0D7AB3",       // Podverse Blue
-          highlight: "#B1CAE3",    // 
-          cream: "#fae7b5",        // Soft Cream
-        },
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],

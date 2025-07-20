@@ -73,7 +73,7 @@ def reparse_feed_controller_sync(feed_id: int) -> dict:
 
     if feed.flag_status.status.lower() not in ["active", "always-parse"]:
         logger.info(f"Skipping reparse — Feed {feed_id} not eligible (status={feed.flag_status.status})")
-        raise ValidationError("Feed is not eligible for parsing", status_code=400)
+        raise ValidationError(f"Feed is not eligible for parsing (status: {feed.flag_status.status})", status_code=400)
 
 
     try:
