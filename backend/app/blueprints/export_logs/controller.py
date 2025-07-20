@@ -7,13 +7,14 @@ from app.utils.query_helpers import paginate_query, apply_sorting
 from app.blueprints.export_logs.schemas import export_log_schema
 from sqlalchemy import and_, or_, func
 import os
+from flask import redirect
 
 logger = get_logger(__name__)
 
 def get_export_logs_controller(request):
-    """Get paginated list of export logs. Supports filtering, pagination, status checks. See API.md for query params and status codes."""
+    """Get paginated list of export logs. Supports filtering, pagination, status checks."""
     try:
-        page, per_page = get_pagination_params(request)
+        page, limit = get_pagination_params(request)
         sort_by, sort_order = get_sorting_params(
             request,
             ['created_at', 'completed_at', 'status', 'export_type', 'format', 'duration'],
@@ -59,7 +60,8 @@ def get_export_logs_controller(request):
                     ExportLog.created_at <= end_date
                 )
             )
-        search_term = request.args.get('search')
+        # search_term is the search term for the error message
+        search_term = request.args.get('search_term')
         if search_term:
             search_filter = or_(
                 ExportLog.error_message.ilike(f'%{search_term}%')
@@ -73,7 +75,7 @@ def get_export_logs_controller(request):
                 query = query.order_by(duration_expr.desc())
         else:
             query = apply_sorting(query, ExportLog, sort_by, sort_order)
-        logs, pagination_metadata = paginate_query(query, page, per_page)
+        logs, pagination_metadata = paginate_query(query, page, limit)
         return [export_log_schema.dump(log) for log in logs], pagination_metadata
     except Exception as e:
         logger.error(f"Error retrieving export logs: {str(e)}")
@@ -93,15 +95,28 @@ def get_export_log_controller(log_id):
         raise ValidationError(f"Failed to retrieve export log: {str(e)}")
 
 def download_export_file_controller(log_id):
-    """Download an export file by log ID. See API.md for status codes."""
+    """Download an export file by log ID. Handles both local files and S3 URLs."""
     try:
         log = db.session.get(ExportLog, log_id)
         if not log:
             raise NotFoundError("Export log not found")
-        if not log.file_path or not os.path.exists(log.file_path):
+        
+        if not log.file_path:
             raise NotFoundError("Export file not found or has expired")
+        
+        # Check if it's an S3 URL
+        if log.file_path.startswith('http'):
+            # For S3 URLs, redirect to the URL
+            logger.info(f"Redirecting to S3 URL for export log {log_id}: {log.file_path}")
+            return redirect(log.file_path)
+        
+        # For local files, check if they exist
+        if not os.path.exists(log.file_path):
+            raise NotFoundError("Export file not found or has expired")
+        
         filename = os.path.basename(log.file_path)
         return log.file_path, filename, log.format
+        
     except NotFoundError:
         raise
     except Exception as e:

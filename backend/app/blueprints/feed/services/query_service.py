@@ -109,8 +109,8 @@ def get_feed_by_id(feed_id: int):
     return feed
 
 
-def get_feed_logs(feed_id: int):
-    """Get all logs for a specific feed, sorted by finished_at."""
+def get_feed_logs(feed_id: int, page=1, limit=50, success_only=None, error_only=None):
+    """Get logs for a specific feed with pagination and filtering options."""
     try:
         # Check if feed exists
         feed = db.session.get(Feed, feed_id)
@@ -118,18 +118,41 @@ def get_feed_logs(feed_id: int):
             logger.warning(f"Feed not found when fetching logs: ID {feed_id}")
             raise NotFoundError("Feed not found")
 
-        # Get all logs for the feed, sorted by finished_at
-        logs = (
-            db.session.query(FeedLog)
-            .filter(FeedLog.feed_id == feed_id)
-            .order_by(FeedLog.finished_at.desc())
-            .all()
-        )
+        # Validate that success_only and error_only are not used together
+        if success_only is not None and error_only is not None:
+            raise ValidationError("Cannot use both 'success_only' and 'error_only' parameters together")
+
+        # Build base query
+        query = db.session.query(FeedLog).filter(FeedLog.feed_id == feed_id)
         
-        logger.info(f"Retrieved {len(logs)} logs for feed ID {feed_id}")
-        return logs
+        # Apply success/error filtering (mutually exclusive)
+        if success_only is not None:
+            if isinstance(success_only, str):
+                success_only = success_only.lower() == "true"
+            query = query.filter(FeedLog.is_success == success_only)
+            logger.info(f"Filtering logs by success_only: {success_only}")
+            
+        elif error_only is not None:
+            if isinstance(error_only, str):
+                error_only = error_only.lower() == "true"
+            query = query.filter(FeedLog.is_success == (not error_only))
+            logger.info(f"Filtering logs by error_only: {error_only}")
+        
+        # Apply sorting (always by finished_at desc)
+        query = query.order_by(FeedLog.finished_at.desc())
+        
+        # Apply pagination
+        logs, pagination_meta = paginate_query(query, page, limit)
+        
+        logger.info(f"Retrieved {len(logs)} logs for feed ID {feed_id} (page {page}, limit {limit})")
+        return {
+            "logs": logs,
+            "meta": pagination_meta
+        }
         
     except NotFoundError:
+        raise
+    except ValidationError:
         raise
     except Exception as e:
         logger.error(f"Error in get_feed_logs: {str(e)}")

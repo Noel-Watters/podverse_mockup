@@ -21,12 +21,13 @@ def after_request(response):
     return log_request_end(logger, response)
 
 def is_auto_reparse_running() -> bool:
-    return is_locked("auto_reparse_all")
+    is_running, error = is_locked("auto_reparse_all")
+    return is_running
 
 
 @feed_bp.route('/<int:feed_id>/reparse', methods=['POST'])
 @handle_errors
-#@audit_admin_access(action="REPARSE_FEED", resource="feed")
+@audit_admin_access(action="REPARSE_FEED", resource="feed")
 #@requires_auth
 @limiter.limit("10 per minute")
 def reparse_feed(feed_id: int):
@@ -43,9 +44,9 @@ def reparse_feed(feed_id: int):
 
 
 @feed_bp.route('', methods=['GET'])
-@limiter.limit("80 per minute")  
+@limiter.limit("50 per minute")  
 @handle_errors
-#@audit_admin_access(action="GET_FEEDS", resource="feed")
+@audit_admin_access(action="GET_FEEDS", resource="feed")
 #@requires_auth
 def get_feeds():
     """
@@ -56,9 +57,9 @@ def get_feeds():
    
     
 @feed_bp.route('/<int:feed_id>', methods=['GET'])
-@limiter.limit("80 per minute")  
+@limiter.limit("50 per minute")  
 @handle_errors
-#@audit_admin_access(action="GET_FEED", resource="feed")
+@audit_admin_access(action="GET_FEED", resource="feed")
 #@requires_auth
 def get_feed_by_id(feed_id):
     """
@@ -70,7 +71,7 @@ def get_feed_by_id(feed_id):
     
 @feed_bp.route('/<int:feed_id>/export', methods=['GET'])
 @limiter.limit("10 per minute")  # Protect against large download spam
-#@audit_admin_access(action="EXPORT_FEED", resource="feed")
+@audit_admin_access(action="EXPORT_FEED", resource="feed")
 #@requires_auth
 @handle_errors
 def export_single_feed(feed_id):
@@ -86,8 +87,8 @@ def export_single_feed(feed_id):
 
 
 @feed_bp.route('/<int:feed_id>/logs', methods=['GET'])
-@limiter.limit("80 per minute")
-#@audit_admin_access(action="GET_FEED_LOGS", resource="feed")
+@limiter.limit("50 per minute")
+@audit_admin_access(action="GET_FEED_LOGS", resource="feed")
 #@requires_auth
 @handle_errors
 def get_feed_logs(feed_id):
@@ -104,7 +105,7 @@ def get_feed_logs(feed_id):
 #MARK: bulk endpoints   
 @feed_bp.route('/export', methods=['GET'])
 @limiter.limit("10 per minute")  
-#@audit_admin_access(action="EXPORT_FEEDS", resource="feed")
+@audit_admin_access(action="EXPORT_FEEDS", resource="feed")
 #@requires_auth
 @handle_errors
 def bulk_export_feeds():
@@ -115,7 +116,7 @@ def bulk_export_feeds():
 
 @feed_bp.route('/bulk-update', methods=['POST'])
 @limiter.limit("4 per minute")  
-#@audit_admin_access(action="UPDATE_FEEDS", resource="feed")
+@audit_admin_access(action="UPDATE_FEEDS", resource="feed")
 #@requires_auth
 @handle_errors
 def bulk_update_feeds():
@@ -130,7 +131,7 @@ def bulk_update_feeds():
 
 @feed_bp.route('/bulk-reparse', methods=['POST'])
 @limiter.limit("4 per minute")  
-#@audit_admin_access(action="REPARSE_FEEDS", resource="feed")
+@audit_admin_access(action="REPARSE_FEEDS", resource="feed")
 #@requires_auth
 @handle_errors
 def bulk_reparse_feeds():
@@ -146,8 +147,8 @@ def bulk_reparse_feeds():
 
 @feed_bp.route('/auto-reparse-status', methods=['GET'])
 @limiter.limit("10 per minute")  
-#@audit_admin_access(action="GET_AUTO_REPARSE_STATUS", resource="feed")
-#@requires_auth
+@audit_admin_access(action="GET_AUTO_REPARSE_STATUS", resource="feed")
+# @requires_auth
 @handle_errors
 def auto_reparse_status():
     """

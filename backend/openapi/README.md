@@ -46,13 +46,15 @@ npx @redocly/cli build-docs openapi/openapi.yaml --output docs.html
 - **Swagger UI**: http://localhost:8000/admin/docs/ 
 - **Raw spec**: http://localhost:8000/admin/openapi.yaml
 
-## Making changes
+## Making changes 
+`cd backend`
 
 1. Edit files in `paths/` or `components/schemas/`
 2. **Validate**: `npx @redocly/cli lint openapi/openapi.yaml`
 3. **Bundle**: `npx @redocly/cli bundle openapi/openapi.yaml --output openapi/bundled.yaml`
-4. Restart server or hard refresh browser
-5. Check Swagger UI for your changes
+4. To update the docker `docker cp openapi/bundled.yaml podverse_backend:/app/openapi/bundled.yaml`
+5. Restart server or hard refresh browser
+6. Check Swagger UI for your changes
 
 ## Key schemas match database tables:
 - Feed → `feed` table

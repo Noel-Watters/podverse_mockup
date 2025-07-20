@@ -1,0 +1,39 @@
+type: object
+properties:
+  logs:
+    type: array
+    items:
+      $ref: './ExportLog.yaml'
+    description: Array of export logs
+  page:
+    type: integer
+    description: Current page number
+    example: 1
+  limit:
+    type: integer
+    description: Number of items per page
+    example: 10
+  total_items:
+    type: integer
+    description: Total number of export logs
+    example: 32
+  total_pages:
+    type: integer
+    description: Total number of pages
+    example: 4
+  has_next:
+    type: boolean
+    description: Whether there is a next page
+    example: true
+  has_prev:
+    type: boolean
+    description: Whether there is a previous page
+    example: false
+required:
+  - logs
+  - page
+  - limit
+  - total_items
+  - total_pages
+  - has_next
+  - has_prev 

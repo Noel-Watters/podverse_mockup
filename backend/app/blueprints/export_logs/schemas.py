@@ -14,7 +14,7 @@ class ExportLogSchema(ma.SQLAlchemyAutoSchema):
     id = fields.Integer(dump_only=True)
     export_by = fields.Email(required=True)
     export_type = fields.String(required=True, validate=validate.OneOf(['channels', 'feeds', 'items']))
-    filters = fields.Dict(keys=fields.String(), values=fields.Raw(), required=False)
+    filters = fields.Dict(keys=fields.String(), values=fields.Raw(), required=False, allow_none=True)
     status = fields.String(required=True, validate=validate.OneOf(['pending', 'success', 'failed', 'skipped', 'expired']))
     file_path = fields.String(allow_none=True)
     format = fields.String(required=True, validate=validate.OneOf(['csv', 'json']))

@@ -9,16 +9,40 @@ properties:
     type: integer
     description: Foreign key reference to feed table
     example: 123
-  
-  message:
-    type: string
-    description: Log message content
-    example: "Feed parsed successfully"
-  
-  created_at:
+
+  finished_at:
     type: string
     format: date-time
-    description: Timestamp when log entry was created
+    description: Timestamp when the feed log was finished
+    example: "2024-01-01T10:00:00Z"
+
+  http_status:
+    type: integer
+    description: HTTP status code of the response
+    example: 200
+
+  is_success:
+    type: boolean
+  
+  parse_error_message:
+    type: string
+    description: Log message content
+    example: "Feed parsed successfully. All items updated with no issues."
+
+  parse_errors:
+    type: integer
+    description: Number of parse errors
+    example: 0
+
+  parsed_by:
+    type: string
+    description: Auth0 user ID of the user who parsed the feed or system
+    example: "auth0|123456"
+
+  started_at:
+    type: string
+    format: date-time
+    description: Timestamp when the feed log was started
     example: "2024-01-01T10:00:00Z"
 
 required:

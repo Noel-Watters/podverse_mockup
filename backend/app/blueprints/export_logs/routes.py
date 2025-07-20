@@ -5,10 +5,24 @@ from . import export_logs_bp
 from app.extensions import limiter
 from app.blueprints.export_logs.controller import *
 from app.utils.error_handlers import handle_errors
+from app.utils.audit_decorators import audit_admin_access
+from app.utils.auth import requires_auth
+from app.utils.request_logger import get_logger, log_request_start, log_request_end
+
+logger = get_logger(__name__)
+
+@export_logs_bp.before_request
+def before_request():
+    log_request_start(logger)
+
+@export_logs_bp.after_request
+def after_request(response):
+    return log_request_end(logger, response)
 
 @export_logs_bp.route('/', methods=['GET'])
 @handle_errors
-#@requires_auth
+# @requires_auth
+@audit_admin_access(action="GET_EXPORT_LOGS", resource="export_logs")
 @limiter.limit("100 per day")
 def get_export_logs():
     """Get paginated list of export logs. Supports filtering, pagination, status checks"""
@@ -20,7 +34,8 @@ def get_export_logs():
 
 @export_logs_bp.route('/<int:log_id>', methods=['GET'])
 @handle_errors
-#@requires_auth
+# @requires_auth
+@audit_admin_access(action="GET_EXPORT_LOG", resource="export_logs")
 @limiter.limit("100 per day")
 def get_export_log(log_id):
     """Get detailed information about a specific export log"""
@@ -29,14 +44,23 @@ def get_export_log(log_id):
 
 @export_logs_bp.route('/<int:log_id>/download', methods=['GET'])
 @handle_errors
-#@requires_auth
+# @requires_auth
+@audit_admin_access(action="DOWNLOAD_EXPORT_FILE", resource="export_logs")
 @limiter.limit("50 per day")
 def download_export_file(log_id):
     """Download the exported file for a specific log.
-    This endpoint allows users to download exported files by their log ID.
-    It checks if the file exists and is accessible before sending it.
+    This endpoint handles both local files and S3 URLs.
+    For S3 URLs, it redirects to the S3 URL.
+    For local files, it serves the file directly.
     """
-    file_path, filename, file_format = download_export_file_controller(log_id)
+    result = download_export_file_controller(log_id)
+    
+    # Check if result is a redirect response (for S3 URLs)
+    if hasattr(result, 'status_code') and result.status_code == 302:
+        return result
+    
+    # Otherwise, it's a local file (file_path, filename, file_format)
+    file_path, filename, file_format = result
     return send_file(
         file_path,
         as_attachment=True,

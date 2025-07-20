@@ -46,7 +46,7 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./backend/scripts:/app/scripts
-      - ./backend/exports:/app/exports
+      - export_data:/app/exports
     depends_on:
       - database
       - redis
@@ -77,7 +77,7 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./backend/scripts:/app/scripts
-      - ./backend/exports:/app/exports
+      - export_data:/app/exports
     networks:
       - podverse-network
 
@@ -106,7 +106,7 @@ services:
     volumes:
       - ./backend/app:/app/app
       - ./backend/scripts:/app/scripts
-      - ./backend/exports:/app/exports
+      - export_data:/app/exports
     networks:
       - podverse-network
 
@@ -136,6 +136,7 @@ services:
 
 volumes:
   pgdata:
+  export_data:
 
 networks:
   podverse-network:

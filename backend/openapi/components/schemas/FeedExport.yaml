@@ -1,0 +1,86 @@
+type: object
+required:
+  - id
+  - url
+  - parsing_priority
+  - is_parsing
+  - flag_status
+  - parse_error_count
+properties:
+  id:
+    type: integer
+    description: Feed ID (primary key)
+    example: 1
+
+  url:
+    type: string
+    format: uri
+    maxLength: 2083
+    description: RSS feed URL
+    example: "https://example.com/rss.xml"
+
+  parsing_priority:
+    type: integer
+    minimum: 0
+    maximum: 5
+    description: Frequency tier for parsing; 0 = rarely, 5 = frequently
+    example: 4
+
+  is_parsing:
+    type: boolean
+    description: Whether the feed is currently being parsed
+    example: false
+
+  created_at:
+    type: string
+    format: date-time
+    description: Timestamp when the feed was added
+    example: "2025-07-18T21:14:04.003685"
+
+  updated_at:
+    type: string
+    format: date-time
+    description: Timestamp when the feed was last updated
+    example: "2025-07-20T03:18:52.775538"
+
+  flag_status:
+    type: string
+    description: Human-readable flag status
+    enum: ["active", "archived", "spam", "parse_error", "fetch_error", "always-parse", "pending-archive", "takedown"]
+    example: "archived"
+
+  channel_title:
+    type: string
+    nullable: true
+    description: Title of the associated channel
+    example: "Example Podcast"
+
+  channel_podcast_index_id:
+    type: integer
+    nullable: true
+    description: Podcast Index ID of the associated channel
+    example: 88067
+
+  last_parse_error:
+    type: string
+    nullable: true
+    description: Last parsing error message with timestamp
+    example: "Parsing failed: Malformed XML detected. Check for unclosed tags or invalid structure. (at 2025-07-18 21:46:04.006747)"
+
+  parse_error_count:
+    type: integer
+    minimum: 0
+    description: Total number of parsing errors
+    example: 2
+
+  last_successful_parse_at:
+    type: string
+    nullable: true
+    description: Timestamp of last successful parse
+    example: "Fri, 18 Jul 2025 21:47:04 GMT"
+
+  channel_issue:
+    type: string
+    nullable: true
+    description: Channel-related issues or problems
+    example: null 

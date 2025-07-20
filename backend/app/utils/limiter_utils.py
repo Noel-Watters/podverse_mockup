@@ -4,7 +4,6 @@ from flask import request
 from jose import jwt
 from flask_limiter.util import get_remote_address
 import os
-from typing import Optional, Union
 
 def get_limiter_key() -> str:
     """

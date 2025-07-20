@@ -3,38 +3,86 @@ from datetime import datetime, timedelta
 import jwt
 from app.extensions import db
 from app.models.account import Account
+from app.models.user import User
 
 @pytest.fixture
-def test_user(db):
+def test_user(session):
     """Create a test user."""
-    user = Account(
+    user = User(
         email='test@example.com',
         username='testuser',
-        is_admin=False
+        role='user',
+        is_active=True,
+        referral_token='test-token-123'
     )
-    db.session.add(user)
-    db.session.commit()
+    session.add(user)
+    session.commit()
     return user
 
 @pytest.fixture
-def admin_user(db):
+def admin_user(session):
     """Create an admin user."""
-    admin = Account(
+    admin = User(
         email='admin@example.com',
         username='adminuser',
-        is_admin=True
+        role='admin',
+        is_active=True,
+        referral_token='admin-token-456'
     )
-    db.session.add(admin)
-    db.session.commit()
+    session.add(admin)
+    session.commit()
     return admin
 
 @pytest.fixture
+def test_account(session):
+    """Create a test account."""
+    account = Account(
+        id_text='TEST001',
+        verified=True
+    )
+    session.add(account)
+    session.commit()
+    return account
+
+@pytest.fixture
 def auth_headers(app, test_user):
-    """Generate authentication headers."""
+    """Generate authentication headers for regular user."""
     token = jwt.encode(
         {
             'user_id': test_user.id,
-            'exp': datetime.utcnow() + timedelta(days=1)
+            'email': test_user.email,
+            'role': test_user.role,
+            'exp': datetime.utcnow() + timedelta(hours=1)
+        },
+        app.config['SECRET_KEY'],
+        algorithm='HS256'
+    )
+    return {'Authorization': f'Bearer {token}'}
+
+@pytest.fixture
+def admin_auth_headers(app, admin_user):
+    """Generate authentication headers for admin user."""
+    token = jwt.encode(
+        {
+            'user_id': admin_user.id,
+            'email': admin_user.email,
+            'role': admin_user.role,
+            'exp': datetime.utcnow() + timedelta(hours=1)
+        },
+        app.config['SECRET_KEY'],
+        algorithm='HS256'
+    )
+    return {'Authorization': f'Bearer {token}'}
+
+@pytest.fixture
+def expired_token_headers(app, test_user):
+    """Generate expired authentication headers for testing token expiration."""
+    token = jwt.encode(
+        {
+            'user_id': test_user.id,
+            'email': test_user.email,
+            'role': test_user.role,
+            'exp': datetime.utcnow() - timedelta(hours=1)  # Expired
         },
         app.config['SECRET_KEY'],
         algorithm='HS256'

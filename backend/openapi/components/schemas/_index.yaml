@@ -2,24 +2,26 @@ Feed:
   $ref: "./Feed.yaml"
 FeedBulkUpdate:
   $ref: "./FeedBulkUpdate.yaml"
-FeedBulkDelete:
-  $ref: "./FeedBulkDelete.yaml"
-FeedFlagStatus:
-  $ref: "./FeedFlagStatus.yaml"
 FeedLog:
   $ref: "./FeedLog.yaml"
+FeedBulkReparse:
+  $ref: "./FeedBulkReparse.yaml"
+FeedExport:
+  $ref: "./FeedExport.yaml"
 Channel:
   $ref: "./Channel.yaml"
 ChannelDetails:
   $ref: "./ChannelDetails.yaml"
-Category:
-  $ref: "./Category.yaml"
+ChannelExport:
+  $ref: "./ChannelExport.yaml"
+ExportLog:
+  $ref: "./ExportLog.yaml"
+ExportLogsResponse:
+  $ref: "./ExportLogsResponse.yaml"
 Item:
   $ref: "./Item.yaml"
 ItemFlagStatus:
   $ref: "./ItemFlagStatus.yaml"
-Medium:
-  $ref: "./Medium.yaml"
 StatsChannel:
   $ref: "./StatsChannel.yaml"
 StatsItem:

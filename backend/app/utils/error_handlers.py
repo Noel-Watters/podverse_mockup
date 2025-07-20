@@ -49,7 +49,17 @@ def handle_errors(route_func):
         except Exception as e:
             current_app.logger.error(f"Unexpected error in {route_func.__name__}: {str(e)}")
             current_app.logger.error(f"Full traceback: {traceback.format_exc()}")
-            return jsonify({"error": "Internal server error"}), 500
+            
+            #  more specific error messages for common issues
+            error_message = "Internal server error"
+            if "rate limit" in str(e).lower() or "too many requests" in str(e).lower():
+                error_message = "Rate limit exceeded"
+            elif "validation" in str(e).lower():
+                error_message = f"Validation error: {str(e)}"
+            elif "not found" in str(e).lower():
+                error_message = f"Resource not found: {str(e)}"
+            
+            return jsonify({"error": error_message}), 500
     return wrapper
 
 def register_error_handlers(app):
@@ -110,6 +120,22 @@ def register_error_handlers(app):
                 'status_code': error.code
             }
         }), error.code
+    
+    @app.errorhandler(429)
+    def handle_rate_limit_error(error):
+        """Handle rate limiting errors (429 Too Many Requests)"""
+        current_app.logger.warning(f"Rate limit exceeded: {request.method} {request.path}")
+        
+        # Extract rate limit info from the error if available
+        rate_limit_info = getattr(error, 'description', 'Rate limit exceeded')
+        
+        return jsonify({
+            'error': {
+                'message': 'Rate limit exceeded',
+                'status_code': 429,
+                'details': rate_limit_info
+            }
+        }), 429
     
     @app.errorhandler(Exception)
     def handle_generic_exception(error):

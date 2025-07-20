@@ -13,8 +13,8 @@ from datetime import datetime, timedelta
 from app.extensions import db
 from app.models.export_logs import ExportLog
 from app.utils.export_logging import create_export_log_simple, finalize_export_log
+from app.utils.s3_helpers import delete_from_s3
 from config import BaseConfig
-import boto3
 
 
 logger = get_logger(__name__)
@@ -136,13 +136,18 @@ def cleanup_old_export_files() -> str:
     for log in old_logs:
         try:
             if BaseConfig.STORAGE_BACKEND == "s3":
-                if log.file_path.startswith("https://"):
-                    # extract key from S3 URL
-                    s3_key = log.file_path.split(f"{BaseConfig.S3_BUCKET_NAME}.s3.amazonaws.com/")[-1]
-                    s3 = boto3.client("s3")
-                    s3.delete_object(Bucket=BaseConfig.S3_BUCKET_NAME, Key=s3_key)
+                if log.file_path and log.file_path.startswith("https://"):
+                    # Extract key from S3 URL
+                    if BaseConfig.S3_ENDPOINT_URL and BaseConfig.S3_ENDPOINT_URL in log.file_path:
+                        # Custom S3-compatible service
+                        s3_key = log.file_path.split(f"{BaseConfig.S3_ENDPOINT_URL}/{BaseConfig.S3_BUCKET_NAME}/")[-1]
+                    else:
+                        # Standard AWS S3
+                        s3_key = log.file_path.split(f"{BaseConfig.S3_BUCKET_NAME}.s3.{BaseConfig.S3_REGION}.amazonaws.com/")[-1]
+                    
+                    delete_from_s3(BaseConfig.S3_BUCKET_NAME, s3_key)
             else:
-                if os.path.exists(log.file_path):
+                if log.file_path and os.path.exists(log.file_path):
                     os.remove(log.file_path)
         except Exception as e:
             log_error(f"Failed to delete export file: {log.file_path} | Error: {str(e)}", "system@podverse.com", e)

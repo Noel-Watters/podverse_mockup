@@ -1,3 +1,5 @@
+# app/blueprints/feed/controllers/query.py
+
 from app.utils.request_logger import get_logger, log_database_operation
 from app.blueprints.feed.services import get_feed_logs, get_feed_by_id, get_all_feeds
 from app.blueprints.feed.schemas import feed_schema, feed_logs_schema, feeds_schema
@@ -7,13 +9,31 @@ from flask import request
 
 logger = get_logger(__name__)
 
-# Controllers
 def get_feed_logs_controller(feed_id: int) -> dict:
-    log_database_operation(logger, "READ", "feed_logs", f"feed_{feed_id}")
-    logs = get_feed_logs(feed_id)
-    serialized_logs = feed_logs_schema.dump(logs)
+    # Get pagination parameters
+    page, limit = get_pagination_params(request, default_page=1, default_limit=50, max_limit=100)
+    
+    # Get filtering parameters
+    success_only = request.args.get("success_only")
+    error_only = request.args.get("error_only")
+    
+    log_database_operation(logger, "READ", "feed_logs", f"feed_{feed_id}_p{page}_l{limit}")
+    
+    result = get_feed_logs(
+        feed_id=feed_id,
+        page=page,
+        limit=limit,
+        success_only=success_only,
+        error_only=error_only
+    )
+    
+    serialized_logs = feed_logs_schema.dump(result["logs"])
     logger.info(f"Retrieved and serialized {len(serialized_logs)} logs for feed ID {feed_id}")
-    return {"logs": serialized_logs}
+    
+    return {
+        "logs": serialized_logs,
+        "meta": result["meta"]
+    }
 
 
 def get_feed_by_id_controller(feed_id: int) -> dict:

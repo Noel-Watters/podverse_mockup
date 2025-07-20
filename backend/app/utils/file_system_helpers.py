@@ -8,7 +8,7 @@ import os
 import tempfile
 import shutil
 from pathlib import Path
-from typing import Optional, Tuple, Callable
+from typing import Optional, Tuple
 from app.utils.request_logger import get_logger
 from app.utils.error_exceptions import FSError
 

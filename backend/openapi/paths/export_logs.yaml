@@ -1,0 +1,244 @@
+/admin/export_logs:
+  get:
+    tags:
+      - Export Logs
+    summary: List export logs
+    description: |
+      Retrieve a paginated list of export logs with comprehensive filtering, sorting, and search capabilities.
+      
+      **Features:**
+      - **Pagination**: Control page size and navigation with `page` and `limit` parameters
+      - **Filtering**: Filter by status, export type, user email, format, date ranges, duration, error status, and specific ID
+      - **Sorting**: Sort by any field including computed duration (created_at, completed_at, status, export_type, format, duration)
+      - **Search**: Search within error messages using `search_term`
+      - **Real-time Data**: Get current file existence and expiration status
+      
+      **Available Filters:**
+      - `status`: pending, success, failed, skipped, expired
+      - `export_type`: channels, feeds, items
+      - `format`: csv, json
+      - `export_by`: User email who initiated the export
+      - `id`: Specific export log ID
+      - `has_error`: true/false to filter by error status
+      - `min_duration`/`max_duration`: Duration range in seconds (only for completed exports)
+      - `start_date`/`end_date`: Date range for created_at (must be used together)
+      - `search_term`: Search in error messages (case-insensitive)
+      
+      **Use Cases:**
+      - Monitor export job status and progress
+      - Track user export activity and usage
+      - Analyze export performance and duration
+      - Debug failed exports by searching error messages
+      - Generate reports on export history
+
+      **Primary table:** `export_log`
+      **Related tables:** None
+      
+      **Authentication Required**: Bearer token
+      
+      **Rate Limit**: 100 requests per day
+    security:
+      - Auth0Bearer: []
+    parameters:
+      - $ref: "../components/parameters/query/limit.yaml"
+      - $ref: "../components/parameters/query/page.yaml"
+      - $ref: "../components/parameters/query/search.yaml"
+      - $ref: "../components/parameters/query/export_logs_status.yaml"
+      - $ref: "../components/parameters/query/export_format.yaml"
+      - $ref: "../components/parameters/query/export_by.yaml"
+      - $ref: "../components/parameters/query/id_filter.yaml"
+      - $ref: "../components/parameters/query/export_logs_export_type.yaml"
+      - $ref: "../components/parameters/query/export_logs_has_error.yaml"
+      - $ref: "../components/parameters/query/export_logs_min_duration.yaml"
+      - $ref: "../components/parameters/query/export_logs_max_duration.yaml"
+      - $ref: "../components/parameters/query/export_logs_start_date.yaml"
+      - $ref: "../components/parameters/query/export_logs_end_date.yaml"
+    responses:
+      '200':
+        description: Successfully retrieved export logs
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/ExportLogsResponse.yaml"
+      '401':
+        $ref: "../components/responses/Unauthorized.yaml"
+      '403':
+        $ref: "../components/responses/Forbidden.yaml"
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/Error.yaml"
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml"
+
+/admin/export_logs/{log_id}:
+  get:
+    tags:
+      - Export Logs
+    summary: Get export log details
+    description: |
+      Retrieve detailed information about a specific export log by ID, including computed fields and real-time status.
+      
+      **Computed Fields:**
+      - **duration**: Calculated time difference between created_at and completed_at
+      - **is_expired**: Whether the export file has expired (based on retention policy)
+      - **has_file**: Whether the export file currently exists on the server
+      
+      **Use Cases:**
+      - Get detailed status of a specific export job
+      - Check if export file is still available for download
+      - Monitor export progress and completion time
+      - Debug export issues with full context
+      - Verify export parameters and filters used
+      
+      **Authentication Required**: Bearer token
+      
+      **Rate Limit**: 100 requests per day
+    security:
+      - Auth0Bearer: []
+    parameters:
+      - name: log_id
+        in: path
+        required: true
+        description: Unique identifier of the export log
+        schema:
+          type: integer
+          minimum: 1
+        example: 25
+    responses:
+      '200':
+        description: Successfully retrieved export log
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/ExportLog.yaml"
+      '401':
+        $ref: "../components/responses/Unauthorized.yaml"
+      '403':
+        $ref: "../components/responses/Forbidden.yaml"
+      '404':
+        $ref: "../components/responses/NotFound.yaml"
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/Error.yaml"
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml"
+
+/admin/export_logs/{log_id}/download:
+  get:
+    tags:
+      - Export Logs
+    summary: Download export file
+    description: |
+      Download the exported file for a specific export log in its original format (CSV or JSON).
+      
+      **File Formats:**
+      - **CSV**: Comma-separated values with headers, suitable for spreadsheet applications
+      - **JSON**: Structured data format, suitable for programmatic processing
+      
+      **File Availability:**
+      - Only available for exports with `status: "success"`
+      - File must exist on server (`has_file: true`)
+      - File must not be expired (`is_expired: false`)
+      - For S3 URLs, redirects to the S3 URL
+      - For local files, serves the file directly
+      
+      **Response Headers:**
+      - `Content-Type`: application/json or text/csv
+      - `Content-Disposition`: attachment with original filename
+      
+      **Use Cases:**
+      - Download completed export data for analysis
+      - Integrate exported data into external systems
+      - Generate reports from exported data
+      - Backup export results for archival purposes
+      
+      **Authentication Required**: Bearer token
+      
+      **Rate Limit**: 50 requests per day
+    security:
+      - Auth0Bearer: []
+    parameters:
+      - name: log_id
+        in: path
+        required: true
+        description: Unique identifier of the export log
+        schema:
+          type: integer
+          minimum: 1
+        example: 25
+    responses:
+      '200':
+        description: Successfully downloaded export file
+        content:
+          application/json:
+            schema:
+              type: object
+              description: |
+                **JSON Format Response**
+                
+                When the export format is JSON, the response contains the exported data as a JSON object.
+                The structure varies based on export_type:
+                
+                - **channels**: Array of channel objects with properties like id, title, description, etc.
+                - **feeds**: Array of feed objects with properties like id, title, url, status, etc.
+                - **items**: Array of item objects with properties like id, title, description, duration, etc.
+              properties:
+                message:
+                  type: string
+                  example: "File downloaded successfully"
+          text/csv:
+            schema:
+              type: string
+              description: |
+                **CSV Format Response**
+                
+                When the export format is CSV, the response contains the exported data as a CSV file.
+                The CSV includes headers and data rows with the following structure:
+                
+                **Headers**: `id,export_by,export_type,status,format,file_path,created_at,completed_at,feeds_count,channels_count,items_count,error_message`
+                
+                **Example CSV Content**:
+                ```
+                id,export_by,export_type,status,format,file_path,created_at,completed_at,feeds_count,channels_count,items_count,error_message
+                25,nicholasgriffin@example.com,feeds,success,csv,/app/exports/feeds_export_20250718_214804_e0b23bf0.csv,2025-07-18T19:48:04.595678,2025-07-18T21:42:04.595596,400,,,
+                ```
+                
+                **Note**: Empty fields are represented as empty strings in CSV format.
+        headers:
+          Content-Disposition:
+            description: File attachment header with appropriate filename
+            schema:
+              type: string
+              example: "attachment; filename=feeds_export_20250718_214804_e0b23bf0.csv"
+          Content-Type:
+            description: File MIME type based on export format
+            schema:
+              type: string
+              enum: [application/json, text/csv]
+              example: "text/csv"
+      '401':
+        $ref: "../components/responses/Unauthorized.yaml"
+      '403':
+        $ref: "../components/responses/Forbidden.yaml"
+      '404':
+        description: Export log or file not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/Error.yaml"
+            example:
+              error: "Export file not found or has expired (Status Code: 404)"
+      '429':
+        description: Rate limit exceeded
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/Error.yaml"
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml"

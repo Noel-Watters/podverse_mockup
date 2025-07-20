@@ -1,0 +1,8 @@
+name: format
+in: query
+required: false
+schema:
+  type: string
+  enum: [csv, json]
+  default: csv
+description: Filter by export format (csv or json)

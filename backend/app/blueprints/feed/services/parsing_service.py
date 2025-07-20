@@ -70,12 +70,8 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
                 response = requests.post("http://parse-service:3001/trigger-parse", json=payload, timeout=5)
                 response.raise_for_status()
                 break
-            except requests.Timeout as e:
-                logger.warning(f"Timeout on attempt {attempt + 1}: {e}")
-                if attempt == 1:
-                    raise
-            except requests.ConnectionError as e:
-                logger.warning(f"Connection error on attempt {attempt + 1}: {e}")
+            except Exception as e:
+                logger.warning(f"Request error on attempt {attempt + 1}: {e}")
                 if attempt == 1:
                     raise
                 # exponential backoff with random jitter - base delay doubles on each try
@@ -98,26 +94,12 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
         logger.error(f"Error calling Node trigger: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
         
-        # Provide more descriptive error messages based on exception type
-        if isinstance(e, requests.Timeout):
-            message = "Parser request timed out: The parsing service did not respond within the expected time limit."
-        elif isinstance(e, requests.ConnectionError):
-            message = "Connection error: Unable to connect to the parsing service. The service may be down or unreachable."
-        elif isinstance(e, requests.HTTPError):
-            if e.response.status_code == 404:
-                message = "HTTP 404 Not Found: The requested RSS feed URL could not be located."
-            elif e.response.status_code == 403:
-                message = "Access Denied: HTTP 403 Forbidden. Server is blocking feed requests."
-            elif e.response.status_code == 500:
-                message = "Server Error: HTTP 500 Internal Server Error. The parsing service encountered an error."
-            else:
-                message = f"HTTP Error {e.response.status_code}: {e.response.reason}"
-        else:
-            message = f"Parsing failed: {str(e)}"
+        # Use a simple error message approach
+        message = f"Parsing failed: {str(e)}"
+        http_status = None
         
-        result = {"status": "error", "error": str(e), "feed_id": feed.id}
+        result = {"status": "error", "message": message, "feed_id": feed.id}
         is_success = False
-        http_status = getattr(e, 'response', {}).status_code if hasattr(e, 'response') else None
 
     finally:
         # Get the current user's Auth0 ID

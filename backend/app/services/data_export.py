@@ -8,8 +8,6 @@ import csv
 import os
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from app.extensions import db
-from app.models.channel import Channel
 from app.utils.request_logger import get_logger
 from app.blueprints.channel.services import get_channels_for_export
 from app.blueprints.feed.services import get_feeds_for_export

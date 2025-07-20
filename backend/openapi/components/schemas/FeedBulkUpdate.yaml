@@ -1,25 +1,35 @@
+# Schema for bulk update response
 type: object
-description: Schema for bulk updating multiple feeds
-required:
-  - feed_ids
-  - updates
 properties:
-  feed_ids:
+  updated:
+    type: integer
+    description: Number of feeds successfully updated
+    example: 3
+
+  not_found:
+    type: integer
+    description: Number of feeds not found
+    example: 0
+
+  total_requested:
+    type: integer
+    description: Total number of feeds requested for update
+    example: 3
+
+  results:
     type: array
-    description: List of feed IDs to update
     items:
-      type: integer
-  updates:
-    type: object
-    description: Fields to update for the selected feeds
-    properties:
-      feed_flag_status_id:
-        type: integer
-        description: ID of the feed flag status
-      parsing_priority:
-        type: integer
-        description: Priority level for feed parsing (higher numbers = higher priority)
-      is_parsing:
-        type: boolean
-        description: Whether the feed is currently being parsed
-    minProperties: 1
+      type: object
+      properties:
+        feed_id:
+          type: integer
+          description: ID of the feed
+          example: 123
+        status:
+          type: string
+          enum: [updated, not_found]
+          description: Status of the update operation
+          example: "updated"
+      required: [feed_id, status]
+
+required: [updated, not_found, total_requested, results]
