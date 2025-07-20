@@ -6,6 +6,7 @@ from app.models.item import Item
 from app.models.stats import StatsAggregatedChannel, StatsAggregatedItem
 from app.blueprints.feed.schemas import FeedSchema
 from app.blueprints.item.schemas import ItemSchema
+from app.blueprints.channel.schemas import ChannelDetailSchema
 
 
 class StatsChannelSchema(ma.SQLAlchemyAutoSchema):
@@ -22,15 +23,15 @@ class StatsItemSchema(ma.SQLAlchemyAutoSchema):
         include_relationships = False
         include_fk = True
 
-class ChannelDetailsSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = Channel
-        include_relationships = True
-        include_fk = True
-        include_fields = (
-            'id', 'title', 'slug', 'description', 'stats', 'raw_event_count',
-            'items', 'categories', 'feed', 'medium'
-        )
+class ChannelDetailWithStatsSchema(ChannelDetailSchema):
+    # class Meta:
+    #     model = Channel
+    #     include_relationships = True
+    #     include_fk = True
+    #     include_fields = (
+    #         'id', 'title', 'slug', 'description', 'stats', 'raw_event_count',
+    #         'items', 'categories', 'feed', 'medium'
+    #     )
 
     stats = ma.Nested(StatsChannelSchema, many=True)
     items = ma.Nested(ItemSchema, many=True)
@@ -167,7 +168,7 @@ stats_channel_schema_many = StatsChannelSchema(many=True)
 stats_item_schema = StatsItemSchema()
 stats_item_schema_many = StatsItemSchema(many=True)
 
-channel_details_schema = ChannelDetailsSchema()
+channel_details_with_stats_schema = ChannelDetailWithStatsSchema()
 item_details_schema = ItemDetailsSchema()
 
 channel_daily_stats_only_schema = ChannelDailyStatsOnlySchema()

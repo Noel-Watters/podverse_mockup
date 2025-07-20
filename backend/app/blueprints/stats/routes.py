@@ -5,6 +5,7 @@ from app.blueprints.stats import stats_bp
 from app.utils.request_logger import get_logger, log_request_start, log_request_end
 from app.utils.error_handlers import handle_errors
 from app.blueprints.stats.controller import list_channel_stats, get_channel_stat_details_by_id, list_item_stats, get_item_stat_details_by_id
+from app.utils.audit_decorators import audit_admin_access
 
 logger = get_logger(__name__)
 
@@ -18,6 +19,7 @@ def after_request(response):
 
 @handle_errors
 @stats_bp.route('/channels', methods=['GET'])
+@audit_admin_access(action="LIST_STATS_CHANNELS", resource="channel")
 def list_channel_stats_route():
 
     # Pass the request into the controller
@@ -35,6 +37,7 @@ def list_channel_stats_route():
 
 @handle_errors
 @stats_bp.route('/channels/<int:channel_id>', methods=['GET'])
+@audit_admin_access(action="GET_CHANNEL_STATS_DETAIL", resource="channel, stats")
 def get_channel_stats_detail(channel_id):
  
     data = get_channel_stat_details_by_id(channel_id)
@@ -44,10 +47,10 @@ def get_channel_stats_detail(channel_id):
 
 @handle_errors
 @stats_bp.route('/items', methods=['GET'])
+@audit_admin_access(action="LIST_STATS_ITEMS", resource="item")
 def list_item_stats():
 
     data = list_item_stats()
-
     return jsonify({
         "data": data["results"],
         "meta": {
@@ -60,6 +63,7 @@ def list_item_stats():
 
 @handle_errors
 @stats_bp.route('/items/<int:item_id>', methods=['GET'])
+@audit_admin_access(action="GET_ITEM_STATS_DETAIL", resource="item, stats")
 def get_item_stats_detail(item_id):
 
     data = get_item_stat_details_by_id(item_id)

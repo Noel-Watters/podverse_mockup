@@ -9,6 +9,8 @@ from app.blueprints.feed import feed_bp
 from app.blueprints.export_logs import export_logs_bp
 from app.blueprints.item import item_bp
 from app.blueprints.stats import stats_bp
+from app.blueprints.report_builder import report_builder_bp
+
 
 def register_blueprints(app):
     # Top-level /admin blueprint
@@ -21,7 +23,8 @@ def register_blueprints(app):
     admin_bp.register_blueprint(item_bp, url_prefix="/items")
     admin_bp.register_blueprint(stats_bp, url_prefix="/stats")
     admin_bp.register_blueprint(docs_bp, url_prefix="/docs") # should i hide in production? if app.env != "production":
-        
+    admin_bp.register_blueprint(report_builder_bp, url_prefix="/reports")
+
     # Register the grouped admin routes
     app.register_blueprint(admin_bp)
 

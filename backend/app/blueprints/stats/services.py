@@ -8,7 +8,7 @@ from app.models.stats import StatsAggregatedChannel, StatsAggregatedItem, StatsT
 from app.models.channel import Channel
 from app.models.item import Item
 from app.blueprints.stats.schemas import (
-    channel_details_schema, 
+    channel_details_with_stats_schema, 
     channel_daily_stats_only_schema, 
     channel_weekly_stats_only_schema, 
     stats_channel_schema_many, 
@@ -165,7 +165,7 @@ def get_channel_stats_detail(channel_id: int, start: Optional[datetime] = None,
             f"channel_id={channel_id} start={start or 'none'} end={end or 'none'}"
         )
 
-        return channel_details_schema.dump(channel)
+        return channel_details_with_stats_schema.dump(channel)
 
     except Exception as e:
         logger.error(f"Error retrieving detailed stats for channel {channel_id}: {str(e)}")
