@@ -48,8 +48,8 @@ start_date:
 status:
   $ref: "query/export_logs_status.yaml"
 
-export_type:
-  $ref: "query/export_logs_export_type.yaml"
+source:
+  $ref: "query/export_logs_source.yaml"
 
 
 

@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS export_logs (
     id SERIAL PRIMARY KEY,
     export_by TEXT NOT NULL,                             -- who triggered it (manually or via system)
-    export_type TEXT NOT NULL CHECK (export_type IN ('channels', 'feeds', 'items')),
+    source TEXT NOT NULL CHECK (source IN ('channels', 'feeds', 'items')),
     filters JSONB,                                         -- optional, if search terms used (e.g., search, sort_by)
     status TEXT NOT NULL CHECK (status IN ('pending', 'success', 'failed', 'skipped', 'expired')),
     file_path TEXT,                                        -- absolute or relative file path
@@ -24,9 +24,9 @@ BEGIN
         CREATE INDEX idx_export_logs_export_by ON export_logs(export_by);
     END IF;
     IF NOT EXISTS (
-        SELECT 1 FROM pg_indexes WHERE indexname = 'idx_export_logs_export_type'
+        SELECT 1 FROM pg_indexes WHERE indexname = 'idx_export_logs_source'
     ) THEN
-        CREATE INDEX idx_export_logs_export_type ON export_logs(export_type);
+        CREATE INDEX idx_export_logs_source ON export_logs(source);
     END IF;
     IF NOT EXISTS (
         SELECT 1 FROM pg_indexes WHERE indexname = 'idx_export_logs_status'

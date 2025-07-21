@@ -1,7 +1,7 @@
-name: export_type
+name: source
 in: query
 required: false
 schema:
   type: string
   enum: [channels, feeds]
-description: Filter by export type.
+description: Filter by source of exported data. 

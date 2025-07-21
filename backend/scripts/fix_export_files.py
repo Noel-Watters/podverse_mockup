@@ -22,7 +22,7 @@ def fix_export_files():
             def write_export_log_data(f):
                 writer = csv.writer(f)
                 writer.writerow([
-                    'id', 'export_by', 'export_type', 'status', 'format', 
+                    'id', 'export_by', 'source', 'status', 'format', 
                     'file_path', 'created_at', 'completed_at', 'feeds_count', 'channels_count', 'items_count', 'error_message'
                 ])
                 
@@ -30,7 +30,7 @@ def fix_export_files():
                 writer.writerow([
                     log.id,
                     log.export_by,
-                    log.export_type,
+                    log.source,
                     log.status,
                     log.format,
                     log.file_path or "",

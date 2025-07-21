@@ -6,7 +6,7 @@ def handle_custom_report(data):
     validated = schema.load(data)
 
     export_result = export_custom_report(
-        user_email=validated["exported_by"],
+        user_email=validated["export_by"],
         source=validated["source"],
         fields=validated["selected_fields"],
         filters=validated["filters"],

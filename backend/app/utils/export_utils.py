@@ -30,9 +30,9 @@ def generate_export_filename(prefix: str, user_id: str, resource_id: Optional[in
         return f"{prefix}_{resource_id}_export_{timestamp}_{sanitized_user_id}"
     return f"{prefix}_export_{timestamp}_{sanitized_user_id}"
 
-def create_export_log_with_filters(export_type: str, filters: Dict[str, Any], export_by: str) -> Any:
+def create_export_log_with_filters(source: str, filters: Dict[str, Any], export_by: str) -> Any:
     """Create export log with common parameters."""
-    return create_export_log_simple(export_type=export_type, filters=filters, export_by=export_by)
+    return create_export_log_simple(source=source, filters=filters, export_by=export_by)
 
 def finalize_export_success(export_log_id: int, file_path: str, format: str, **kwargs) -> None:
     """Finalize export log with success status."""

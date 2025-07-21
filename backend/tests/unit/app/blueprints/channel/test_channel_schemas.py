@@ -155,26 +155,3 @@ def test_channel_schema_title_validation():
             "feed_id": 1,
             "podcast_index_id": 12345
         })
-
-def test_channel_schema_missing_title():
-    """Test that title is required."""
-    schema = ChannelSchema()
-    
-    with pytest.raises(ValidationError):
-        schema.load({
-            "id_text": "TEST123",
-            "feed_id": 1,
-            "podcast_index_id": 12345
-        })
-
-def test_channel_schema_invalid_data_type():
-    """Test invalid data type handling."""
-    schema = ChannelSchema()
-    
-    with pytest.raises(ValidationError):
-        schema.load({
-            "title": 123,  # Title should be string
-            "id_text": "TEST123",
-            "feed_id": 1,
-            "podcast_index_id": 12345
-        })

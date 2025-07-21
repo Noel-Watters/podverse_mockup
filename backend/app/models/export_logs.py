@@ -13,7 +13,7 @@ class ExportLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     export_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    export_type: Mapped[str] = mapped_column(String(50), nullable=False)  # channels, feeds, items
+    source: Mapped[str] = mapped_column(String(50), nullable=False)  # channels, feeds, items
     filters: Mapped[dict] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(50), nullable=False)  # pending, success, failed, skipped, expired
     file_path: Mapped[str] = mapped_column(Text, nullable=True)
