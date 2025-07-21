@@ -2,7 +2,7 @@ services:
   database:
     build:
       context: .
-      dockerfile: Dockerfile.database
+      dockerfile: Dockerfile.admin_database
     image: podverse-database:latest
     container_name: podverse_database
     env_file:
@@ -29,7 +29,7 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: Dockerfile.admin_api
     image: podverse-backend:latest
     container_name: podverse_backend
     ports:
@@ -56,7 +56,7 @@ services:
   celery:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: Dockerfile.admin_api
     image: podverse-backend:latest
     container_name: podverse_celery
     entrypoint: ""  # override entrypoint.sh
@@ -84,7 +84,7 @@ services:
   celery-beat:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: Dockerfile.admin_api
     image: podverse-backend:latest
     container_name: podverse_celery_beat
     entrypoint: ""  # override entrypoint.sh
@@ -113,7 +113,7 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: Dockerfile.admin_web
     container_name: podverse_frontend
     ports:
       - "3000:3000"
@@ -125,7 +125,7 @@ services:
   parse-service:
     build:
       context: .
-      dockerfile: Dockerfile.perse_service
+      dockerfile: Dockerfile.admin_parse_service
     image: podverse-parse-service:latest
     container_name: podverse_parse_service
     ports:
