@@ -7,7 +7,7 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json(); 
-    const response = await axios.post(`${BACKEND_URL}/admin/feeds/bulk-update-status`, data);
+    const response = await axios.post(`${BACKEND_URL}/admin/feeds/bulk-update`, data);
     return NextResponse.json(response.data, { status: response.status });
   } catch (error: any) {
     return NextResponse.json(
