@@ -5,6 +5,13 @@ module.exports = {
     "./layouts/**/*.{js,ts,jsx,tsx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  safelist: [
+    'bg-green-500', 'text-white',
+    'bg-yellow-400', 'text-blue-900',
+    'bg-gray-500',
+    'bg-red-400', 'text-black',
+    'bg-gray-300'
+  ],
   theme: {
     extend: {
       colors: {

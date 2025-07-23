@@ -5,18 +5,23 @@ import ReparseFeed from "../reparsefeed/ReparseFeed";
 import ReparseButton from "../reparsefeed/ReparseButton";
 import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import FeedStatusBadge from "@/components/rssfeed/FeedStatusBadge";
+import Healthbadge from "@/components/rssfeed/Healthbadge";
 
 
 export default function ChannelHeader({ data }: { data: ChannelData }) {
   return (
-    <div className="bg-podverse-surface p-6 rounded-xl shadow space-y-2">
+    <div className="border border-gray-300 p-6 rounded-xl shadow space-y-2">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-black">{data.title}</h1>
-          <p className="text-sm text-black">Podcast Index ID: {data.podcast_index_id}</p>
-          <p className="text-sm text-black">Status: {data.feed.flag_status}</p>
+          <h1 className="text-4xl font-bold text-black">{data.title}</h1>
+          <p className="text-sm ml-2 text-black">Podcast Index ID: {data.podcast_index_id}</p>
         </div>
             <div className="flex items-center space-x-2">
+              <Healthbadge recent_logs={(data.feed.recent_logs ?? []).map(log => ({
+              ...log,
+              finished_at: log.finished_at ?? "",
+              parse_errors: log.parse_errors ?? 0,
+            }))} />
             <ReparseFeed feedId={data.feed.id.toString()} onNotify={() => {}}>
                 {({ onReparse, loading, status }) => (
                 <span onClick={e => e.stopPropagation()}>
@@ -28,34 +33,33 @@ export default function ChannelHeader({ data }: { data: ChannelData }) {
                 </span>
                 )}
             </ReparseFeed>
-            <button
-                onClick={() => {}}
-                type="button"
-                className="border border-black bg-white text-black rounded-md w-9 h-9 flex items-center justify-center hover:bg-gray-100 transition"
-                aria-label="Export"
-            >
-            <ArrowDownTrayIcon className="h-5 w-5" />
-          </button>
           </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {data.categories.map((id) => (
-          <span key={id} className="text-xs bg-gray-300 px-2 py-1 rounded-full">
-            Category #{id}
+        {data.categories.map((cat) => (
+          <span key={cat.id} className="text-sm border border-gray-400 bg-gradient-to-b from-[rgba(255,255,255,0)] to-[rgba(153,153,153,0.5)]  px-2 py-3 rounded-lg">
+          {cat.display_name}
           </span>
-        ))}
-        <span className="text-xs bg-gray-300 px-2 py-1 rounded-full">Medium ID: {data.medium_id}</span>
-        <a href={data.feed.url} className="flex items-center text-blue-300 border px-2 py-1 rounded border-blue-400 text-xs">
-          <RssIcon className="h-4 w-4 mr-1" />
-          RSS
-        </a>
-        <span className="text-xs border px-2 py-1 rounded border-gray-500 text-gray-400 flex items-center">
+          ))}
+        <span className="text-sm border border-gray-400 bg-gradient-to-b from-[rgba(255,255,255,0)] to-[rgba(153,153,153,0.5)]  px-2 py-3 rounded-lg">Medium: {data.medium.value}</span>
+      </div>
+
+      <div className="flex flex-col gap-y-2">
+          
+        <span className="text-xs flex border px-2 py-1 rounded border-gray-400  w-96 h-8 items-center">
           <CalendarIcon className="h-4 w-4 mr-1" />
           Launched: {data.feed.created_at ? new Date(data.feed.created_at).toLocaleDateString() : "-"}
         </span>
+        <a href={data.feed.url} className="w-96 h-8 flex items-center text-black border px-2 py-1 rounded border-gray-400 text-xs">
+          <RssIcon className="h-4 w-4 mr-1" />
+          RSS {data.feed.url ? data.feed.url : "N/A"}
+        </a>
         <FeedStatusBadge feed={data.feed} />
+
       </div>
+
+
     </div>
   );
 }
