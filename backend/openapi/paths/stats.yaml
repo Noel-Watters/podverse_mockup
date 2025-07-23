@@ -13,7 +13,7 @@
     parameters:
       - $ref: "../components/parameters/query/time_filter.yaml"
       - $ref: "../components/parameters/query/limit.yaml"
-      - $ref: "../components/parameters/query/offset.yaml"
+      - $ref: "../components/parameters/query/page.yaml"
       - $ref: "../components/parameters/query/search.yaml"
     responses:
       '200':
@@ -255,7 +255,7 @@
     parameters:
       - $ref: "../components/parameters/query/time_filter.yaml"
       - $ref: "../components/parameters/query/limit.yaml"
-      - $ref: "../components/parameters/query/offset.yaml"
+      - $ref: "../components/parameters/query/page.yaml"
       - $ref: "../components/parameters/query/search.yaml"
     responses:
       '200':

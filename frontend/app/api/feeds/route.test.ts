@@ -2,8 +2,8 @@ import { GET, POST } from './route';
 import { NextRequest } from 'next/server';
 
 jest.mock('axios', () => ({
-  get: jest.fn().mockResolvedValue({ data: [{ id: 1, title: 'Feed 1' }], status: 200 }),
-  post: jest.fn().mockResolvedValue({ data: { id: 2, title: 'New Feed' }, status: 201 }),
+  get: jest.fn().mockResolvedValue({data:{ data: [{ id: 1, title: 'Feed 1' }]}, status: 200 }),
+  post: jest.fn().mockResolvedValue({data: { id: 2, title: 'New Feed' }, status: 201 }),
 }));
 
 jest.mock('@/lib/auth0', () => ({

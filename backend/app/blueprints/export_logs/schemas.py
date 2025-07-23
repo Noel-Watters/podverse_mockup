@@ -12,9 +12,8 @@ class ExportLogSchema(ma.SQLAlchemyAutoSchema):
 
     # Add explicit field definitions for validation and formatting
     id = fields.Integer(dump_only=True)
-    export_by = fields.Email(required=True)
-    export_type = fields.String(required=True, validate=validate.OneOf(['channels', 'feeds', 'items']))
-    filters = fields.Dict(keys=fields.String(), values=fields.Raw(), required=False)
+    source = fields.String(required=True, validate=validate.OneOf(['channels', 'feeds', 'items']))
+    filters = fields.Dict(keys=fields.String(), values=fields.Raw(), required=False, allow_none=True)
     status = fields.String(required=True, validate=validate.OneOf(['pending', 'success', 'failed', 'skipped', 'expired']))
     file_path = fields.String(allow_none=True)
     format = fields.String(required=True, validate=validate.OneOf(['csv', 'json']))
@@ -25,7 +24,7 @@ class ExportLogSchema(ma.SQLAlchemyAutoSchema):
     completed_at = fields.DateTime(allow_none=True)
     error_message = fields.String(allow_none=True)
 
-    # Add computed fields
+    # adding computed fields
     duration = fields.Method("get_duration")
     is_expired = fields.Method("get_is_expired")
     has_file = fields.Method("get_has_file")
@@ -48,6 +47,5 @@ class ExportLogSchema(ma.SQLAlchemyAutoSchema):
         import os
         return bool(obj.file_path and os.path.exists(obj.file_path))
 
-# Create schema instances
 export_log_schema = ExportLogSchema()
 export_logs_schema = ExportLogSchema(many=True)

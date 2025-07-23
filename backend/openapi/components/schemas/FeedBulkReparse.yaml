@@ -1,0 +1,52 @@
+# Schema for bulk reparse sync response
+# For async responses, see the oneOf schema in the endpoint definition
+type: object
+properties:
+  success:
+    type: integer
+    description: Number of feeds successfully queued for reparse
+    example: 2
+
+  failed:
+    type: integer
+    description: Number of feeds that failed to queue
+    example: 0
+
+  not_found:
+    type: integer
+    description: Number of feeds not found
+    example: 0
+
+  already_parsing:
+    type: integer
+    description: Number of feeds already being parsed
+    example: 0
+
+  total_requested:
+    type: integer
+    description: Total number of feeds requested
+    example: 3
+
+  results:
+    type: array
+    items:
+      type: object
+      properties:
+        feed_id:
+          type: integer
+          description: ID of the feed
+          example: 123
+        status:
+          type: string
+          enum: [success, skipped_flag, not_found, error, already_parsing]
+          description: Status of the reparse operation for this feed
+          example: "success"
+        error:
+          type: string
+          description: Error message (only present when status is error)
+          example: "Database error occurred"
+      required: [feed_id, status]
+
+required: [success, failed, not_found, already_parsing, total_requested, results]
+
+        

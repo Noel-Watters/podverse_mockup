@@ -34,4 +34,4 @@ fi
 echo "$(date '+%Y-%m-%d %H:%M:%S') - Starting Flask app with gunicorn..."
 
 # Start Gunicorn
-exec gunicorn --bind 0.0.0.0:8000 --workers 4 --access-logfile - --error-logfile - "main:app"
+exec gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 120 --access-logfile - --error-logfile - "main:app"

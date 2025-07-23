@@ -1,0 +1,8 @@
+name: feed_id
+in: path
+required: true
+schema:
+  type: integer
+  minimum: 1
+description: ID of the feed to operate on
+example: 123 

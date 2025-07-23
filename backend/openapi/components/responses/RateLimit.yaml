@@ -1,0 +1,5 @@
+description: Rate limit exceeded (429)
+content:
+  application/json:
+    schema:
+      $ref: "../schemas/Error.yaml"

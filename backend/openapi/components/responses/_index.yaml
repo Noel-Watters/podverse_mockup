@@ -10,3 +10,5 @@ UnsupportedMediaType:
   $ref: "./UnsupportedMediaType.yaml"
 InternalServerError:
   $ref: "./InternalServerError.yaml"
+RateLimit:
+  $ref: "./RateLimit.yaml"

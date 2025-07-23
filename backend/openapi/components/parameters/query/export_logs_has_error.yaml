@@ -1,0 +1,7 @@
+name: has_error
+in: query
+required: false
+schema:
+  type: string
+  enum: ["true", "false"]
+description: Filter by whether the export has an error (true for failed status, false for non-failed status) 

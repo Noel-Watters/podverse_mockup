@@ -1,0 +1,6 @@
+name: sort_by
+in: query
+required: false
+schema:
+  type: string
+description: Field to sort by 

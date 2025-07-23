@@ -1,0 +1,7 @@
+name: status
+in: query
+required: false
+schema:
+  type: string
+  enum: [pending, success, failed, skipped, expired]
+description: Filter by export status 

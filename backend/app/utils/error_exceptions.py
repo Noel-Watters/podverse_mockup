@@ -78,3 +78,8 @@ class RedisLockError(APIException):
         if self.lock_name:
             return f"{base_msg} (Lock: {self.lock_name})"
         return base_msg
+
+class FSError(APIException):
+    """Exception raised for filesystem-related errors."""
+    status_code = 500
+    message = "Filesystem Error"

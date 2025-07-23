@@ -10,12 +10,22 @@ import shutil
 from pathlib import Path
 from typing import Optional, Tuple
 from app.utils.request_logger import get_logger
+from app.utils.error_exceptions import FSError
 
 logger = get_logger(__name__)
 
-class FSError(Exception):
-    """Custom exception for filesystem operations"""
-    pass
+def ensure_export_directory() -> str:
+    """
+    Ensures the exports directory exists
+    """
+    # Use a path relative to the backend directory
+    export_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'exports')
+    if not os.path.exists(export_dir):
+        os.makedirs(export_dir)
+        # Ensure directory has correct permissions
+        os.chmod(export_dir, 0o755)
+    return export_dir
+
 
 def check_directory_permissions(directory: str) -> Tuple[bool, Optional[str]]:
     """
@@ -47,7 +57,7 @@ def check_directory_permissions(directory: str) -> Tuple[bool, Optional[str]]:
         if not os.access(directory, os.W_OK):
             return False, f"No write permission for {directory}"
             
-        # Try to create a test file
+        # try to create and delete a small test file
         test_file = path / ".permissions_test"
         try:
             test_file.touch()
@@ -82,21 +92,20 @@ def get_export_directory(primary_dir: str = None) -> Tuple[str, bool]:
             return primary_dir, False
         logger.warning(f"Primary export directory not usable: {error}")
     
-    # Try app-specific temp directory
+    # Try app-specific temp directory -if no primary or it failed, try a fallback inside system temp folder
     temp_dir = os.path.join(tempfile.gettempdir(), 'podverse_exports')
     is_writable, error = check_directory_permissions(temp_dir)
-    
     if is_writable:
         logger.info(f"Using fallback export directory: {temp_dir}")
         return temp_dir, True
         
-    raise FSError(f"No writable export directory available. Errors: Primary: {error}")
+    raise FSError(f"No writable export directory available. Errors: Primary: {error}") # if fallbacks fails too
 
 
 
 def safe_write_file(filepath: str, write_func) -> Tuple[bool, Optional[str]]:
     """
-    Safely write a file using a write function
+    Write a file safely using a temporary file and atomic move.
     
     Args:
         filepath: Path to the file to write
@@ -108,13 +117,17 @@ def safe_write_file(filepath: str, write_func) -> Tuple[bool, Optional[str]]:
     temp_file = None
     try:
         # Create temporary file in the same directory
-        directory = os.path.dirname(filepath)
-        with tempfile.NamedTemporaryFile(mode='w', 
-                                       dir=directory,
-                                       prefix='._tmp_',
-                                       delete=False) as temp_file:
+        directory = os.path.dirname(filepath) 
+        ## creating  a temp file in same directory (so atomic rename is safe)
+        with tempfile.NamedTemporaryFile(
+            mode='w', 
+            dir=directory,
+            prefix='._tmp_',
+            delete=False 
+        ) as temp_file:
             # Write to temporary file
             write_func(temp_file)
+            
             temp_file.flush()
             os.fsync(temp_file.fileno())
             

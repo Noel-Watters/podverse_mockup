@@ -1,0 +1,8 @@
+name: max_duration
+in: query
+required: false
+schema:
+  type: number
+  format: float
+  minimum: 0
+description: Filter by maximum duration in seconds (only applies to completed exports) 

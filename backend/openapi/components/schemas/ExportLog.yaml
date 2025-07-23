@@ -1,0 +1,89 @@
+type: object
+properties:
+  id:
+    type: integer
+    description: Unique identifier for the export log
+    example: 25
+  export_by:
+    type: string
+    description: Email of the user who triggered the export or system
+    example: "nicholasgriffin@example.com"
+  source:
+    type: string
+    enum: [channels, feeds, items]
+    description: Source of data being exported
+    example: "feeds"
+  status:
+    type: string
+    enum: [pending, success, failed, skipped, expired]
+    description: Current status of the export operation
+    example: "success"
+  format:
+    type: string
+    enum: [csv, json]
+    description: File format of the export
+    example: "csv"
+  file_path:
+    type: string
+    nullable: true
+    description: Path to the exported file on the server
+    example: "/app/exports/feeds_export_20250718_214804_e0b23bf0.csv"
+  filters:
+    type: object
+    nullable: true
+    description: JSON object containing search and filter parameters used for the export
+    example:
+      date_from: "2025-06-18T21:48:04.595674"
+      date_to: "2025-07-18T21:48:04.595676"
+      status: "active"
+  channels_count:
+    type: integer
+    nullable: true
+    description: Number of channels exported (only for channel exports)
+    example: 400
+  feeds_count:
+    type: integer
+    nullable: true
+    description: Number of feeds exported (only for feed exports)
+    example: 100
+  items_count:
+    type: integer
+    nullable: true
+    description: Number of items exported (only for item exports)
+  created_at:
+    type: string
+    format: date-time
+    description: Timestamp when the export was initiated
+    example: "2025-07-18T19:48:04.595678"
+  completed_at:
+    type: string
+    format: date-time
+    nullable: true
+    description: Timestamp when the export was completed
+    example: "2025-07-18T21:42:04.595596"
+  error_message:
+    type: string
+    nullable: true
+    description: Error message if the export failed
+  duration:
+    type: number
+    nullable: true
+    description: Duration of the export operation in seconds
+    example: 6839.999918
+  is_expired:
+    type: boolean
+    description: Whether the export file has expired
+    example: false
+  has_file:
+    type: boolean
+    description: Whether the export file exists on the server
+    example: false
+required:
+  - id
+  - export_by
+  - source
+  - status
+  - format
+  - created_at
+  - is_expired
+  - has_file 

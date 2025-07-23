@@ -45,20 +45,22 @@ def finalize_export_log(log_id: int, status: str = None, file_path: str = None, 
     db.session.commit()
     return log
 
-def create_export_log_simple(export_type: str, filters: dict = None, status: str = "pending", 
+def create_export_log_simple(source: str, filters: dict = None, status: str = "pending", 
                            file_path: str = None, export_by: str = "system@podverse.com", format: str = "csv") -> ExportLog:
     """ Creates a new export log entry with required fields.
 
         Returns:
             The created ExportLog instance.
     """
+    # If source is a list, join it
+    if isinstance(source, list):
+        source = ",".join(source)
     data = {
         "export_by": export_by,
-        "export_type": export_type,
+        "source": source,
         "filters": filters or {},
         "status": status,
         "file_path": file_path,
         "format": format 
-        # Todo json format
     }
     return create_export_log(data)

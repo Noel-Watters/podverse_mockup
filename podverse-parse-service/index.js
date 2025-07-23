@@ -24,8 +24,13 @@ function triggerRealParser(url, podcast_index_id) {
 app.post("/trigger-parse", async (req, res) => {
   const { url, podcast_index_id } = req.body;
 
-  if (!url || typeof url !== 'string' || !podcast_index_id || typeof podcast_index_id !== 'number') {
-    return res.status(400).json({ success: false, message: "Invalid payload" });
+  if (!url || typeof url !== 'string') {
+    return res.status(400).json({ success: false, message: "URL is required and must be a string" });
+  }
+
+  // podcast_index_id is optional
+  if (podcast_index_id !== undefined && typeof podcast_index_id !== 'number') {
+    return res.status(400).json({ success: false, message: "podcast_index_id must be a number if provided" });
   }
 
   triggerRealParser(url, podcast_index_id);

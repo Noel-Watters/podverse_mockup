@@ -1,207 +1,79 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { Feed, RecentLog } from "@/types/feed";
-import FeedStatsChart from "../../components/FeedStatsChart";
-import AdminLayout from "@/layouts/AdminLayout";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import ReparseNotify from "@/components/reparsefeed/ReparseNotify";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchFeeds, resetFeeds, setFilters } from "@/redux/feedSlice";
+import { RootState, AppDispatch } from "@/redux/store";
+import { fetchChannelsByFeedIds } from "@/redux/batchChannelSlice";
+import { on } from "events";
 
-export default function DashboardPage() {
-  const router = useRouter();
-  const [feeds, setFeeds] = useState<Feed[]>([]);
-  const [error, setError] = useState<string>("");
+export default function Page() {
+  const dispatch = useDispatch<AppDispatch>();
+  const feeds = useSelector((state: RootState) => state.feeds.items);
+  const loading = useSelector((state: RootState) => state.feeds.loading);
+  const error = useSelector((state: RootState) => state.feeds.error);
+  const channelsByFeedId = useSelector((state: RootState) => state.batchChannel.data);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
-  const [selectedFeedLogs, setSelectedFeedLogs] = useState<RecentLog[]>([]);
-  const [logLoading, setLogLoading] = useState(false);
-  const [logError, setLogError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [selectedFeedLogs, setSelectedFeedLogs] = useState<any[]>([]);
+  const [notifies, setNotifies] = useState<
+  {
+    id: string;
+    type: "success" | "error";
+    message: string;
+    duration?: number;
+    details?: string[];
+  }[]
+>([]);
 
-  // Fetch feeds on mount
+  // Preset filters for flagged feeds
   useEffect(() => {
-    const fetchFeeds = async () => {
-      try {
-        const response = await fetch("/api/feeds?limit=2000");
-        if (!response.ok) throw new Error("Failed to load feeds");
-        const data = await response.json();
-        setFeeds(data);
-      } catch (error) {
-        setError("Failed to load feeds");
+    dispatch(setFilters({
+      status: "parse_error",
+      sort_by: "updated_at",
+      sort_order: "desc",
+      limit: 20,
+      page: 1,
+    }));
+    dispatch(resetFeeds());
+    dispatch(fetchFeeds());
+  }, [dispatch]);
+
+    useEffect(() => {
+      if (feeds.length > 0) {
+        dispatch(fetchChannelsByFeedIds(feeds.map(f => f.id)));
       }
-    };
-    fetchFeeds();
-  }, []);
-
-  // Show only most recent flagged or error feeds
-  const handleRecentFlagged = (feeds: Feed[]) => {
-    return feeds
-      .filter(feed => feed.feed_flag_status_id === 2 || feed.feed_flag_status_id === 3)
-      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-      .slice(0, 6);
-  };
-
-  // Fetch logs for selected feed
-  useEffect(() => {
-    if (selectedFeedId == null) return;
-    setLogLoading(true);
-    setLogError(null);
-    fetch(`/api/feeds/${selectedFeedId}`)
-      .then(res => res.json())
-      .then(data => setSelectedFeedLogs(data.recent_logs || []))
-      .catch(() => setLogError("Failed to load logs"))
-      .finally(() => setLogLoading(false));
-  }, [selectedFeedId]);
-
-  // Set default selected feed to first flagged/error feed
-  useEffect(() => {
-    if (selectedFeedId == null && feeds.length > 0) {
-      const flagged = handleRecentFlagged(feeds);
-      if (flagged.length > 0) {
-        setSelectedFeedId(flagged[0].id);
-      }
-    }
-  }, [feeds, selectedFeedId]);
-
-const handleSearch = () => {
-  setTimeout(() => {
-    router.push(`/rssfeed?search=${encodeURIComponent(searchTerm)}`);
-  }, 200); // 200ms delay
-};
-
-  // --- Stats calculations ---
-  const totalFeeds = feeds.length;
-  const flaggedFeeds = feeds.filter(f => f.feed_flag_status_id === 2 || f.feed_flag_status_id === 3).length;
-  const healthyFeeds = feeds.filter(f => f.feed_flag_status_id !== 2 && f.feed_flag_status_id !== 3).length;
-  const flaggedPercent = totalFeeds > 0 ? Math.round((flaggedFeeds / totalFeeds) * 100) : 0;
+    }, [feeds, dispatch]);
 
   return (
-    <AdminLayout
-      searchValue={searchTerm}
-      onSearchChange={(e) => setSearchTerm(e.target.value)}
-      onSearchSubmit={handleSearch}
-      >
-
-      <main className="flex-1  space-y-8">
-  
-
-        {/* Show feed fetch error if any */}
-        {error && (
-          <div className="text-red-500 font-semibold mb-4">{error}</div>
-        )}
-
-        {/* RSS Feed and Audit Log */}
-        <section className="grid grid-cols-2 gap-8">
-          {/* Flagged Podcasts */}
-          <div className="bg-white rounded-lg p-6 shadow-md flex flex-col h-[600px]">
-            <h2 className="text-xl font-semibold mb-4 text-black">Recent Flagged Feeds</h2>
-            <div className="flex-1 overflow-y-auto">
-              {handleRecentFlagged(feeds).map((feed) => (
-                <div
-                  key={feed.id}
-                  tabIndex={0}
-                  role="button"
-                  onClick={() => setSelectedFeedId(feed.id)}
-                  className={`flex justify-between items-center p-3 rounded mb-3 cursor-pointer ${
-                    feed.id === selectedFeedId
-                      ? "bg-blue-100 border border-blue-400"
-                      : feed.feed_flag_status_id === 2
-                      ? "bg-yellow-100"
-                      : "bg-red-100"
-                  }`}
-                >
-                  <div>
-                    <p className="font-semibold text-black">{feed.url}</p>
-                    <p className="text-sm text-gray-500">Feed ID: {feed.id}</p>
-                  </div>
-                  <div className="flex items-center gap-2 ml-auto">
-                    {/* Flag status oval, fixed width */}
-                    <span
-                      className={`flex items-center justify-center w-24 px-0 py-1 rounded-full shadow-md text-sm font-semibold select-none
-                        ${
-                          feed.feed_flag_status_id === 2
-                            ? "bg-yellow-400 text-yellow-900"
-                            : "bg-red-500 text-white"
-                        }
-                      `}
-                    >
-                      {feed.feed_flag_status_id === 2 ? "Flagged" : "Error"}
-                    </span>
-                    {/* Reparse button with Heroicon */}
-                    <button
-                      aria-label="Reparse"
-                      className="ml-2 p-1 rounded-full bg-gradient-to-r from-podverse-accent to-blue-500 text-white shadow-md hover:from-blue-500 hover:to-podverse-accent transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 flex items-center justify-center"
-                    >
-                      {/* Heroicons ArrowPath (refresh) icon */}
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="w-5 h-5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12a7.5 7.5 0 0113.5-4.5M19.5 12a7.5 7.5 0 01-13.5 4.5m0 0V15m0 1.5H6m12-1.5v-1.5m0 0H18" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {handleRecentFlagged(feeds).length === 0 && (
-                <div className="text-center text-gray-400 py-8">No flagged feeds found.</div>
-              )}
-            </div>
-          </div>
-
-          {/* Audit Log Table */}
-          <div className="bg-white rounded-lg p-6 shadow-md flex flex-col h-[600px]">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-black">Audit Log</h2>
-            </div>
-            <div className="flex-1 space-y-3 overflow-auto min-w-0">
-              {logLoading ? (
-                <div className="text-podverse-muted">Loading logs...</div>
-              ) : logError ? (
-                <div className="text-red-500">{logError}</div>
-              ) : selectedFeedLogs.length === 0 ? (
-                <div className="text-podverse-muted">No logs available</div>
-              ) : (
-                selectedFeedLogs.map((log, i) => (
-                  <div key={i} className="p-3 rounded bg-white border border-gray-200">
-                    <p className="font-semibold text-black break-words">{log.message}</p>
-                    <p className="text-xs text-gray-400">{new Date(
-                      log.last_finished_parse_time ||
-                      log.last_good_http_status_time ||
-                      ""
-                    ).toLocaleString()}</p>
-                    <span className={log.parse_errors === 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                      {log.parse_errors === 0 ? "Live" : "Error"}
-                    </span>
-                  </div>
-                ))
-                )
-              }
-            </div>
-          </div>
-        </section>
-
-        {/* Stats at the bottom */}
-        <section className="mt-8">
-          <div className="grid grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded p-6 flex flex-col justify-between">
-              <p className="text-gray-500">Total RSS Feeds</p>
-              <h3 className="text-3xl font-semibold text-black">{totalFeeds.toLocaleString()}</h3>
-            </div>
-            <div className="bg-white rounded p-6 flex flex-col justify-between">
-              <p className="text-gray-500">Healthy Feeds</p>
-              <h3 className="text-3xl font-semibold text-black">{healthyFeeds.toLocaleString()}</h3>
-            </div>
-            <div className="bg-white rounded p-6 flex flex-col justify-between">
-              <p className="text-gray-500">Flagged Feeds</p>
-              <h3 className="text-3xl font-semibold text-black">{flaggedFeeds.toLocaleString()}</h3>
-            </div>
-            <div className="bg-white rounded p-6 flex flex-col justify-between">
-              <p className="text-gray-500">Flagged %</p>
-              <h3 className="text-3xl font-semibold text-black">{flaggedPercent}%</h3>
-            </div>
-          </div>
-          {/* Pie Chart for Healthy vs Flagged Feeds */}
-          <div className="bg-white rounded p-6 shadow-md">
-            <h3 className="text-xl font-semibold mb-4 text-black">Feed Health Distribution</h3>
-            <FeedStatsChart healthy={healthyFeeds} flagged={flaggedFeeds} />
-          </div>
-        </section>
-      </main>
-  </AdminLayout>
+    <>
+      {/* Notifications */}
+      {notifies.map((notify) => (
+        <ReparseNotify
+          key={notify.id}
+          type={notify.type}
+          message={notify.message}
+          duration={notify.duration}
+          details={notify.details}
+          onClose={() => setNotifies(notifies.filter(n => n.id !== notify.id))}
+        />
+      ))}
+      <DashboardLayout
+        feeds={feeds}
+        loading={loading}
+        error={error ?? null}
+        selectedFeedId={selectedFeedId}
+        onSelectFeed={(feedId, logs) => {
+          setSelectedFeedId(feedId);
+          setSelectedFeedLogs(logs);
+        }}
+        onNotify={(n) =>
+          setNotifies((prev) => [
+            ...prev,
+            { ...n, id: crypto.randomUUID() },
+          ])
+        }
+      />
+    </>
   );
 }

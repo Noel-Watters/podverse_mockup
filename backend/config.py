@@ -28,6 +28,14 @@ class BaseConfig:
     AUTH0_DOMAIN = os.getenv("AUTH0_DOMAIN")
     API_AUDIENCE = os.getenv("API_AUDIENCE")
     ALGORITHMS = [os.getenv("ALGORITHMS", "RS256")]
+    
+    # Storage backend configuration
+    STORAGE_BACKEND = os.getenv("STORAGE_BACKEND", "local")  # or 's3'
+    S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+    S3_REGION = os.getenv("S3_REGION", "us-east-1")
+    S3_ACCESS_KEY_ID = os.getenv("S3_ACCESS_KEY_ID")
+    S3_SECRET_ACCESS_KEY = os.getenv("S3_SECRET_ACCESS_KEY")
+    S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL")  # For custom S3-compatible services
 
 
 class DevelopmentConfig(BaseConfig):
@@ -35,7 +43,7 @@ class DevelopmentConfig(BaseConfig):
     DEBUG = True
 
 class TestingConfig(BaseConfig):
-    SQLALCHEMY_DATABASE_URI = os.getenv("TEST_DATABASE_URL")
+    SQLALCHEMY_DATABASE_URI = "sqlite://"
     TESTING = True
     DEBUG = True
 

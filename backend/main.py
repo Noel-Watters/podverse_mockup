@@ -17,10 +17,10 @@ logger = get_logger(__name__)
 config_name = os.getenv("FLASK_ENV", "development")
 app = create_app(config_name)
 
-# Redirect root path to the admin sitemap
+# Redirect root path to the admin docs
 @app.route("/")
 def redirect_to_sitemap():
-    return redirect("/admin/site")
+    return redirect("/admin/docs")
 
 
 if __name__ == '__main__':

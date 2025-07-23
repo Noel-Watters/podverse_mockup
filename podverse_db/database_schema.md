@@ -218,7 +218,7 @@
 |-------|------|
 | id | SERIAL PRIMARY |
 | admin_email | varchar_normal NOT |
-| export_type | TEXT NOT |
+| source | TEXT NOT |
 | filters | JSONB |
 | status | TEXT NOT |
 | file_path | TEXT |
