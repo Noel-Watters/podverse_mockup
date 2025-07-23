@@ -24,7 +24,7 @@ export default function EpisodeList({ items }: { items: Item[] }) {
                 <LinkIcon className="h-4 w-4 mr-1 text-gray-400" />
                 <span className="whitespace-nowrap">{item.guid}</span>
               </span>
-              <span className={`text-xs px-2 py-1 rounded font-semibold border ${FEED_STATUS_MAP[item.flag_status.status]?.color || 'border-gray-400 text-gray-500'}`}>
+              <span className={`text-xs px-2 py-1 rounded font-semibold border ${FEED_STATUS_MAP[item.flag_status.status]?.className || 'border-gray-400 text-gray-500'}`}>
                 {FEED_STATUS_MAP[item.flag_status.status]?.label || item.flag_status.status}
               </span>
             </div>
