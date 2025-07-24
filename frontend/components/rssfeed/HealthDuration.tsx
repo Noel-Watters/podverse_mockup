@@ -11,13 +11,16 @@ interface HealthDurationProps {
 function getRelevantDuration(finishedAt: string): string {
   const finishedDate = new Date(finishedAt);
   const now = new Date();
-  const diffMs = now.getTime() - finishedDate.getTime();
+  // Clamp diffMs to zero if finished_at is in the future
+  const diffMs = Math.max(0, now.getTime() - finishedDate.getTime());
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
   const diffMonths = Math.floor(diffMs / (30 * 86400000));
 
-  if (diffMins < 60) {
+  if (diffMins < 1) {
+    return '< 1 min';
+  } else if (diffMins < 60) {
     return `${diffMins} min${diffMins !== 1 ? 's' : ''}`;
   } else if (diffHours < 24) {
     return `${diffHours} hour${diffHours !== 1 ? 's' : ''}`;

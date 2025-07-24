@@ -121,7 +121,7 @@ def seed_feed(n=100):
             feed = Feed(
                 url=url,
                 feed_flag_status_id=feed_status_id,
-                is_parsing=fake.boolean(chance_of_getting_true=10),
+                is_parsing=False,
                 parsing_priority=random.randint(0, 5),
                 last_parsed_file_hash=fake.md5(),
                 container_id=fake.bothify(text="##########"),

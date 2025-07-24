@@ -11,6 +11,7 @@ import { fetchFeeds, resetFeeds, setFilters, setSearchTerm } from "@/redux/feedS
 import type { AppDispatch, RootState } from "@/redux/store";
 import { fetchChannelsByFeedIds } from "@/redux/batchChannelSlice";
 import { useDebounce } from "@/hooks/useDebounce";
+import { FEED_STATUS_MAP } from "@/types/feed";   
 
 export default function FeedsPageContent() {
   const dispatch = useDispatch<AppDispatch>();
@@ -117,10 +118,15 @@ const handleBulkReparse = async () => {
 };
 
 const handleBulkUpdateStatus = async (newStatus: string) => {
-  await fetch("/api/feeds/bulk-update-status", {
+  const feed_flag_status_id = FEED_STATUS_MAP[newStatus]?.id;
+  if (!feed_flag_status_id) return; // Optionally handle invalid status
+  await fetch("/api/feeds/bulk-update", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ feed_ids: selectedFeeds, new_status: newStatus }),
+    body: JSON.stringify({
+      feed_ids: selectedFeeds,
+      updates: { feed_flag_status_id }
+    }),
   });
 };
 
