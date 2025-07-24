@@ -18,17 +18,10 @@ interface RecentFlaggedFeedProps {
   feeds: any[];
   loading?: boolean;
   error?: string | null;
+  onNotify: (n: { type: "error" | "success"; message: string; duration?: number; details?: string[] }) => void;
 }
 
-const RecentFlaggedFeed: React.FC<RecentFlaggedFeedProps> = ({ channelMap, onSelectFeed, selectedFeedId, feeds, loading, error }) => {
-  // Show a simple alert for now; replace with a toast/snackbar in production
-  function onNotify(n: { type: "error" | "success"; message: string; duration?: number; details?: string[] }): void {
-    if (n.type === "error") {
-      alert(`Error: ${n.message}${n.details ? "\nDetails:\n" + n.details.join("\n") : ""}`);
-    } else {
-      alert(`Success: ${n.message}`);
-    }
-  }
+const RecentFlaggedFeed: React.FC<RecentFlaggedFeedProps> = ({ channelMap, onSelectFeed, selectedFeedId, feeds, loading, error, onNotify }) => {
 
   // Only show the 6 most recent feeds
   const recentFeeds = feeds.slice(0, 6);

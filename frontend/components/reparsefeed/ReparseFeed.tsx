@@ -54,7 +54,7 @@ export default function ReparseFeed({ feedId, children, onNotify }: ReparseFeedP
 
   return children({
     onReparse: handleReparse,
-    status: feedState?.status,
+    status: feedState?.flag_status,
     loading: feedState?.reparsing ?? false,
     error: feedState?.error ?? null,
   });

@@ -42,3 +42,21 @@ export interface FeedFilters {
   limit?: number;
   page?: number;
 }
+
+export interface FeedStatusInfo {
+  id: number;
+  label: string;
+  className: string;
+}
+
+export const FEED_STATUS_MAP: Record<string, FeedStatusInfo> = {
+  active:           { id: 1, label: "Active", className: "bg-green-500 text-white" },
+  "always-parse":   { id: 2, label: "Always Parse", className: "bg-green-500 text-white" },
+  spam:             { id: 3, label: "Spam", className: "bg-yellow-400 text-white" },
+  "pending-archive":{ id: 4, label: "Pending Archive", className: "bg-yellow-400 text-blue-900" },
+  archived:         { id: 5, label: "Archived", className: "bg-gray-500 text-white" },
+  takedown:         { id: 6, label: "Takedown", className: "bg-yellow-400 text-white" },
+  parse_error:      { id: 7, label: "Parse Error", className: "bg-red-400 text-black" },
+  fetch_error:      { id: 8, label: "Fetch Error", className: "bg-red-400 text-white" },
+  "":               { id: 0, label: "Unknown", className: "bg-gray-300 text-black" }
+};

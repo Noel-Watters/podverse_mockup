@@ -29,9 +29,7 @@ export default function FeedToolBar({
   isBulkReparseLoading,
   setSelectedFeeds,
 }: FeedToolbarProps) {
-  const statusMap = { flagged: 1, unflagged: 2, disabled: 3 };
-  type StatusKey = keyof typeof statusMap;
-  const [statusToUpdate, setStatusToUpdate] = useState<StatusKey>("flagged");
+  const [statusToUpdate, setStatusToUpdate] = useState<string>("active");
   const [error, setError] = useState<string>("");
   const [exportFormat, setExportFormat] = useState("csv");
   const [order, setOrder] = useState<'asc' | 'desc'>('desc');
@@ -68,11 +66,11 @@ const exportFeeds = async () => {
               type="checkbox"
               
               checked={feeds.length > 0 && selectedFeeds.length === feeds.length}
-              className="peer appearance-none h-7 w-7 rounded-md bg-[var(--pv-cream)] border border-black checked:bg-black checked:border-black focus:outline-none" 
+              className="peer appearance-none h-7 w-7 rounded-md bg-[var(--pv-cream)] border border-black checked:bg-primary checked:border-black focus:outline-none" 
               onChange={e => setSelectedFeeds(e.target.checked ? feeds.map(f => f.id) : [])}
             />
             <svg
-              className="absolute w-4 h-4 text-[var(--pv-cream)] pointer-events-none left-0.5 top-0.5 opacity-0 peer-checked:opacity-100 transition"
+              className="absolute w-7 h-7 text-white pointer-events-none left-0.5 top-1 opacity-0 peer-checked:opacity-100 transition"
               fill="none"
               stroke="currentColor"
               strokeWidth="3"
@@ -105,14 +103,9 @@ const exportFeeds = async () => {
             className="appearance-none border border-black rounded-md w-32 px-4 py-1 text-left text-sm text-black bg-white focus:outline-none min-w-[90px] h-8"
             defaultValue=""
           >
-            <option value="">Flag Statuses</option>
+            <option value="">Status</option>
             <option value="active">Active </option>
-            <option value="always-parse">Always Parse</option>
-            <option value="spam">Spam</option>
-            <option value="takedown">Take Down</option>
-            <option value="pending-archive">Pending</option>
-            <option value="fetch_error">Fetch Error</option>
-            <option value="parse_error">Parse Error</option>
+            <option value="parse_error">Error</option>
             <option value="archived">Archived</option>
           </select>
           <FunnelIcon className="h-4 w-4 absolute right-1 top-2 text-black pointer-events-none" />
@@ -134,14 +127,14 @@ const exportFeeds = async () => {
           </div>
         </div>
         <div className="flex ml-20 gap-2 "> {/* Row two*/}
-        {/* Parsing Toggle */}
+        {/* Parsing Toggle 
         <button
           type="button"
           className={`rounded-full px-4 py-1 text-sm border h-8 transition ${isParsing ? 'bg-primary text-white border-border' : 'bg-white text-black border-black'}`}
           onClick={() => { setIsParsing(!isParsing); onFilterChange('is_parsing', (!isParsing).toString()); }}
         >
           Parsing
-        </button>
+        </button> */}
         {/* Asc/Desc Toggle Button */}
         <button
           type="button"
@@ -162,7 +155,7 @@ const exportFeeds = async () => {
         <div className="flex gap-2 items-end">
           {/* Bulk Update Status */}
           <button
-            onClick={() => onBulkUpdateStatus(statusMap[statusToUpdate].toString())}
+            onClick={async () => await onBulkUpdateStatus(statusToUpdate)}
             disabled={selectedFeeds.length === 0}
             className="border border-black bg-white text-black rounded-md w-9 h-9 flex items-center justify-center hover:bg-gray-100 transition"
             aria-label="Confirm Status Update"
@@ -171,12 +164,15 @@ const exportFeeds = async () => {
           </button>
           <select
             value={statusToUpdate}
-            onChange={e => setStatusToUpdate(e.target.value as StatusKey)}
+            onChange={e => setStatusToUpdate(e.target.value as string)}
             className="border border-black rounded-md px-2 py-1 text-sm text-black bg-white focus:outline-none min-w-[90px] mr-2 h-9"
           >
-            <option value="flagged">Flagged</option>
-            <option value="unflagged">Unflagged</option>
-            <option value="disabled">Disabled</option>
+            <option value="active">Active</option>
+            <option value="parse_error">Error</option>
+            <option value="spam">Spam</option>
+            <option value="takedown">Take Down</option>
+            <option value="pending-archive">Pending Archive</option>
+            <option value="archived">Archive</option>
           </select>
           
           {/* Bulk Reparse Button */}

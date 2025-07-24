@@ -3,16 +3,19 @@
 from app.models.feed import Feed, FeedLog, FeedFlagStatus
 from app.extensions import db
 from app.utils.request_logger import get_logger
-from app.utils.error_exceptions import NotFoundError, DatabaseError
+from app.utils.error_exceptions import NotFoundError, DatabaseError, ValidationError
 from app.utils.auth import get_current_auth0_id
 from datetime import datetime
-import requests
-import traceback
-import random
-import time
+import requests, traceback, random, time
 from .node_trigger import normalize_feed_url
 
 logger = get_logger(__name__)
+
+def is_feed_eligible_for_reparse(feed) -> bool:
+    """
+    Returns True if the feed is eligible for reparsing based on its flag_status.status.
+    """
+    return feed.flag_status.status.lower() in ["active", "always-parse", "parse_error", "fetch_error"] 
 
 def parse_and_update_feed_object(feed: Feed) -> dict:
     """
@@ -26,42 +29,25 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
     5. Handles errors and rollback on failure
     """
     logger.info(f"Calling Node trigger for feed {feed.id}")
-    
-    channel = feed.channels[0] if feed.channels else None
-    podcast_index_id = channel.podcast_index_id if channel else None
+    start_time = datetime.utcnow() # Record start time for logging
+    transaction_started = False # T=ry to start a transaction, but handle the case where one is already active
+    http_status, message, result, is_success = None, None, None, False
 
     if feed.is_parsing:
         return {"status": "error", "message": "Already parsing", "feed_id": feed.id}
 
-    # Record start time for logging
-    start_time = datetime.utcnow()
-    
-    # T=ry to start a transaction, but handle the case where one is already active
-    transaction_started = False
     try:
-        # Try to start a new transaction
-        try:
-            db.session.begin()
-            transaction_started = True
-        except Exception as e:
-            # Transaction might already be active, continue without starting a new one
-            logger.debug(f"Could not start new transaction (might already be active): {e}")
-            transaction_started = False
-        
         feed.is_parsing = True
         db.session.flush()  # Flush to ensure the change is visible
-        
     except Exception as e:
-        logger.error(f"Failed to set is_parsing flag: {e}")
-        if transaction_started:
-            db.session.rollback()
+        logger.error(f"Failed to start transaction: {e}")
         raise DatabaseError("Failed to mark feed as parsing")
 
-    result = None
-    
     payload = {"url": normalize_feed_url(feed.url)}
-    if podcast_index_id is not None:
-        payload["podcast_index_id"] = podcast_index_id
+    if feed.channels:
+        podcast_index_id = feed.channels[0].podcast_index_id
+        if podcast_index_id:
+            payload["podcast_index_id"] = podcast_index_id
         
     try:
         # retry 2 times if the request fails - can't do this with background task becaue I don;t own the parser celery task
@@ -82,19 +68,15 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
         is_success = result.get("success", False)
         message = result.get("message", None)
         http_status = response.status_code
-        
         # If the parser service returned an error, provide a more descriptive message
         if not is_success:
             message = f"Parser service error: {message or 'No message provided'}"
-
     except Exception as e:
         logger.error(f"Error calling Node trigger: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
         message = f"Parsing failed: {str(e)}"
         http_status = None   
         result = {"status": "error", "message": message, "feed_id": feed.id}
-        is_success = False
-
     finally:
         # Get the current user's Auth0 ID
         auth0_id = get_current_auth0_id()
@@ -108,23 +90,23 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
             finished_at=datetime.utcnow(),
             parsed_by=auth0_id if auth0_id else "system@podverse.com"
         )
+        feed.is_parsing = False
+        
+        # Reset flag_status if parse succeeded from a failure state
+        if is_success and feed.flag_status and feed.flag_status.status in ("parse_error", "fetch_error"):
+            active_flag = db.session.query(FeedFlagStatus).filter_by(status="active").first()
+            if active_flag:
+                feed.flag_status = active_flag
+                
         try:
             db.session.add(log)
-            feed.is_parsing = False
-            
-             # Reset flag_status if parse succeeded from a failure state
-            if is_success and feed.flag_status and feed.flag_status.status in ("parse_error", "fetch_error"):
-                active_flag = db.session.query(FeedFlagStatus).filter_by(status="active").first()
-                if active_flag:
-                    feed.flag_status = active_flag
             
             # Only commit if we started the transaction
             if transaction_started:
                 db.session.commit()
             else:
                 # If we didn't start the transaction, just flush to ensure changes are visible
-                db.session.flush()
-                
+                db.session.flush()        
         except Exception as e:
             if transaction_started:
                 db.session.rollback()
@@ -134,14 +116,10 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
     # Ensure consistent result format
     if result is None:
         result = {"status": "error", "message": "No response from parser", "feed_id": feed.id}
-    elif "status" not in result:
+    if "status" not in result:
         # If parser didn't return status, determine it from success flag
-        if is_success:
-            result["status"] = "success"
-        else:
-            result["status"] = "error"
+        result["status"] = "success" if is_success else "error"
         result["feed_id"] = feed.id
-    
     return result
 
 
@@ -150,15 +128,17 @@ def parse_and_update_feed(feed_id: int) -> dict:
     feed = db.session.get(Feed, feed_id)
     if not feed:
         raise NotFoundError("Feed not found")
+    if feed.is_parsing:
+        raise ValidationError("Feed is already being parsed", status_code=409)
+    if not is_feed_eligible_for_reparse(feed):
+        raise ValidationError(f"Feed is not eligible (status: {feed.flag_status.status})", status_code=400)
     
     result = parse_and_update_feed_object(feed)
-
     try:
         db.session.commit()  # FeedLog gets saved even if object function didn’t start txn
     except Exception as e:
         logger.error(f"Failed to commit after parsing feed {feed_id}: {e}")
         db.session.rollback()
-
     return result
 
 
@@ -176,51 +156,35 @@ def bulk_reparse_feeds(feed_ids: list) -> dict:
     results = {"success": 0, "failed": 0, "not_found": 0, "already_parsing": 0, "results": []}
     
     for feed_id in feed_ids:
+        # Try to commit any pending work before processing each feed
         try:
-            # Try to commit any pending work before processing each feed
-            try:
-                db.session.commit()
-            except Exception as e:
-                # No transaction to commit or other error, continue normally
-                logger.debug(f"No transaction to commit or commit failed: {e}")
-            
-            feed = db.session.get(Feed, feed_id)
-            if not feed:
-                results["not_found"] += 1
-                results["results"].append({"feed_id": feed_id, "status": "not_found"})
-                continue
-                
-            if feed.flag_status.status.lower() not in ["active", "always-parse", "parse_error", "fetch_error"]:
-                results["results"].append({"feed_id": feed_id, "status": "skipped_flag"})
-                continue
-            if feed.is_parsing:
-                results["already_parsing"] += 1
-                results["results"].append({"feed_id": feed_id, "status": "already_parsing"})
-                continue
-                
+            db.session.commit()
+        except Exception as e:
+            # No transaction to commit or other error, continue normally
+            logger.debug(f"No transaction to commit or commit failed: {e}")
+        
+        try:
             result = parse_and_update_feed(feed_id)
-            status = result.get("status")
-            
-            # Handle different status values
+            status = result.get("status", "error")
+            results["results"].append({"feed_id": feed_id, "status": status})
             if status == "success":
                 results["success"] += 1
             elif status == "error":
                 results["failed"] += 1
-            else:
-                # Default to failed for unknown status
-                results["failed"] += 1
-                status = "error"
-                
-            results["results"].append({"feed_id": feed_id, "status": status})
-            
         except NotFoundError:
             results["not_found"] += 1
             results["results"].append({"feed_id": feed_id, "status": "not_found"})
+        except ValidationError as e:
+            if "already" in str(e).lower():
+                results["already_parsing"] += 1
+                status = "already_parsing"
+            else:
+                status = "skipped_flag"
+            results["results"].append({"feed_id": feed_id, "status": status})
         except Exception as e:
-            logger.error(f"Error processing feed {feed_id}: {str(e)}")
-            logger.error(f"Full traceback: {traceback.format_exc()}")
+            logger.error(f"Error parsing feed {feed_id}: {e}")
             results["failed"] += 1
             results["results"].append({"feed_id": feed_id, "status": "error", "error": str(e)})
-    
+
     results["total_requested"] = len(feed_ids)
-    return results 
+    return results

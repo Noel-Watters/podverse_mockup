@@ -4,51 +4,20 @@ from app.utils.request_logger import get_logger, log_database_operation
 from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
 from app.utils.auth import get_current_auth0_id
 from app.blueprints.feed.services import parse_and_update_feed, bulk_reparse_feeds
-from flask import request, current_app
-import threading
+from app.blueprints.feed.services.parsing_service import is_feed_eligible_for_reparse
+from flask import request
+from app.utils.run_async import maybe_run_async
 
 logger = get_logger(__name__)
 
-# Helper functions
-def maybe_run_async(target_func, *args, **kwargs):
-    async_mode = request.args.get('async', '').lower() == 'true'
-    if request.is_json:
-        try:
-            async_mode = async_mode or (request.get_json(silent=True) or {}).get('async', False)
-        except Exception:
-            pass
 
-    if async_mode:
-        app = current_app._get_current_object()
-        
-        # Capture request data before starting async thread
-        request_data = None
-        if request.is_json:
-            try:
-                request_data = request.get_json()
-            except Exception:
-                pass
-
-        def runner():
-            with app.app_context():
-                try:
-                    # Pass request data as payload if available
-                    if request_data is not None:
-                        target_func(payload=request_data, *args, **kwargs)
-                    else:
-                        target_func(*args, **kwargs)
-                except Exception as e:
-                    logger.error(f"Async task failed: {str(e)}")
-
-        threading.Thread(target=runner).start()
-        return {"status": "queued"}
-
-    return target_func(*args, **kwargs)
-
-
-# Controllers
 def reparse_feed_controller(feed_id: int) -> dict:
-    return maybe_run_async(reparse_feed_controller_sync, feed_id)
+    return maybe_run_async(parse_and_update_feed, feed_id)
+
+
+def bulk_reparse_feeds_controller() -> dict:
+    return maybe_run_async(bulk_reparse_feeds_controller_sync)
+
 
 def reparse_feed_controller_sync(feed_id: int) -> dict:
     """Synchronous implementation of feed reparse controller. 
@@ -71,10 +40,9 @@ def reparse_feed_controller_sync(feed_id: int) -> dict:
         logger.info(f"Feed {feed_id} is already being parsed — skipping reparse")
         raise ValidationError("Feed is already being parsed", status_code=409)
 
-    if feed.flag_status.status.lower() not in ["active", "always-parse"]:
+    if not is_feed_eligible_for_reparse(feed):
         logger.info(f"Skipping reparse — Feed {feed_id} not eligible (status={feed.flag_status.status})")
         raise ValidationError(f"Feed is not eligible for parsing (status: {feed.flag_status.status})", status_code=400)
-
 
     try:
         result = parse_and_update_feed(feed_id)
@@ -87,8 +55,6 @@ def reparse_feed_controller_sync(feed_id: int) -> dict:
         logger.error(f"Full traceback: {traceback.format_exc()}")
         raise DatabaseError("Failed to reparse feed")
 
-def bulk_reparse_feeds_controller() -> dict:
-    return maybe_run_async(bulk_reparse_feeds_controller_sync)
 
 def bulk_reparse_feeds_controller_sync(payload: dict = None) -> dict:
     logger.info("Starting bulk feed reparse")
