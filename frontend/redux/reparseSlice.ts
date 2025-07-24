@@ -135,7 +135,6 @@ const reparseSlice = createSlice({
         if (!state[feedId]) state[feedId] = {  loading: false, error: null, success: false };
         state[feedId].loading = true;
         state[feedId].error = null;
-        state[feedId].reparsing = true;
         state[feedId].success = false;
       })
       .addCase(fetchFeedStatus.fulfilled, (state, action) => {

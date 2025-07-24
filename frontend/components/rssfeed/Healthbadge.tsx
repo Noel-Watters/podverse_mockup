@@ -12,7 +12,7 @@ interface HealthBadgeProps {
 }
 
 const statusMap: Record<number, { text: string; className: string }> = {
-  0: { text: "Live", className: "bg-gradient-to-r from-[#70F57D] to-[#0BC01D] text-gray-700" },
+  0: { text: "Active", className: "bg-gradient-to-r from-[#70F57D] to-[#0BC01D] text-gray-700" },
   1: { text: "Error", className: "bg-gradient-to-r from-[#D42121] to-[#720808] text-gray-200" },
   2: { text: "Flagged", className: "bg-gradient-to-r from-yellow-400 to-yellow-700 text-gray-200" },
   3: { text: "Pending", className: "bg-gradient-to-r from-blue-300 to-blue-500 text-gray-800" },

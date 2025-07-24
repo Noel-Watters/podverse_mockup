@@ -3,10 +3,20 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import ChannelLayout from "@/components/channel/ChannelLayout";
 import {ChannelData} from "@/types/channel";
+import ReparseNotify from "@/components/reparsefeed/ReparseNotify";
 
 export default function ChannelPage() {
   const { id } = useParams();
   const [channelData, setChannelData] = useState<ChannelData | null>(null);
+    const [notifies, setNotifies] = useState<
+    {
+      id: string;
+      type: "success" | "error";
+      message: string;
+      duration?: number;
+      details?: string[];
+    }[]
+  >([]);
 
   useEffect(() => {
     if (!id) return;
@@ -21,5 +31,29 @@ export default function ChannelPage() {
 
   if (!channelData) return <div className="p-4 text-white">Loading…</div>;
 
-  return <ChannelLayout data={channelData} />;
+  return (
+    <>
+      {/* Notifications */}
+      {notifies.map((notify) => (
+        <ReparseNotify
+          key={notify.id}
+          type={notify.type}
+          message={notify.message}
+          duration={notify.duration}
+          details={notify.details}
+          onClose={() => setNotifies(notifies.filter(n => n.id !== notify.id))}
+        />
+      ))}
+
+      <ChannelLayout
+        data={channelData}
+        onNotify={(n) =>
+          setNotifies((prev) => [
+            ...prev,
+            { ...n, id: crypto.randomUUID() },
+          ])
+        }
+      />
+    </>
+  );
 }

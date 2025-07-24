@@ -119,8 +119,8 @@ const handleBulkReparse = async () => {
 
 const handleBulkUpdateStatus = async (newStatus: string) => {
   const feed_flag_status_id = FEED_STATUS_MAP[newStatus]?.id;
-  if (!feed_flag_status_id) return; // Optionally handle invalid status
-  await fetch("/api/feeds/bulk-update", {
+  if (!feed_flag_status_id) return; 
+  const res = await fetch("/api/feeds/bulk-update", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -128,6 +128,13 @@ const handleBulkUpdateStatus = async (newStatus: string) => {
       updates: { feed_flag_status_id }
     }),
   });
+  if (res.ok) {
+    await dispatch(fetchFeeds());
+    await Promise.all(
+    selectedFeeds.map(feedId => dispatch(fetchFeedStatus(String(feedId))))
+  );
+    setSelectedFeeds([]);
+  }
 };
 
 
@@ -158,7 +165,7 @@ const toggleExpand = (feedId: number) => {
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
-        className="overflow-y-auto h-[80vh] p-2"
+        className="overflow-y-auto max-h-[100vh] p-2"
         style={{ position: "relative" }}
       >
         {/* Notifications */}
