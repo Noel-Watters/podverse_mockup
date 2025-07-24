@@ -1,6 +1,6 @@
 # app/blueprints/feed/services/parsing_service.py
 
-from app.models.feed import Feed, FeedLog
+from app.models.feed import Feed, FeedLog, FeedFlagStatus
 from app.extensions import db
 from app.utils.request_logger import get_logger
 from app.utils.error_exceptions import NotFoundError, DatabaseError
@@ -85,19 +85,13 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
         
         # If the parser service returned an error, provide a more descriptive message
         if not is_success:
-            if message:
-                message = f"Parser service error: {message}"
-            else:
-                message = "Parser service returned an error but no message was provided."
+            message = f"Parser service error: {message or 'No message provided'}"
 
     except Exception as e:
         logger.error(f"Error calling Node trigger: {str(e)}")
         logger.error(f"Full traceback: {traceback.format_exc()}")
-        
-        # Use a simple error message approach
         message = f"Parsing failed: {str(e)}"
-        http_status = None
-        
+        http_status = None   
         result = {"status": "error", "message": message, "feed_id": feed.id}
         is_success = False
 
@@ -117,6 +111,12 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
         try:
             db.session.add(log)
             feed.is_parsing = False
+            
+             # Reset flag_status if parse succeeded from a failure state
+            if is_success and feed.flag_status and feed.flag_status.status in ("parse_error", "fetch_error"):
+                active_flag = db.session.query(FeedFlagStatus).filter_by(status="active").first()
+                if active_flag:
+                    feed.flag_status = active_flag
             
             # Only commit if we started the transaction
             if transaction_started:
@@ -190,7 +190,7 @@ def bulk_reparse_feeds(feed_ids: list) -> dict:
                 results["results"].append({"feed_id": feed_id, "status": "not_found"})
                 continue
                 
-            if feed.flag_status.status.lower() not in ["active", "always-parse"]:
+            if feed.flag_status.status.lower() not in ["active", "always-parse", "parse_error", "fetch_error"]:
                 results["results"].append({"feed_id": feed_id, "status": "skipped_flag"})
                 continue
             if feed.is_parsing:
