@@ -41,7 +41,7 @@ def test_export_local_success(
     with patch("config.BaseConfig.STORAGE_BACKEND", new="local"):
         result = export_data_to_csv(
             export_dir=temp_export_dir,
-            export_types=["channels", "feeds"]
+            source=["channels", "feeds"]
         )
     
     assert result["channels_count"] == 1
@@ -53,7 +53,7 @@ def test_export_local_success(
 
 def test_export_no_types():
     with pytest.raises(Exception):
-        export_data_to_csv(export_types=[])
+        export_data_to_csv(source=[])
 
 
 @patch("app.services.data_export.get_feeds_for_export")
@@ -69,7 +69,7 @@ def test_export_feeds_only(
     with patch("config.BaseConfig.STORAGE_BACKEND", "local"):
         result = export_data_to_csv(
             export_dir=temp_export_dir,
-            export_types=["feeds"]        )
+            source=["feeds"]        )
     
     assert result["feeds_count"] == 1
     assert "channels_count" not in result
@@ -94,7 +94,7 @@ def test_export_s3_upload_failure(
         with pytest.raises(FSError, match="S3 upload failed"):
             export_data_to_csv(
                 export_dir=temp_export_dir,
-                export_types=["channels"]
+                source=["channels"]
             )
 
 @patch("app.services.data_export.get_channels_for_export")
@@ -110,7 +110,7 @@ def test_export_empty_data(
     with patch("config.BaseConfig.STORAGE_BACKEND", "local"):
         result = export_data_to_csv(
             export_dir=temp_export_dir,
-            export_types=["channels"]        )
+            source=["channels"]        )
     
     assert result["channels_count"] == 0
     assert result["zip_file"].endswith(".zip")
@@ -127,7 +127,7 @@ def test_export_general_exception(
         with pytest.raises(FSError, match="Export failed"):
             export_data_to_csv(
                 export_dir=temp_export_dir,
-                export_types=["channels"]
+                source=["channels"]
             )
 
 

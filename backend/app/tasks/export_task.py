@@ -20,7 +20,7 @@ from config import BaseConfig
 logger = get_logger(__name__)
 
 @shared_task(bind=True, max_retries=3)
-def scheduled_export_task(self: Task, export_types=["channels", "feeds"]) -> Dict[str, Any]:
+def scheduled_export_task(self: Task, source=["channels", "feeds"]) -> Dict[str, Any]:
     """
     Scheduled task to export data to CSV files.
     Uses Redis lock to prevent multiple exports running simultaneously.
@@ -51,10 +51,10 @@ def scheduled_export_task(self: Task, export_types=["channels", "feeds"]) -> Dic
                     raise
                 
                 # Determine source for log
-                if len(export_types) > 1:
+                if len(source) > 1:
                     source = "bulk"
                 else:
-                    source = ",".join(export_types)
+                    source = ",".join(source)
                 
                 # Create export log
                 log = create_export_log_simple(
@@ -65,7 +65,7 @@ def scheduled_export_task(self: Task, export_types=["channels", "feeds"]) -> Dic
                 )
                 
                 # Perform export with directory override
-                result = export_data_to_csv(export_dir=export_dir, export_types=export_types)
+                result = export_data_to_csv(export_dir=export_dir, source=source)
                 
                 # finalize export log
                 finalize_export_log(

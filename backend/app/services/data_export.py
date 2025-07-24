@@ -21,7 +21,7 @@ from app.utils.s3_helpers import upload_to_s3
 
 logger = get_logger(__name__)
 
-def export_data_to_csv(export_dir: Optional[str] = None, export_types: List[str] = ["channels", "feeds"]) -> Dict[str, Any]:
+def export_data_to_csv(export_dir: Optional[str] = None, source: List[str] = ["channels", "feeds"]) -> Dict[str, Any]:
     """
     Export selected data types to CSV files and optionally bundle into a ZIP file.
 
@@ -36,7 +36,7 @@ def export_data_to_csv(export_dir: Optional[str] = None, export_types: List[str]
         FSError: For any file or upload-related failure.
     """
     try:
-        if not export_types:
+        if not source:
             raise FSError("No export types provided.")
             
         timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
@@ -52,7 +52,7 @@ def export_data_to_csv(export_dir: Optional[str] = None, export_types: List[str]
         file_paths = []  # Track all created files for ZIP
         
         # Export channels if requested
-        if "channels" in export_types:
+        if "channels" in source:
             channels = get_channels_for_export(sort_by='id', sort_order='asc')
             channels_data = channel_exports_schema.dump(channels)
             channels_file = f"channels_export_{timestamp}.csv"
@@ -74,7 +74,7 @@ def export_data_to_csv(export_dir: Optional[str] = None, export_types: List[str]
             logger.info(f"Exported {len(channels_data)} channels")
         
         # Export feeds if requested
-        if "feeds" in export_types:
+        if "feeds" in source:
             feeds = get_feeds_for_export(sort_by='id', sort_order='asc')
             feeds_data = feeds_export_schema.dump(feeds)
             feeds_file = f"feeds_export_{timestamp}.csv"
@@ -124,9 +124,9 @@ def export_data_to_csv(export_dir: Optional[str] = None, export_types: List[str]
         
         # Log summary
         export_summary = []
-        if "channels" in export_types:
+        if "channels" in source:
             export_summary.append(f"{result.get('channels_count', 0)} channels")
-        if "feeds" in export_types:
+        if "feeds" in source:
             export_summary.append(f"{result.get('feeds_count', 0)} feeds")
         
         logger.info(f"Export completed: {', '.join(export_summary)}")
