@@ -1,18 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend,
 } from 'recharts';
 import {Stats } from '@/types/stats'; 
-import { FunnelIcon } from '@heroicons/react/24/outline';
 
 
 
-interface ChannelStatsChartsProps {
+interface FeedStatsChartsProps {
   stats: Stats;
 }
 
-const ChannelStatsCharts: React.FC<ChannelStatsChartsProps> = ({ stats }) => {
-  const [selectedView, setSelectedView] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+const FeedStatsCharts: React.FC<FeedStatsChartsProps> = ({ stats }) => {
   const dailyData = [
     { day: '8d ago', count: stats.day_8_count },
     { day: '7d ago', count: stats.day_7_count },
@@ -39,75 +37,52 @@ const ChannelStatsCharts: React.FC<ChannelStatsChartsProps> = ({ stats }) => {
 
   return (
     <div className="space-y-12 py-6">
-      <div className="flex items-center justify-between mb-2">
-  <h2 className="text-xl font-semibold">
-    {selectedView === 'daily' && 'Daily Views (Last 8 Days)'}
-    {selectedView === 'weekly' && 'Weekly Views'}
-    {selectedView === 'monthly' && 'Monthly Comparison'}
-  </h2>
-  <div className="relative w-32 min-w-[90px] h-8 text-left border border-black rounded-md px-2 py-1 text-sm text-black bg-white focus:outline-none flex items-center">
-    <select
-      onChange={e => setSelectedView(e.target.value as 'daily' | 'weekly' | 'monthly')}
-      className="appearance-none border-none w-full h-full pr-6 bg-transparent focus:outline-none focus:ring-0"
-      value={selectedView}
-    >
-      <option value="daily">Daily</option>
-      <option value="weekly">Weekly</option>
-      <option value="monthly">Monthly</option>
-    </select>
-    <FunnelIcon className="h-4 w-4 text-black absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-  </div>
-</div>
       {/* Daily Line Chart */}
-      {selectedView === 'daily' && (
       <div>
+        <h2 className="text-xl font-semibold mb-2">Daily Downloads (Last 8 Days)</h2>
         <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={dailyData}>
+          <LineChart data={dailyData}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="day" />
             <YAxis />
             <Tooltip />
             <Legend />
-            <Bar  dataKey="count" fill="#0d79b3e0" radius={[8, 8, 0, 0]}  stroke='#000000e3' strokeWidth={1} />
+            <Line type="monotone" dataKey="count" stroke="#8884d8" />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Weekly Bar Chart */}
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Weekly Downloads</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={weeklyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="week" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="count" fill="#82ca9d" />
           </BarChart>
         </ResponsiveContainer>
       </div>
-      )}
 
-
-      {selectedView === 'weekly' && (
-        <div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="week" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="count" fill="#0d7ab3" radius={[8, 8, 0, 0]}  stroke='#000000e3' strokeWidth={1} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-
-      {selectedView === 'monthly' && (
-        <div>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="count" fill="#0d7ab3" radius={[8, 8, 0, 0]}  stroke='#000000e3' strokeWidth={1} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-      
+      {/* Monthly Bar Chart */}
+      <div>
+        <h2 className="text-xl font-semibold mb-2">Monthly Comparison</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={monthlyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="count" fill="#ffc658" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
 
-export default ChannelStatsCharts;
+export default FeedStatsCharts;

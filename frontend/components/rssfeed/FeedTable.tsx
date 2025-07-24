@@ -64,12 +64,12 @@ const FeedTable: React.FC<FeedTableProps> = ({
                   <label className="relative inline-flex items-center cursor-pointer">
                   <input
                     type="checkbox"
-                    className="peer appearance-none h-5 w-5 rounded-md bg-[var(--pv-cream)] border border-black checked:bg-primary checked:border-black focus:outline-none" 
+                    className="peer appearance-none h-5 w-5 rounded-md bg-[var(--pv-cream)] border border-black checked:bg-black checked:border-black focus:outline-none" 
                     checked={selectedFeeds.includes(feed.id)}
                     onChange={e => handleCheckboxChange(feed.id, e.target.checked)}
                   />
                   <svg
-                    className="absolute w-4 h-4 text-white pointer-events-none left-0.5 top-0.5 opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                    className="absolute w-4 h-4 text-[var(--pv-cream)] pointer-events-none left-0.5 top-0.5 opacity-0 peer-checked:opacity-100 transition"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="3"
