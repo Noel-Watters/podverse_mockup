@@ -1,7 +1,8 @@
 # tests/integration/blueprints/channel/test_channel_routes_simple.py
 
-""" 
-Not exactly ingration test. This file tests the behavior of your channel API endpoints without needing any external services
+"""
+   Behavioral tests for /admin/channels endpoints: checks authentication, endpoint existence, and method support.
+   These do not require external services or real data.
 """
 import pytest
 

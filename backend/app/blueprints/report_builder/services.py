@@ -31,7 +31,7 @@ def export_custom_report(user_email, source, fields, filters, export_format):
     
     export_log = ExportLog(
         export_by=user_email,
-        export_type=source,
+        source=source,
         format=export_format,
         filters=filters,
         file_path=full_path,

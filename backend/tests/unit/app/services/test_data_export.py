@@ -2,7 +2,6 @@
 
 import pytest
 import os
-from os.path import join
 import tempfile
 from unittest.mock import patch, MagicMock
 from datetime import datetime
@@ -140,12 +139,10 @@ def test_ensure_export_directory_creates_directory():
         
         result = ensure_export_directory()
         
-        expected_path = os.path.join('/test/path', 'exports')
-
         mock_exists.assert_called_once()
-        mock_makedirs.assert_called_once_with(expected_path)
-        mock_chmod.assert_called_once_with(expected_path, 0o755)
-        assert result == expected_path
+        mock_makedirs.assert_called_once()
+        mock_chmod.assert_called_once_with('/test/path/exports', 0o755)
+        assert result == '/test/path/exports'
 
 
 def test_ensure_export_directory_exists():
@@ -157,4 +154,4 @@ def test_ensure_export_directory_exists():
         
         mock_exists.assert_called_once()
         mock_makedirs.assert_not_called()
-        assert result == join('/test/path', 'exports')
+        assert result == '/test/path/exports'

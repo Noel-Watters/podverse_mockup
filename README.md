@@ -121,7 +121,7 @@ cp frontend/env.local.example frontend/.env.local
 
 | Service | Technology | Purpose | Key Features |
 |---------|------------|---------|--------------|
-| **Frontend** | Next.js 13+ | Admin dashboard | Dashboard, RSS management, analytics |
+| **Frontend** | Next.js 15+ | Admin dashboard | Dashboard, RSS management, analytics |
 | **Backend** | Flask + SQLAlchemy | REST API | CRUD operations, background tasks, security |
 | **Database** | PostgreSQL 15 | Data storage | ACID compliance, JSON support, full-text search |
 | **Redis** | Redis Stack | Caching & queue | Session storage, Celery broker, rate limiting |

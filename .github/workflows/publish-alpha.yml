@@ -1,0 +1,33 @@
+name: Publish Admin Alpha Images
+
+on:
+  push:
+    branches:
+      - v5-alpha
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Admin API image
+        run: docker build -f Dockerfile.admin_api -t ghcr.io/${{ github.repository }}/podverse_admin_api:alpha .
+
+      - name: Build Admin Web image
+        run: docker build -f Dockerfile.admin_web -t ghcr.io/${{ github.repository }}/podverse_admin_web:alpha .
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Admin API image
+        run: docker push ghcr.io/${{ github.repository }}/podverse_admin_api:alpha
+
+      - name: Push Admin Web image
+        run: docker push ghcr.io/${{ github.repository }}/podverse_admin_web:alpha

@@ -12,21 +12,21 @@ def seed_export_logs(n=25):
     """Seed the database with export log data"""
     session = get_db_session()
     try:
-        export_types = ['channels', 'feeds', 'items']
+        sources = ['channels', 'feeds', 'items']
         statuses = ['pending', 'success', 'failed', 'skipped', 'expired']
         formats = ['csv', 'json']
         
         for _ in range(n):
-            export_type = random.choice(export_types)
+            source = random.choice(sources)
             status = random.choice(statuses)
             format_type = random.choice(formats)
             
-            # Generate realistic counts based on export type
-            if export_type == 'channels':
+            # Generate realistic counts based on source
+            if source == 'channels':
                 channels_count = random.randint(10, 100)
                 feeds_count = None
                 items_count = None
-            elif export_type == 'feeds':
+            elif source == 'feeds':
                 channels_count = None
                 feeds_count = random.randint(50, 500)
                 items_count = None
@@ -39,7 +39,7 @@ def seed_export_logs(n=25):
             file_path = None
             if status == 'success':
                 timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-                file_path = f"/app/exports/{export_type}_export_{timestamp}_{str(unique_uuid())[:8]}.{format_type}"
+                file_path = f"/app/exports/{source}_export_{timestamp}_{str(unique_uuid())[:8]}.{format_type}"
                 
                 # Ensure exports directory exists
                 os.makedirs('/app/exports', exist_ok=True)
@@ -50,7 +50,7 @@ def seed_export_logs(n=25):
                         if format_type == 'csv':
                             writer = csv.writer(f)
                             writer.writerow([
-                                'id', 'export_by', 'export_type', 'status', 'format', 
+                                'id', 'export_by', 'source', 'status', 'format', 
                                 'file_path', 'created_at', 'completed_at', 'feeds_count', 'channels_count', 'items_count', 'error_message'
                             ])
                         else:  # json
@@ -79,7 +79,7 @@ def seed_export_logs(n=25):
             
             export_log = ExportLog(
                 export_by=fake.email(),
-                export_type=export_type,
+                source=source,
                 filters={
                     "date_from": (datetime.utcnow() - timedelta(days=30)).isoformat(),
                     "date_to": datetime.utcnow().isoformat(),
@@ -126,7 +126,7 @@ def populate_export_files(session):
                     if log.format == 'csv':
                         writer = csv.writer(f)
                         writer.writerow([
-                            'id', 'export_by', 'export_type', 'status', 'format', 
+                            'id', 'export_by', 'source', 'status', 'format', 
                             'file_path', 'created_at', 'completed_at', 'feeds_count', 'channels_count', 'items_count', 'error_message'
                         ])
                         
@@ -134,7 +134,7 @@ def populate_export_files(session):
                         writer.writerow([
                             log.id,
                             log.export_by,
-                            log.export_type,
+                            log.source,
                             log.status,
                             log.format,
                             log.file_path or "",
@@ -150,7 +150,7 @@ def populate_export_files(session):
                         data = {
                             'id': log.id,
                             'export_by': log.export_by,
-                            'export_type': log.export_type,
+                            'source': log.source,
                             'status': log.status,
                             'format': log.format,
                             'file_path': log.file_path,

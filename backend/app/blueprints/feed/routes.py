@@ -31,12 +31,6 @@ def is_auto_reparse_running() -> bool:
 #@requires_auth
 @limiter.limit("10 per minute")
 def reparse_feed(feed_id: int):
-    """
-    Reparse a specific feed by ID.
-    
-    This endpoint can be run synchronously or asynchronously based on query parameters.
-    When run asynchronously, it returns immediately with a "queued" status.
-    """
     result = reparse_feed_controller(feed_id)
     # Return 202 for async mode, 200 for sync mode
     status_code = 202 if result.get("status") == "queued" else 200
@@ -49,9 +43,6 @@ def reparse_feed(feed_id: int):
 @audit_admin_access(action="GET_FEEDS", resource="feed")
 #@requires_auth
 def get_feeds():
-    """
-    Get all feeds with pagination, filtering, and search capabilities. See API.md for query params and status codes.
-    """
     result = get_all_feeds_controller()
     return jsonify(result), 200
    
@@ -62,9 +53,6 @@ def get_feeds():
 @audit_admin_access(action="GET_FEED", resource="feed")
 #@requires_auth
 def get_feed_by_id(feed_id):
-    """
-    Get a single feed by ID with detailed information. See API.md for status codes.
-    """
     result = get_feed_by_id_controller(feed_id)
     return jsonify(result), 200
     
@@ -75,14 +63,8 @@ def get_feed_by_id(feed_id):
 #@requires_auth
 @handle_errors
 def export_single_feed(feed_id):
-    """
-    Export a single feed as CSV/JSON.
-    
-    This endpoint generates export files for a single feed with all relevant
-    metadata, parsing history, and error information.
-    """
     result = export_single_feed_controller(feed_id)
-    # Export controllers return Response objects directly, don't jsonify them
+    # export controllers return response objects directly, no need jsonify them
     return result
 
 
@@ -109,7 +91,6 @@ def get_feed_logs(feed_id):
 #@requires_auth
 @handle_errors
 def bulk_export_feeds():
-    """Export feeds in bulk. See API.md for query params and status codes."""
     result = bulk_export_feeds_controller()
     return result
 
@@ -135,12 +116,7 @@ def bulk_update_feeds():
 #@requires_auth
 @handle_errors
 def bulk_reparse_feeds():
-    """
-    This endpoint processes bulk reparse requests and provides detailed results for each feed.
-    It can run synchronously (default) or asynchronously based on query parameters.
-    """
     result = bulk_reparse_feeds_controller()
-    # Return 202 for async mode, 200 for sync mode
     status_code = 202 if result.get("status") == "queued" else 200
     return jsonify(result), status_code
 

@@ -13,7 +13,7 @@ def test_valid_export_log_serialization():
     log = ExportLog(
         id=1,
         export_by="test@example.com",
-        export_type="feeds",
+        source="feeds",
         format="csv",
         status="success",
         file_path="/tmp/test.csv",
@@ -29,7 +29,7 @@ def test_valid_export_log_serialization():
     
     assert result['id'] == 1
     assert result['export_by'] == "test@example.com"
-    assert result['export_type'] == "feeds"
+    assert result['source'] == "feeds"
     assert result['format'] == "csv"
     assert result['status'] == "success"
     assert result['file_path'] == "/tmp/test.csv"
@@ -48,7 +48,7 @@ def test_export_log_with_null_values():
     log = ExportLog(
         id=1,
         export_by="test@example.com",
-        export_type="channels",
+        source="channels",
         format="json",
         status="pending",
         file_path=None,
@@ -79,7 +79,7 @@ def test_export_log_with_error_message():
     log = ExportLog(
         id=1,
         export_by="test@example.com",
-        export_type="items",
+        source="items",
         format="csv",
         status="failed",
         file_path=None,
@@ -106,7 +106,7 @@ def test_duration_calculation():
     log = ExportLog(
         id=1,
         export_by="test@example.com",
-        export_type="feeds",
+        source="feeds",
         format="csv",
         status="success",
         file_path="/tmp/test.csv",
@@ -128,7 +128,7 @@ def test_is_expired_calculation():
     log = ExportLog(
         id=1,
         export_by="test@example.com",
-        export_type="feeds",
+        source="feeds",
         format="csv",
         status="success",
         file_path="/tmp/test.csv",
@@ -148,7 +148,7 @@ def test_has_file_calculation_file_not_exists(mock_exists):
     log = ExportLog(
         id=1,
         export_by="test@example.com",
-        export_type="feeds",
+        source="feeds",
         format="csv",
         status="success",
         file_path="/tmp/test.csv",
@@ -168,14 +168,14 @@ def test_has_file_calculation_file_not_exists(mock_exists):
     assert result['has_file'] is False
 
 
-def test_validation_export_type_invalid():
-    """Test validation of invalid export_type"""
+def test_validation_source_invalid():
+    """Test validation of invalid source"""
     schema = ExportLogSchema()
     
     with pytest.raises(ValidationError, match="Must be one of"):
         schema.load({
             'export_by': 'test@example.com',
-            'export_type': 'invalid_type',
+            'source': 'invalid_type',
             'format': 'csv',
             'status': 'pending'
         })
@@ -188,7 +188,7 @@ def test_validation_format_invalid():
     with pytest.raises(ValidationError, match="Must be one of"):
         schema.load({
             'export_by': 'test@example.com',
-            'export_type': 'feeds',
+            'source': 'feeds',
             'format': 'invalid_format',
             'status': 'pending'
         })
@@ -201,7 +201,7 @@ def test_validation_status_invalid():
     with pytest.raises(ValidationError, match="Must be one of"):
         schema.load({
             'export_by': 'test@example.com',
-            'export_type': 'feeds',
+            'source': 'feeds',
             'format': 'csv',
             'status': 'invalid_status'
         })
@@ -214,7 +214,7 @@ def test_validation_missing_required_fields():
     with pytest.raises(ValidationError):
         schema.load({
             'export_by': 'test@example.com'
-            # Missing export_type, format, status
+            # Missing source, format, status
         })
 
 
@@ -224,7 +224,7 @@ def test_validation_valid_data():
     
     data = {
         'export_by': 'test@example.com',
-        'export_type': 'feeds',
+        'source': 'feeds',
         'format': 'csv',
         'status': 'pending',
         'filters': {'date_from': '2023-01-01'},
@@ -236,7 +236,7 @@ def test_validation_valid_data():
     result = schema.load(data)
     
     assert result.export_by == 'test@example.com'
-    assert result.export_type == 'feeds'
+    assert result.source == 'feeds'
     assert result.format == 'csv'
     assert result.status == 'pending'
     assert result.filters == {'date_from': '2023-01-01'}

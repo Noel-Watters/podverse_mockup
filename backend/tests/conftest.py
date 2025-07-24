@@ -84,7 +84,7 @@ class MockExportLog:
     """Standardized mock for ExportLog model."""
     def __init__(self, **kwargs):
         self.id = kwargs.get('id', 1)
-        self.export_type = kwargs.get('export_type', 'feed')
+        self.source = kwargs.get('source', 'feed')
         self.status = kwargs.get('status', 'completed')
         self.started_at = kwargs.get('started_at', datetime.utcnow())
         self.finished_at = kwargs.get('finished_at', datetime.utcnow())

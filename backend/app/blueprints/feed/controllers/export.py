@@ -28,7 +28,7 @@ def export_single_feed_controller(feed_id: int) -> Response:
 
             format, export_by = get_export_format_and_user()
             export_log = create_export_log_with_filters(
-                export_type="feeds",
+                source="feeds",
                 filters={"feed_id": feed_id},
                 export_by=export_by
             )
@@ -75,7 +75,7 @@ def bulk_export_feeds_controller() -> Response:
                 raise ValidationError("Bulk export is already in progress. Please try again in a few minutes.")
 
             export_log = create_export_log_with_filters(
-                export_type="feeds",
+                source="feeds",
                 filters={"format": format, "export_by": export_by, "feed_id": feed_id, "podcast_index_id": podcast_index_id},
                 export_by=export_by
             )

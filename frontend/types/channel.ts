@@ -37,7 +37,8 @@ export interface ChannelData {
   id_text: string;
   slug: string;
   medium_id: number;
-  categories: number[];
+  categories: Category[];
+  medium: Medium;
   feed: Feed;
   items: Item[];
   stats: Stats[];

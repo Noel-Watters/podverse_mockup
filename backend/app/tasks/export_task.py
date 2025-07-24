@@ -50,15 +50,15 @@ def scheduled_export_task(self: Task, export_types=["channels", "feeds"]) -> Dic
                     logger.error(f"Failed to get export directory: {str(e)}")
                     raise
                 
-                # Determine export_type for log
+                # Determine source for log
                 if len(export_types) > 1:
-                    export_type = "bulk"
+                    source = "bulk"
                 else:
-                    export_type = ",".join(export_types)
+                    source = ",".join(export_types)
                 
                 # Create export log
                 log = create_export_log_simple(
-                    export_type=export_type,
+                    source=source,
                     format="csv",
                     filters={}, # no filters for scheduled export
                     export_by="system@podverse.com"

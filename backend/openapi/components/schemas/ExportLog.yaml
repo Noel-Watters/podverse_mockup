@@ -8,10 +8,10 @@ properties:
     type: string
     description: Email of the user who triggered the export or system
     example: "nicholasgriffin@example.com"
-  export_type:
+  source:
     type: string
     enum: [channels, feeds, items]
-    description: Type of data being exported
+    description: Source of data being exported
     example: "feeds"
   status:
     type: string
@@ -81,7 +81,7 @@ properties:
 required:
   - id
   - export_by
-  - export_type
+  - source
   - status
   - format
   - created_at

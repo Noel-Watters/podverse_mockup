@@ -14,6 +14,12 @@ interface DashboardLayoutProps {
   error: string | null;
   selectedFeedId: number | null;
   onSelectFeed: (feedId: any, logs: any) => void;
+  onNotify: (n: {
+    type: "success" | "error";
+    message: string;
+    duration?: number;
+    details?: string[];
+  }) => void;
 }
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({
@@ -22,6 +28,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   error,
   selectedFeedId,
   onSelectFeed,
+  onNotify
 }) => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,6 +53,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({
           error={error}
           selectedFeedId={selectedFeedId}
           onSelectFeed={onSelectFeed}
+          onNotify={onNotify}
         />
         <DashboardStatsSection />
       </div>

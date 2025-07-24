@@ -9,13 +9,13 @@
       **Features:**
       - **Pagination**: Control page size and navigation with `page` and `limit` parameters
       - **Filtering**: Filter by status, export type, user email, format, date ranges, duration, error status, and specific ID
-      - **Sorting**: Sort by any field including computed duration (created_at, completed_at, status, export_type, format, duration)
+      - **Sorting**: Sort by any field including computed duration (created_at, completed_at, status, source, format, duration)
       - **Search**: Search within error messages using `search_term`
       - **Real-time Data**: Get current file existence and expiration status
       
       **Available Filters:**
       - `status`: pending, success, failed, skipped, expired
-      - `export_type`: channels, feeds, items
+      - `source`: channels, feeds, items
       - `format`: csv, json
       - `export_by`: User email who initiated the export
       - `id`: Specific export log ID
@@ -47,7 +47,7 @@
       - $ref: "../components/parameters/query/export_format.yaml"
       - $ref: "../components/parameters/query/export_by.yaml"
       - $ref: "../components/parameters/query/id_filter.yaml"
-      - $ref: "../components/parameters/query/export_logs_export_type.yaml"
+      - $ref: "../components/parameters/query/export_logs_source.yaml"
       - $ref: "../components/parameters/query/export_logs_has_error.yaml"
       - $ref: "../components/parameters/query/export_logs_min_duration.yaml"
       - $ref: "../components/parameters/query/export_logs_max_duration.yaml"
@@ -183,7 +183,7 @@
                 **JSON Format Response**
                 
                 When the export format is JSON, the response contains the exported data as a JSON object.
-                The structure varies based on export_type:
+                The structure varies based on source:
                 
                 - **channels**: Array of channel objects with properties like id, title, description, etc.
                 - **feeds**: Array of feed objects with properties like id, title, url, status, etc.
@@ -201,11 +201,11 @@
                 When the export format is CSV, the response contains the exported data as a CSV file.
                 The CSV includes headers and data rows with the following structure:
                 
-                **Headers**: `id,export_by,export_type,status,format,file_path,created_at,completed_at,feeds_count,channels_count,items_count,error_message`
+                **Headers**: `id,export_by,source,status,format,file_path,created_at,completed_at,feeds_count,channels_count,items_count,error_message`
                 
                 **Example CSV Content**:
                 ```
-                id,export_by,export_type,status,format,file_path,created_at,completed_at,feeds_count,channels_count,items_count,error_message
+                id,export_by,source,status,format,file_path,created_at,completed_at,feeds_count,channels_count,items_count,error_message
                 25,nicholasgriffin@example.com,feeds,success,csv,/app/exports/feeds_export_20250718_214804_e0b23bf0.csv,2025-07-18T19:48:04.595678,2025-07-18T21:42:04.595596,400,,,
                 ```
                 

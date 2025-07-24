@@ -16,7 +16,7 @@ def test_create_export_log(mock_session):
     mock_session.commit = MagicMock()
 
     with patch("app.utils.export_logging.ExportLog", return_value=mock_log):
-        data = {"export_type": "feeds", "filters": {}, "status": "pending", "format": "csv"}
+        data = {"source": "feeds", "filters": {}, "status": "pending", "format": "csv"}
         result = create_export_log(data)
 
     mock_session.add.assert_called_once_with(mock_log)
@@ -61,11 +61,11 @@ def test_create_export_log_simple_with_list(mock_create):
     mock_log = MagicMock()
     mock_create.return_value = mock_log
 
-    result = create_export_log_simple(export_type=["feeds", "channels"], filters={"active": True})
+    result = create_export_log_simple(source=["feeds", "channels"], filters={"active": True})
 
     mock_create.assert_called_once()
     data_arg = mock_create.call_args[0][0]
-    assert data_arg["export_type"] == "feeds,channels"
+    assert data_arg["source"] == "feeds,channels"
     assert data_arg["filters"] == {"active": True}
     assert data_arg["status"] == "pending"
     assert data_arg["format"] == "csv"
