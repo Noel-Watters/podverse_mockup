@@ -10,14 +10,15 @@ import { resetFeeds, setSearchTerm } from "@/redux/feedSlice";
 import { fetchFeeds } from "@/redux/feedSlice";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useRouter } from "next/navigation";
-import ChannelStats from "./ChannelStats";
-import ChannelStatsCharts from "./ChannelStatsChats";
 import ChannelStatsSection from "./ChannelStatsSection";
 
 
+type ChannelLayoutProps = {
+  data: ChannelData;
+  onNotify?: (n: any) => void;
+};
 
-
-export default function ChannelLayout({ data }: { data: ChannelData }) {
+export default function ChannelLayout({ data, onNotify }: ChannelLayoutProps) {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const { filters } = useSelector((state: RootState) => state.feeds);
@@ -51,7 +52,7 @@ export default function ChannelLayout({ data }: { data: ChannelData }) {
             onSearchSubmit={handleSearch}
       >
         <div className="p-4 gap-4 space-y-4">
-          <ChannelHeader data={data} />
+          <ChannelHeader data={data} onNotify={onNotify} />
           <EpisodeLogSection items={data.items} logs={data.feed.recent_logs ?? []} />
           <ChannelStatsSection stats={data.stats[0]} />
         </div>

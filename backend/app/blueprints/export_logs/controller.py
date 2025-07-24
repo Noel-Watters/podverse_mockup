@@ -1,3 +1,5 @@
+# app/blueprints/export_logs/controller.py
+
 from app.extensions import db
 from app.models.export_logs import ExportLog
 from app.utils.error_exceptions import NotFoundError, ValidationError
@@ -6,7 +8,6 @@ from app.utils.query_helpers import paginate_query, apply_sorting
 from app.blueprints.export_logs.schemas import export_log_schema
 from sqlalchemy import and_, or_, func
 import os
-from flask import redirect
 
 logger = get_logger(__name__)
 
@@ -107,7 +108,7 @@ def download_export_file_controller(log_id: int) -> dict:
             raise NotFoundError("Export file not found or has expired")
         
         filename = os.path.basename(log.file_path)
-        return {"type": "file", "file_path": log.file_path, "filename": filename, "format": log.format}
+        return {"type": "file", "path": log.file_path, "filename": filename, "format": log.format}
         
     except NotFoundError:
         raise

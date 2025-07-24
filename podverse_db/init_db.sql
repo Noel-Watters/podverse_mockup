@@ -284,9 +284,6 @@ CREATE TABLE feed (
     -- the run-time environment container id
     container_id VARCHAR(12),
 
-    -- Podcast Index ID for external podcast identification #0004 migration - Add podcast_index_id to feed table 
-    podcast_index_id INTEGER,
-
     created_at server_time_with_default,
     updated_at server_time_with_default
 );

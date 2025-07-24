@@ -1,5 +1,5 @@
 import { FeedLog } from "@/types/feed";
-import { formatDateTime } from "@/utils/formateDateTime";
+import { formatLocal } from "@/utils/datetime";
 
 
 export default function FeedLogTable({ logs }: { logs: FeedLog[] }) {
@@ -7,7 +7,7 @@ export default function FeedLogTable({ logs }: { logs: FeedLog[] }) {
   return (
     <div className="flex flex-col w-full text-sm space-y-2">
       {logs.map((log) => {
-        const formatted = formatDateTime(log.finished_at ?? "");
+        const formatted = formatLocal(log.finished_at ?? "");
         const [date, time] = formatted.split(" ");
 
         return (

@@ -8,6 +8,8 @@ import { Channel } from "@/types/channel";
 import HealthDuration from "./HealthDuration";
 import FeedUpdated from "./FeedUpdated";
 import Healthbadge from "./Healthbadge";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 
 interface FeedTableRowProps {
   feed: Feed;
@@ -30,12 +32,24 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
   onExpand,
   onNotify,
   checkbox,
-}) => (
-  <div 
-  onClick={onExpand}
-  style={{ cursor: "pointer" }} 
-  className={`grid grid-cols-[40px_1fr_100px_175px_140px_60px] gap-4 my-3 py-1 items-center bg-row rounded-lg border border-gray-300 hover:bg-accent transition${expanded ? " bg-accent" : ""}`}
-  >
+}) => {
+
+  const feedState = useSelector((state: RootState) => state.reparse[feed.id]);
+  const logs = (feedState?.logs && feedState.logs.length > 0
+  ? feedState.logs
+  : (feed.recent_logs ?? [])
+).map(log => ({
+  ...log,
+  finished_at: log.finished_at ?? "",
+  parse_errors: log.parse_errors ?? 0,
+}));
+
+  return (
+    <div
+      onClick={onExpand}
+      style={{ cursor: "pointer" }}
+      className={`grid grid-cols-[40px_1fr_100px_175px_140px_60px] gap-4 my-3 py-1 items-center bg-row rounded-lg border border-gray-300 hover:bg-accent transition${expanded ? " bg-accent" : ""}`}
+    >
 
       {/* Checkbox */}
     <div>
@@ -51,10 +65,7 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
 
       {/* Dates */}
     <div>
-        <HealthDuration recent_logs={(feed.recent_logs ?? []).map(log => ({
-          ...log,
-          finished_at: log.finished_at ?? "",
-        }))} />
+        <HealthDuration recent_logs={logs} />
     </div>
     <div>
         <FeedUpdated updated_at={feed.updated_at ?? ""} />
@@ -62,11 +73,10 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
 
     {/* Feed Status */}
     <div>
-      <Healthbadge recent_logs={(feed.recent_logs ?? []).map(log => ({
-        ...log,
-        finished_at: log.finished_at ?? "",
-        parse_errors: log.parse_errors ?? 0,
-      }))} />
+      <Healthbadge recent_logs={logs}
+        reparsing={feedState?.reparsing}
+        flag_status={feedState?.flag_status ?? feed.flag_status}
+      />
     </div>
 
     {/* Reparse Button */}
@@ -86,5 +96,6 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
 
   </div>
 );
+};
 
 export default FeedTableRow;

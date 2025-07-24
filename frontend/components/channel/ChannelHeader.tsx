@@ -7,8 +7,13 @@ import { ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import FeedStatusBadge from "@/components/rssfeed/FeedStatusBadge";
 import Healthbadge from "@/components/rssfeed/Healthbadge";
 
+type ChannelHeaderProps = {
+  data: ChannelData;
+  onNotify?: (n: any) => void;
+};
 
-export default function ChannelHeader({ data }: { data: ChannelData }) {
+
+export default function ChannelHeader({ data, onNotify }: ChannelHeaderProps) {
   return (
     <div className="border border-gray-300 p-6 rounded-xl shadow space-y-2">
       <div className="flex justify-between items-start">
@@ -22,7 +27,7 @@ export default function ChannelHeader({ data }: { data: ChannelData }) {
               finished_at: log.finished_at ?? "",
               parse_errors: log.parse_errors ?? 0,
             }))} />
-            <ReparseFeed feedId={data.feed.id.toString()} onNotify={() => {}}>
+            <ReparseFeed feedId={data.feed.id.toString()} onNotify={onNotify}>
                 {({ onReparse, loading, status }) => (
                 <span onClick={e => e.stopPropagation()}>
                     <ReparseButton

@@ -1,13 +1,11 @@
 # backend/app/blueprints/export_logs/routes.py
 
-from flask import jsonify, request, send_file
+from flask import jsonify, request, send_file, redirect
 from . import export_logs_bp
 from app.extensions import limiter
 from app.blueprints.export_logs.controller import *
 from app.utils.error_handlers import handle_errors
 from app.utils.audit_decorators import audit_admin_access
-from app.utils.auth import requires_auth
-from app.utils.query_params import get_pagination_params, get_sorting_params
 from app.utils.request_logger import get_logger, log_request_start, log_request_end
 
 logger = get_logger(__name__)
@@ -75,16 +73,14 @@ def download_export_file(log_id):
     result = download_export_file_controller(log_id)
     
     # Check if result is a redirect response (for S3 URLs)
-    if result['type'] == 'redirect':
-        return redirect(result['url'])
+    if result["type"] == "redirect":
+        return redirect(result["url"])
     
     # Otherwise, it's a local file (file_path, filename, file_format)
-    file_path = result['file_path']
-    filename = result['filename']
-    file_format = result['format']
+
     return send_file(
-        file_path,
+        result["path"],
         as_attachment=True,
-        download_name=filename,
-        mimetype='text/csv' if file_format == 'csv' else 'application/json'
+        download_name=result["filename"],
+        mimetype='text/csv' if result["format"] == 'csv' else 'application/json'
     )

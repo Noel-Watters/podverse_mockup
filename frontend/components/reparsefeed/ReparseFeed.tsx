@@ -38,11 +38,9 @@ export default function ReparseFeed({ feedId, children, onNotify }: ReparseFeedP
         });
       }
     }
-    // Poll logs 3 times, 1s apart, after reparse
-    for (let i = 0; i < 3; i++) {
-      await dispatch(fetchFeedLogs(feedId));
-      if (i < 2) await new Promise(res => setTimeout(res, 1000));
-    }
+    // delay to ensure backend has written the new log
+  await new Promise(res => setTimeout(res, 1000));
+  await dispatch(fetchFeedLogs(feedId));
     if (success && onNotify) {
       onNotify({
         type: "success",
@@ -54,7 +52,7 @@ export default function ReparseFeed({ feedId, children, onNotify }: ReparseFeedP
 
   return children({
     onReparse: handleReparse,
-    status: feedState?.status,
+    status: feedState?.flag_status,
     loading: feedState?.reparsing ?? false,
     error: feedState?.error ?? null,
   });

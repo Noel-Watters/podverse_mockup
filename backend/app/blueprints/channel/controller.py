@@ -10,7 +10,7 @@ import traceback
 
 logger = get_logger(__name__)
 
-def list_channels_controller(search, sort_by, sort_order, page, limit, channel_id=None, podcast_index_id=None):
+def list_channels():
     """List channels with pagination, filtering, and search capabilities."""
     try:
         logger.info(f"Listing channels - page: {page}, limit: {limit}, sort: {sort_by} {sort_order}, search: {search or 'none'}, id: {channel_id}, podcast_index_id: {podcast_index_id}")
@@ -77,8 +77,7 @@ def export_channels_controller(search, sort_by, sort_order, max_rows, export_by,
             finalize_export_failure(log.id, str(e))
         raise DatabaseError("Failed to export channels")
 
-def get_channel_by_id_controller(channel_id):
-    """Return serialized data for a single channel."""
+def get_channel_by_id(channel_id):
     try:   
         logger.info(f"Retrieving channel details for ID: {channel_id}")
         log_database_operation(logger, "READ", "channels", channel_id)
@@ -100,7 +99,7 @@ def get_channel_by_id_controller(channel_id):
         raise DatabaseError("Failed to retrieve channel")
 
 
-def get_channels_by_feed_controller(feed_ids, max_ids):
+def get_channels_by_feed():
     """Get channels by feed IDs. Accepts a comma-separated list of feed IDs and returns all channels associated with those feeds."""
     try:
         logger.info(f"Retrieving channels by feed IDs: {feed_ids}, max_ids: {max_ids}")
@@ -121,7 +120,7 @@ def get_channels_by_feed_controller(feed_ids, max_ids):
         }
         
         logger.info(f"Successfully retrieved {len(channels)} channels for {len(feed_ids)} feed IDs")
-        return result
+        return jsonify(result)
         
     except ValidationError as e:
         logger.warning(f"Validation error in get_channels_by_feed: {str(e)}")

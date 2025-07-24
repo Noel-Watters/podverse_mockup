@@ -31,7 +31,7 @@ export default function AdminLayout({ children, searchValue, onSearchChange, onS
   return (
     <div className="flex min-h-screen text-black">
       <Sidebar />
-      <div className="flex-1 flex bg-bar h-screen flex-col">
+      <div className="flex-1 flex h-screen bg-bar flex-col">
         <TopBar
           searchValue={searchValue}
           onSearchChange={onSearchChange}
@@ -39,7 +39,7 @@ export default function AdminLayout({ children, searchValue, onSearchChange, onS
           onLogout={handleLogout}
           onNotificationsClick={() => console.log("Notifications clicked")}
         />
-        <main className="flex-1 overflow-auto rounded-lg border border-gray-300 bg-white shadow-lg">
+        <main className="flex-1 h-full overflow-y-auto rounded-lg border border-gray-300 bg-white shadow-lg">
           {children}
         </main>
       </div>

@@ -103,14 +103,9 @@ const exportFeeds = async () => {
             className="appearance-none border border-black rounded-md w-32 px-4 py-1 text-left text-sm text-black bg-white focus:outline-none min-w-[90px] h-8"
             defaultValue=""
           >
-            <option value="">Flag Statuses</option>
+            <option value="">Status</option>
             <option value="active">Active </option>
-            <option value="always-parse">Always Parse</option>
-            <option value="spam">Spam</option>
-            <option value="takedown">Take Down</option>
-            <option value="pending-archive">Pending</option>
-            <option value="fetch_error">Fetch Error</option>
-            <option value="parse_error">Parse Error</option>
+            <option value="parse_error">Error</option>
             <option value="archived">Archived</option>
           </select>
           <FunnelIcon className="h-4 w-4 absolute right-1 top-2 text-black pointer-events-none" />
@@ -132,14 +127,14 @@ const exportFeeds = async () => {
           </div>
         </div>
         <div className="flex ml-20 gap-2 "> {/* Row two*/}
-        {/* Parsing Toggle */}
+        {/* Parsing Toggle 
         <button
           type="button"
           className={`rounded-full px-4 py-1 text-sm border h-8 transition ${isParsing ? 'bg-primary text-white border-border' : 'bg-white text-black border-black'}`}
           onClick={() => { setIsParsing(!isParsing); onFilterChange('is_parsing', (!isParsing).toString()); }}
         >
           Parsing
-        </button>
+        </button> */}
         {/* Asc/Desc Toggle Button */}
         <button
           type="button"
@@ -160,7 +155,7 @@ const exportFeeds = async () => {
         <div className="flex gap-2 items-end">
           {/* Bulk Update Status */}
           <button
-            onClick={() => onBulkUpdateStatus(statusToUpdate)}
+            onClick={async () => await onBulkUpdateStatus(statusToUpdate)}
             disabled={selectedFeeds.length === 0}
             className="border border-black bg-white text-black rounded-md w-9 h-9 flex items-center justify-center hover:bg-gray-100 transition"
             aria-label="Confirm Status Update"
@@ -173,12 +168,11 @@ const exportFeeds = async () => {
             className="border border-black rounded-md px-2 py-1 text-sm text-black bg-white focus:outline-none min-w-[90px] mr-2 h-9"
           >
             <option value="active">Active</option>
-            <option value="parse_error">Parse Error</option>
-            <option value="always-parse">Always Parse</option>
+            <option value="parse_error">Error</option>
             <option value="spam">Spam</option>
             <option value="takedown">Take Down</option>
             <option value="pending-archive">Pending Archive</option>
-            <option value="archived">Archived</option>
+            <option value="archived">Archive</option>
           </select>
           
           {/* Bulk Reparse Button */}

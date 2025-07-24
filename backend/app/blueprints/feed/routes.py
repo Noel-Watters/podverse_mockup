@@ -7,8 +7,11 @@ from app.extensions import limiter
 from app.utils.auth import requires_auth
 from app.utils.error_handlers import handle_errors
 from app.utils.audit_decorators import audit_admin_access
-from .controllers import *
 from app.utils.redis_lock import is_locked
+from .controllers.query import get_feed_logs_controller, get_feed_by_id_controller, get_all_feeds_controller
+from .controllers.parsing import reparse_feed_controller, bulk_reparse_feeds_controller
+from .controllers.export import export_single_feed_controller, bulk_export_feeds_controller
+from .controllers.feed_update import bulk_update_feeds_controller
 
 logger = get_logger(__name__)
 
@@ -21,6 +24,7 @@ def after_request(response):
     return log_request_end(logger, response)
 
 def is_auto_reparse_running() -> bool:
+    """Check if the auto_reparse_all task is currently running (utility for status endpoint)."""
     is_running, error = is_locked("auto_reparse_all")
     return is_running
 
