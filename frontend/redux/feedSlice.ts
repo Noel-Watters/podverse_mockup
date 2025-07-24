@@ -14,18 +14,21 @@ interface FeedState {
   searchTerm:string;
 }
 
+
+export const initialFilters: FeedFilters = {
+  status: "",
+  parsing_priority: undefined,
+  is_parsing: undefined,
+  sort_by: 'id',
+  sort_order: 'desc',
+};
+
 const initialState: FeedState = {
   items: [],
   offset: 0,
   limit: 50,
   loading: false,
-  filters: {
-    status: "",
-    parsing_priority: undefined,
-    is_parsing: undefined,
-    sort_by: 'id', // Only allow: 'id', 'url', 'updated_at'
-    sort_order: 'desc'
-  },
+  filters: { ...initialFilters },
   hasMore: true,
   searchTerm: "",
 };
@@ -106,12 +109,18 @@ const feedsSlice = createSlice({
       state.loading = false;
     },
     setFilters (state, action: PayloadAction<Partial<FeedFilters>>) {
-        state.filters = { ...state.filters, ...action.payload };
-        state.offset = 0; 
-        state.items = []; 
-        state.hasMore = true; 
+      state.filters = { ...state.filters, ...action.payload };
+      state.offset = 0; 
+      state.items = []; 
+      state.hasMore = true; 
     },
-      setSearchTerm(state, action: PayloadAction<string>) {
+    resetFilters(state) {
+      state.filters = { ...initialFilters };
+      state.offset = 0;
+      state.items = [];
+      state.hasMore = true;
+    },
+    setSearchTerm(state, action: PayloadAction<string>) {
       state.searchTerm = action.payload;
     }
   },
@@ -164,5 +173,5 @@ const feedsSlice = createSlice({
   },
 });
 
-export const { resetFeeds, setFilters, setSearchTerm } = feedsSlice.actions;
+export const { resetFeeds, setFilters, resetFilters, setSearchTerm } = feedsSlice.actions;
 export default feedsSlice.reducer;

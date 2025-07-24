@@ -23,7 +23,6 @@ const Healthbadge: React.FC<HealthBadgeProps> = ({ recent_logs, reparsing, flag_
 
   const sortedLogs = [...recent_logs].sort((a, b) => new Date(b.finished_at).getTime() - new Date(a.finished_at).getTime());
   const mostRecent = sortedLogs[0];
-  console.log(flag_status)
 
   let status = 0; // Default status
   if (reparsing) {

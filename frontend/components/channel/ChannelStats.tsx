@@ -12,7 +12,7 @@ export default function ChannelStats({ stats }: { stats: Stats }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-2  h-full gap-12 p-4">
       {statList.map(({ label, value }) => (
-        <div key={label} className="bg-gray-100 p-4 rounded  shadow text-left flex flex-col h-full">
+        <div key={label} className="p-4 rounded  shadow text-left flex flex-col h-full">
           <div className="text-base text-muted font-semibold">{label}</div>
           <div className="text-3xl font-semibold">{value}</div>
         </div>
