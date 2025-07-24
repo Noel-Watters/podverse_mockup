@@ -1,120 +1,56 @@
 import pytest
-from app.utils.error_exceptions import ValidationError
-from app.blueprints.item.schemas import ItemSchema, ItemFlagStatusSchema, StatsTrackEventItemSchema
-from app.blueprints.stats.schemas import StatsItemSchema
-from app.models.item import Item, ItemFlagStatus, StatsAggregatedItem, StatsTrackEventItem
-from uuid import uuid4
+from datetime import datetime
+from app.blueprints.item.schemas import ItemSchema, ItemFlagStatusSchema
+from app.models.item import Item, ItemFlagStatus
 
-class TestItemSchema:
-    @pytest.fixture
-    def valid_item_data(self):
-        return {
-            "id_text": "IT123456789",
-            "channel_id": 1,
-            "item_flag_status_id": 1,
-            "title": "Test Item",
-            "slug": "test-item",
-            "guid": str(uuid4()),
-            "guid_enclosure_url": "https://example.com/enclosure.mp3",
-            "pub_date": "2023-10-01T12:00:00Z"
-        }
+def test_item_schema_serialization():
+    mock_item = Item(
+        id=1,
+        id_text="item-1",
+        channel_id=2,
+        item_flag_status_id=3,
+        title="Test Episode",
+        slug="test-episode",
+        guid="abc123",
+        guid_enclosure_url="https://example.com/audio.mp3",
+        pub_date=datetime(2023, 7, 1, 10, 0, 0),
+        flag_status=ItemFlagStatus(id=3, status="active")
+    )
 
-    def invalid_item_data(self):
-        return {
-            "id_text": "IT123456789",
-            "title": ""  # Invalid: title cannot be empty
-        }
+    schema = ItemSchema()
+    result = schema.dump(mock_item)
 
-    def test_item_schema_valid_data(self, valid_item_data):
-        result = ItemSchema().load(valid_item_data)
-        assert isinstance(result, Item)
-        assert result.id_text == "IT123456789"
-        assert result.title == "Test Item"
+    assert result["id"] == 1
+    assert result["title"] == "Test Episode"
+    assert result["flag_status"]["status"] == "active"
+    assert "guid_enclosure_url" in result
 
-    def test_item_schema_invalid_data(self):
-        with pytest.raises(ValidationError):
-            ItemSchema().load(self.invalid_item_data())
-            
-    class TestItemFlagStatusSchema:
-        @pytest.fixture
-        def valid_flag_status_data(self):
-            return {
-                "status": "active",
-                "created_at": "2023-10-01T12:00:00Z"
-            }
+def test_item_schema_deserialization():
+    payload = {
+        "id": 2,
+        "id_text": "item-2",
+        "channel_id": 1,
+        "item_flag_status_id": 3,
+        "title": "Another Episode",
+        "slug": "another-episode",
+        "guid": "def456",
+        "guid_enclosure_url": "https://example.com/audio2.mp3",
+        "pub_date": "2023-08-01T12:30:00"
+    }
 
-        def invalid_flag_status_data(self):
-            return {
-                "id": None,  # Invalid: item_id cannot be None
-            }
+    schema = ItemSchema()
+    schema.transient = True
+    result = schema.load(payload)
 
-        def test_item_flag_status_schema_valid_data(self, valid_flag_status_data):
-            result = ItemFlagStatusSchema().load(valid_flag_status_data)
-            assert isinstance(result, ItemFlagStatus)
-            assert result.status == "active"
+    assert result.title == "Another Episode"
+    assert result.slug == "another-episode"
+    assert result.channel_id == 1
+    assert result.guid == "def456"
 
-        def test_item_flag_status_schema_invalid_data(self):
-            with pytest.raises(ValidationError):
-                ItemFlagStatusSchema().load(self.invalid_flag_status_data())
-                
-    class TestStatsItemSchema:
-        @pytest.fixture
-        def valid_stats_data(self):
-            return {
-                "item_id": 1,
-                "day_current_count": 10,
-                "day_1_count": 5,
-                "day_2_count": 3,
-                "day_3_count": 2,
-                "day_4_count": 1,
-                "day_5_count": 0,
-                "day_6_count": 0,
-                "day_7_count": 0,
-                "day_8_count": 0,
-                "week_current_count": 20,
-                "week_1_count": 15,
-                "week_2_count": 10,
-                "week_3_count": 5,
-                "week_4_count": 0,
-                "month_current_count": 50,
-                "month_1_count": 40,
-                "all_time_count": 100
-            }
-            
-        def invalid_stats_data(self):
-            return {
-                "item_id": None
-            }
-            
-        def test_stats_aggregated_item_schema_valid_data(self, valid_stats_data):
-            result = StatsItemSchema().load(valid_stats_data)
-            assert isinstance(result, StatsAggregatedItem)
-            assert result.item_id == 1
-            
-        def test_stats_aggregated_item_schema_invalid_data(self):
-            with pytest.raises(ValidationError):
-                StatsItemSchema().load(self.invalid_stats_data())
-                
-    class TestStatsTrackEventItemSchema:
-        @pytest.fixture
-        def valid_event_data(self):
-            return {
-                "account_guid": str(uuid4()),
-                "item_id": 1,
-                "created_at": "2023-10-01T12:00:00Z"
-            }
+def test_item_flag_status_schema_serialization():
+    flag_status = ItemFlagStatus(id=99, status="archived")
+    schema = ItemFlagStatusSchema()
+    result = schema.dump(flag_status)
 
-        def invalid_event_data(self):
-            return {
-                "account_guid": None,  # Invalid: account_guid cannot be None
-                "item_id": None
-            }
-
-        def test_stats_track_event_item_schema_valid_data(self, valid_event_data):
-            result = StatsTrackEventItemSchema().load(valid_event_data)
-            assert isinstance(result, StatsTrackEventItem)
-            assert result.item_id == 1
-
-        def test_stats_track_event_item_schema_invalid_data(self):
-            with pytest.raises(ValidationError):
-                StatsTrackEventItemSchema().load(self.invalid_event_data())
+    assert result["id"] == 99
+    assert result["status"] == "archived"

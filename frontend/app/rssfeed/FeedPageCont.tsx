@@ -12,7 +12,6 @@ import type { AppDispatch, RootState } from "@/redux/store";
 import { fetchChannelsByFeedIds } from "@/redux/batchChannelSlice";
 import { useDebounce } from "@/hooks/useDebounce";
 import { FEED_STATUS_MAP } from "@/types/feed"; 
-  
 
 export default function FeedsPageContent() {
   const dispatch = useDispatch<AppDispatch>();
