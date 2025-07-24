@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import {
-  ChartBarIcon,
   RssIcon,
 } from "@heroicons/react/24/outline";
 
@@ -27,7 +26,7 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-20 h-auto bg-bar p-4 space-y-4">
+    <aside className="w-20 bg-bar p-4 space-y-4">
       <nav className="flex flex-col gap-2">
         {navLinks.map(({ href, label, icon }) => (
           <Link key={href} href={href}>

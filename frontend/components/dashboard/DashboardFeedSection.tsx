@@ -11,7 +11,6 @@ interface DashboardFeedSectionProps {
   error: string | null;
   selectedFeedId: number | null;
   onSelectFeed: (feedId: any, logs: any) => void;
-  onNotify: (n: { type: "error" | "success"; message: string; duration?: number; details?: string[] }) => void;
 }
 
 export default function DashboardFeedSection({
@@ -20,7 +19,6 @@ export default function DashboardFeedSection({
   error,
   selectedFeedId,
   onSelectFeed,
-  onNotify,
 }: DashboardFeedSectionProps) {
   const router = useRouter();
   // Find logs for the selected feed
@@ -42,7 +40,6 @@ export default function DashboardFeedSection({
             error={error}
             onSelectFeed={onSelectFeed}
             selectedFeedId={selectedFeedId}
-            onNotify={onNotify}
           />
         </div>
       </div>

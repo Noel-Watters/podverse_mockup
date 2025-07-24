@@ -22,7 +22,6 @@ const PodcastDetails: React.FC<PodcastDetailsProps> = ({ feed, channel }) => {
   const categories = channel && Array.isArray((channel as any).categories) ? (channel as any).categories : [];
   return (
     <div className="p-4 w-full bg-white">
-      <p className="text-muted text-xs">Index ID: {channel?.podcast_index_id ?? "-"} </p>
       <div className="flex flex-col md:flex-row gap-4 w-full">
         {/* First Row */}
         <div className="flex flex-col border border-gray-400 rounded-lg p-3 flex-1 min-h-[80px] justify-center">

@@ -145,13 +145,21 @@ def parse_and_update_feed_object(feed: Feed) -> dict:
     return result
 
 
-def parse_and_update_feed(feed_id: int):
+def parse_and_update_feed(feed_id: int) -> dict:
     """ Public function for single feed reparse (does DB lookup). """
     feed = db.session.get(Feed, feed_id)
     if not feed:
         raise NotFoundError("Feed not found")
     
-    return parse_and_update_feed_object(feed)
+    result = parse_and_update_feed_object(feed)
+
+    try:
+        db.session.commit()  # FeedLog gets saved even if object function didn’t start txn
+    except Exception as e:
+        logger.error(f"Failed to commit after parsing feed {feed_id}: {e}")
+        db.session.rollback()
+
+    return result
 
 
 # sequential since parsing is async on podverse side
