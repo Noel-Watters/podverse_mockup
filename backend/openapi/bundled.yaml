@@ -4,11 +4,79 @@ info:
   version: 1.0.0
   description: Admin API for Podverse podcast platform dashboard
 servers:
-  - description: Local development
+  - description: Local development (Admin endpoints)
     url: http://localhost:8000/admin
+  - description: Local development (Health endpoints)
+    url: http://localhost:8000
 security:
   - Auth0Bearer: []
 paths:
+  ../health:
+    get:
+      summary: Basic health check
+      description: Returns API status without authentication
+      tags:
+        - Health
+      security: []
+      servers:
+        - url: http://localhost:8000
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: API running
+  ../admin:
+    get:
+      summary: Admin API status check
+      description: Returns admin API status without authentication
+      tags:
+        - Health
+      security: []
+      servers:
+        - url: http://localhost:8000
+      responses:
+        '200':
+          description: Admin API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Admin API is up and running
+  ../test-db:
+    get:
+      summary: Database connectivity test
+      description: Tests database connection and returns current timestamp
+      tags:
+        - Health
+      security: []
+      servers:
+        - url: http://localhost:8000
+      responses:
+        '200':
+          description: Database connection successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: success
+                  current_time:
+                    type: string
+                    format: date-time
+                    example: '2025-07-25T04:41:23.411558+00:00'
+        '500':
+          $ref: ./components/responses/InternalServerError.yaml
   /feeds:
     get:
       summary: Retrieve a list of RSS feeds
@@ -253,7 +321,7 @@ paths:
         Logs are sorted by finished_at in descending order (newest first).
 
         **Pagination**: Supports `page` and `limit` parameters for paginated results
-        **Filtering**: Supports `success_only` and `error_only` parameters to filter by parsing success
+        **Filtering**: Supports `success_only` and `error_only` parameters to filter by parsing success (mutually exclusive)
 
         **Response Structure**:
         - `logs`: Array of parsing log entries
@@ -289,13 +357,13 @@ paths:
           required: false
           schema:
             type: boolean
-          description: Filter to show only successful parsing attempts
+          description: Filter to show only successful parsing attempts (mutually exclusive with error_only)
         - name: error_only
           in: query
           required: false
           schema:
             type: boolean
-          description: Filter to show only failed parsing attempts
+          description: Filter to show only failed parsing attempts (mutually exclusive with success_only)
       responses:
         '200':
           description: Feed logs retrieved successfully
@@ -1048,471 +1116,342 @@ paths:
     get:
       summary: Retrieve aggregated channel statistics
       description: |
-        Returns aggregated stats for channels such as total listens or views.
-        Sorted by highest monthly count (month_current_count DESC).
-        Supports optional filtering by time window (daily, weekly, monthly) and search by channel title or ID.
-        Data is sourced from the `channel` and `stats_aggregated_channel` tables.
+        Returns aggregated statistics for channels with rich filtering and customizable view options.
+        Provides comprehensive analytics data across multiple time periods with flexible response formats.
+
+        **Data Sources**: 
+        - Primary table: `stats_aggregated_channel` (precomputed statistics)
+        - Joined table: `channel` (for search and channel metadata)
+
+        **View Modes** (Controls response fields):
+        - `daily`: Returns only daily count fields (day_current_count through day_8_count)
+        - `weekly`: Returns only weekly count fields (week_current_count through week_4_count)  
+        - `monthly`: Returns all fields including monthly and all-time counts (default)
+        - `all_time`: Same as monthly, returns complete aggregated data
+
+        **Search Capabilities**: 
+        - Searches across channel titles using case-insensitive pattern matching
+        - Exact match filtering by channel ID or multiple channel IDs
+
+        **Sorting Options**: 
+        - `channel_id`: Sort by channel identifier (default)
+        - `day_current_count`: Sort by current day statistics
+        - `week_current_count`: Sort by current week statistics  
+        - `month_current_count`: Sort by current month statistics
+        - `all_time_count`: Sort by all-time totals
+
+        **Advanced Filtering**: 
+        - Range filters for all time periods (daily, weekly, monthly, all-time counts)
+        - Multiple channel ID filtering for batch analytics
+        - Count-based filtering (min/max values for different periods)
+
+        **Response Structure**:
+        - Returns different field sets based on `view` parameter
+        - Consistent pagination metadata with total counts
+        - Optimized for analytics dashboards and reporting
+
+        **Use Cases**:
+        - Analytics dashboard data feeds
+        - Channel performance comparisons
+        - Time-series analysis across different periods
+        - Bulk channel statistics for reporting
+
+        **Rate Limiting**: 100 requests per minute
       tags:
         - Statistics
       security:
         - Auth0Bearer: []
       parameters:
-        - $ref: '#/components/parameters/time_filter'
-        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/view'
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/sort_by'
+        - $ref: '#/components/parameters/sort_order'
+        - $ref: '#/components/parameters/id_filter'
+        - name: channel_ids
+          in: query
+          schema:
+            type: string
+          description: Filter by multiple channel IDs (comma-separated)
+        - name: min_daily_total
+          in: query
+          schema:
+            type: integer
+          description: Minimum daily total count
+        - name: max_daily_total
+          in: query
+          schema:
+            type: integer
+          description: Maximum daily total count
+        - name: min_weekly_total
+          in: query
+          schema:
+            type: integer
+          description: Minimum weekly total count
+        - name: max_weekly_total
+          in: query
+          schema:
+            type: integer
+          description: Maximum weekly total count
+        - name: min_all_time
+          in: query
+          schema:
+            type: integer
+          description: Minimum all-time count
+        - name: max_all_time
+          in: query
+          schema:
+            type: integer
+          description: Maximum all-time count
+        - name: min_current_day
+          in: query
+          schema:
+            type: integer
+          description: Minimum current day count
+        - name: max_current_day
+          in: query
+          schema:
+            type: integer
+          description: Maximum current day count
+        - name: min_current_week
+          in: query
+          schema:
+            type: integer
+          description: Minimum current week count
+        - name: max_current_week
+          in: query
+          schema:
+            type: integer
+          description: Maximum current week count
+        - name: min_current_month
+          in: query
+          schema:
+            type: integer
+          description: Minimum current month count
+        - name: max_current_month
+          in: query
+          schema:
+            type: integer
+          description: Maximum current month count
       responses:
         '200':
-          description: Aggregated channel statistics returned
+          description: Channel statistics retrieved successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/StatsChannel'
-                  meta:
-                    type: object
-                    properties:
-                      total:
-                        type: integer
-                      limit:
-                        type: integer
+                $ref: '#/components/schemas/StatsChannelsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimit'
         '500':
           $ref: '#/components/responses/InternalServerError'
   /stats/channels/{id}:
     get:
-      summary: Retrieve detail stats for a specific channel
+      summary: Retrieve detailed statistics for a specific channel
       description: |
-        Returns detailed statistics, such as total listens or views, and metadata for a specific channel.
-        Includes basic channel info, aggregated stats, and raw event count within an optional time window.
-        Data comes from `stats_aggregated_channel` and `channel` tables.
-      tags:
-        - Statistics
-      security:
-        - Auth0Bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: start
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date-time
-        - name: end
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date-time
-      responses:
-        '200':
-          description: Channel detail statistics returned
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ChannelDetails'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-  /stats/channels/{id}/events:
-    get:
-      summary: Retrieve real-time event counts for a channel
-      description: |
-        Returns real-time event tracking data for a specific channel within a time window.
-        Events include listens, shares, follows, etc.
-        Data is sourced from the `stats_track_event_channel` table.
-        Results can be filtered by time range and aggregated by different intervals.
-      tags:
-        - Statistics
-      security:
-        - Auth0Bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-        - name: start
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date-time
-            description: Start of the time window (ISO 8601)
-        - name: end
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date-time
-            description: End of the time window (ISO 8601)
-        - name: interval
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - hour
-              - day
-              - week
-              - month
-            default: day
-            description: Time interval for aggregating events
-      responses:
-        '200':
-          description: Channel event counts returned
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/StatsTrackEventChannel'
-                  meta:
-                    type: object
-                    properties:
-                      total_events:
-                        type: integer
-                        description: Total number of events in the time window
-                      start:
-                        type: string
-                        format: date-time
-                      end:
-                        type: string
-                        format: date-time
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-  /stats/channels/export:
-    get:
-      summary: Export channel statistics data
-      description: |
-        Exports aggregated channel statistics in CSV or JSON format.
-        Includes metrics like total listens, shares, follows, etc.
-        Supports filtering by time range and aggregation intervals.
+        Returns comprehensive detailed statistics and information for a specific channel.
+        Includes complete channel metadata, associated feed information, items, and aggregated statistics.
 
-        This endpoint is useful for:
-        - Analytics dashboards
-        - Publisher reporting
-        - Channel performance analysis
-        - Trend identification
+        **Data Sources**:
+        - Primary table: `channel` (channel metadata and relationships)
+        - Related tables: `stats_aggregated_channel`, `feed`, `item`, `category`, `medium`
+        - Event data: `stats_track_event_channel` (for raw event counting)
+
+        **Response Includes**:
+        - **Complete Channel Info**: ID, title, slug, podcast metadata, medium type
+        - **Feed Information**: Associated RSS feed with parsing status and recent logs
+        - **Categories**: All categories assigned to the channel with hierarchy
+        - **Items**: Channel's episodes/items with flag status information
+        - **Aggregated Statistics**: Full stats breakdown across all time periods
+        - **Raw Event Count**: Computed event count for specified time range (if provided)
+
+        **Optional Time Range Filtering**:
+        - Use `start` and `end` parameters to filter raw event count calculation
+        - Time range only affects the `raw_event_count` field, not aggregated stats
+        - Accepts ISO 8601 datetime format (e.g., "2024-01-01T00:00:00")
+
+        **Use Cases**:
+        - Detailed channel analytics dashboards
+        - Channel management and monitoring
+        - Content analysis with episode listings
+        - Performance tracking with feed parsing history
+
+        **Rate Limiting**: 100 requests per minute
       tags:
         - Statistics
       security:
         - Auth0Bearer: []
       parameters:
-        - name: format
-          in: query
+        - name: id
+          in: path
           required: true
           schema:
-            type: string
-            enum:
-              - csv
-              - json
-            default: csv
-        - name: start_date
+            type: integer
+            minimum: 1
+          description: Channel ID to retrieve detailed statistics for
+        - name: start
           in: query
           required: false
           schema:
             type: string
-            format: date
-          description: Start date for stats aggregation
-        - name: end_date
+            format: date-time
+          description: |
+            Start date for raw event count calculation (ISO 8601 format).
+            Only affects raw_event_count field, not aggregated statistics.
+          example: '2024-01-01T00:00:00'
+        - name: end
           in: query
           required: false
           schema:
             type: string
-            format: date
-          description: End date for stats aggregation
-        - name: interval
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - day
-              - week
-              - month
-            default: day
-          description: Time interval for aggregation
+            format: date-time
+          description: |
+            End date for raw event count calculation (ISO 8601 format).
+            Only affects raw_event_count field, not aggregated statistics.
+          example: '2024-12-31T23:59:59'
       responses:
         '200':
-          description: Channel statistics export file
+          description: Detailed channel statistics retrieved successfully
           content:
-            text/csv:
-              schema:
-                type: string
-                description: CSV format (when format=csv)
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/StatsAggregatedChannel'
-                  meta:
-                    type: object
-                    properties:
-                      total:
-                        type: integer
-                      filters:
-                        type: object
-                        properties:
-                          interval:
-                            type: string
-                          date_range:
-                            type: object
-                            properties:
-                              start:
-                                type: string
-                                format: date
-                              end:
-                                type: string
-                                format: date
+                $ref: '#/components/schemas/ChannelStatsDetailed'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
         '500':
           $ref: '#/components/responses/InternalServerError'
   /stats/items:
     get:
       summary: Retrieve aggregated item (episode) statistics
       description: |
-        Returns aggregated stats for items (podcast episodes).
-        Sorted by highest monthly count (month_current_count DESC).
-        Supports optional filtering by time window and search by item title or ID.
-        Data is sourced from the `item`, `stats_aggregated_item` tables. 
+        Returns aggregated statistics for podcast items/episodes with filtering and view options.
+        Provides analytics data across multiple time periods for content performance analysis.
+
+        **Data Sources**: 
+        - Primary table: `stats_aggregated_item` (precomputed item statistics)
+        - Joined table: `item` (for search and item metadata)
+
+        **View Modes** (Controls response fields):
+        - `daily`: Returns only daily count fields (day_current_count through day_8_count)
+        - `weekly`: Returns only weekly count fields (week_current_count through week_4_count)  
+        - `monthly`: Returns all fields including monthly and all-time counts (default)
+        - `all_time`: Same as monthly, returns complete aggregated data
+
+        **Search Capabilities**: 
+        - Searches across item titles using case-insensitive pattern matching
+        - Exact match filtering by item ID or multiple item IDs
+
+        **Sorting Options**: 
+        - `item_id`: Sort by item identifier (default)
+        - `day_current_count`: Sort by current day statistics
+        - `week_current_count`: Sort by current week statistics  
+        - `month_current_count`: Sort by current month statistics
+        - `all_time_count`: Sort by all-time totals
+
+        **Advanced Filtering**: 
+        - Range filters for all time periods (daily, weekly, monthly, all-time counts)
+        - Multiple item ID filtering for batch analytics
+        - Count-based filtering (min/max values for different periods)
+
+        **Use Cases**:
+        - Episode performance analysis
+        - Content analytics and trending identification
+        - Time-series analysis for item engagement
+        - Bulk item statistics for reporting
+
+        **Rate Limiting**: 100 requests per minute
+        **Authentication**: Requires Auth0 Bearer token
+
+        **Note**: This endpoint may have implementation issues that need resolution.
       tags:
         - Statistics
       security:
         - Auth0Bearer: []
       parameters:
-        - $ref: '#/components/parameters/time_filter'
-        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/view'
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/search'
-      responses:
-        '200':
-          description: Aggregated item statistics returned
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/StatsItem'
-                  meta:
-                    type: object
-                    properties:
-                      total:
-                        type: integer
-                      limit:
-                        type: integer
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-  /stats/items/{id}:
-    get:
-      summary: Retrieve detail stats for a specific item
-      description: |
-        Returns detailed statistics and metadata for a specific item.
-        Includes basic item info, aggregated stats, and raw event count within an optional time window.
-        Data is sourced from the `item`, `stats_aggregated_item`, and `stats_track_event_item` tables.
-      tags:
-        - Statistics
-      security:
-        - Auth0Bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
+        - $ref: '#/components/parameters/sort_by'
+        - $ref: '#/components/parameters/sort_order'
+        - $ref: '#/components/parameters/id_filter'
+        - name: item_ids
+          in: query
+          schema:
+            type: string
+          description: Filter by multiple item IDs (comma-separated)
+        - name: min_daily_total
+          in: query
           schema:
             type: integer
-        - name: start
+          description: Minimum daily total count
+        - name: max_daily_total
           in: query
-          required: false
-          schema:
-            type: string
-            format: date-time
-        - name: end
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date-time
-      responses:
-        '200':
-          description: Item detail statistics returned
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Item'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-  /stats/items/{id}/events:
-    get:
-      summary: Retrieve real-time event counts for an item
-      description: |
-        Returns real-time event tracking data for a specific item (episode) within a time window.
-        Events include listens, shares, bookmarks, etc.
-        Data is sourced from the `stats_track_event_item` table.
-        Results can be filtered by time range and aggregated by different intervals.
-      tags:
-        - Statistics
-      security:
-        - Auth0Bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
           schema:
             type: integer
-        - name: start
+          description: Maximum daily total count
+        - name: min_weekly_total
           in: query
-          required: true
-          schema:
-            type: string
-            format: date-time
-            description: Start of the time window (ISO 8601)
-        - name: end
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date-time
-            description: End of the time window (ISO 8601)
-        - name: interval
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - hour
-              - day
-              - week
-              - month
-            default: day
-            description: Time interval for aggregating events
-      responses:
-        '200':
-          description: Item event counts returned
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/StatsTrackEventItem'
-                  meta:
-                    type: object
-                    properties:
-                      total_events:
-                        type: integer
-                        description: Total number of events in the time window
-                      start:
-                        type: string
-                        format: date-time
-                      end:
-                        type: string
-                        format: date-time
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-  /stats/items/export:
-    get:
-      summary: Export item statistics data
-      description: |
-        Exports aggregated item (episode) statistics in CSV or JSON format.
-        Includes metrics like listens, shares, bookmarks, etc.
-        Supports filtering by time range and aggregation intervals.
-
-        This endpoint is useful for:
-        - Episode performance analysis
-        - Content strategy planning
-        - Listener engagement tracking
-        - Trend analysis
-      tags:
-        - Statistics
-      security:
-        - Auth0Bearer: []
-      parameters:
-        - name: format
-          in: query
-          required: true
-          schema:
-            type: string
-            enum:
-              - csv
-              - json
-            default: csv
-        - name: start_date
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-          description: Start date for stats aggregation
-        - name: end_date
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-          description: End date for stats aggregation
-        - name: interval
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - day
-              - week
-              - month
-            default: day
-          description: Time interval for aggregation
-        - name: channel_id
-          in: query
-          required: false
           schema:
             type: integer
-          description: Filter items by channel ID
+          description: Minimum weekly total count
+        - name: max_weekly_total
+          in: query
+          schema:
+            type: integer
+          description: Maximum weekly total count
+        - name: min_all_time
+          in: query
+          schema:
+            type: integer
+          description: Minimum all-time count
+        - name: max_all_time
+          in: query
+          schema:
+            type: integer
+          description: Maximum all-time count
+        - name: min_current_day
+          in: query
+          schema:
+            type: integer
+          description: Minimum current day count
+        - name: max_current_day
+          in: query
+          schema:
+            type: integer
+          description: Maximum current day count
+        - name: min_current_week
+          in: query
+          schema:
+            type: integer
+          description: Minimum current week count
+        - name: max_current_week
+          in: query
+          schema:
+            type: integer
+          description: Maximum current week count
+        - name: min_current_month
+          in: query
+          schema:
+            type: integer
+          description: Minimum current month count
+        - name: max_current_month
+          in: query
+          schema:
+            type: integer
+          description: Maximum current month count
       responses:
         '200':
-          description: Item statistics export file
+          description: Item statistics retrieved successfully
           content:
-            text/csv:
-              schema:
-                type: string
-                description: CSV format (when format=csv)
             application/json:
               schema:
                 type: object
@@ -1524,41 +1463,155 @@ paths:
                   meta:
                     type: object
                     properties:
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 100
                       total:
                         type: integer
-                      filters:
-                        type: object
-                        properties:
-                          channel_id:
-                            type: integer
-                          interval:
-                            type: string
-                          date_range:
-                            type: object
-                            properties:
-                              start:
-                                type: string
-                                format: date
-                              end:
-                                type: string
-                                format: date
+                        example: 500
+                      view:
+                        type: string
+                        enum:
+                          - daily
+                          - weekly
+                          - monthly
+                          - all_time
+                        example: monthly
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /stats/items/{id}:
+    get:
+      summary: Retrieve detailed statistics for a specific item
+      description: |
+        Returns detailed information and statistics for a specific podcast item/episode.
+        Includes basic item metadata and computed raw event count for the specified time range.
+
+        **Data Sources**:
+        - Primary table: `item` (item metadata)
+        - Event data: `stats_track_event_item` (for raw event counting)
+
+        **Response Includes**:
+        - **Basic Item Info**: ID, title, GUID, publication date, slug
+        - **Channel Relationship**: Channel ID and reference
+        - **Statistics**: Aggregated statistics array (when available)
+        - **Events**: Tracking events array (when available)
+        - **Raw Event Count**: Computed event count for specified time range (if provided)
+
+        **Optional Time Range Filtering**:
+        - Use `start` and `end` parameters to filter raw event count calculation
+        - Accepts ISO 8601 datetime format (e.g., "2024-01-01T00:00:00")
+
+        **Use Cases**:
+        - Individual episode performance analysis
+        - Content engagement tracking
+        - Detailed item analytics for specific episodes
+
+        **Rate Limiting**: 100 requests per minute
+      tags:
+        - Statistics
+      security:
+        - Auth0Bearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Item ID to retrieve detailed statistics for
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: |
+            Start date for raw event count calculation (ISO 8601 format).
+            Filters events based on created_at timestamp.
+          example: '2024-01-01T00:00:00'
+        - name: end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+          description: |
+            End date for raw event count calculation (ISO 8601 format).
+            Filters events based on created_at timestamp.
+          example: '2024-12-31T23:59:59'
+      responses:
+        '200':
+          description: Detailed item statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ItemStatsDetailed'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
         '500':
           $ref: '#/components/responses/InternalServerError'
   /items:
     get:
-      summary: List all items
+      summary: List all items (episodes)
       description: |
-        Returns a paginated list of items (episodes) with optional filters such as
-        channel ID and publish date range. Also supports search and sorting.
+        Returns a paginated list of podcast episodes with search, filtering, and sorting capabilities.
+        Provides comprehensive access to episode metadata and status information.
 
-        **Primary table:** `item`
+        **Data Sources**: 
+        - Primary table: `item` (episode/content metadata)
+        - Joined tables: `channel` (for channel relationship), `item_flag_status` (for status details)
 
-        **Related tables:**
-        - `channel`: used to filter items by parent channel (`channel_id`)
-        - `item_flag_status`: used to determine current flag/status of the item
-        - `stats_aggregated_item`: optionally joined to provide aggregated stats like play/download count
+        **Search Capabilities**: 
+        - Searches across item titles using case-insensitive pattern matching
+        - No description search in current implementation
+
+        **Sorting Options**: 
+        - `id`: Sort by item identifier (default)
+        - `title`: Sort by episode title
+        - Supports both ascending and descending order
+
+        **Filtering Options**:
+        - Text search across item titles
+        - Publication date range filtering (planned but not implemented)
+        - Flag status filtering (planned but not implemented) 
+        - Channel-based filtering (planned but not implemented)
+
+        **Response Structure**:
+        - Returns `data` array containing item objects
+        - Each item includes nested `flag_status` object with full details
+        - Meta object includes total count and pagination information
+        - Uses limit/offset pagination model
+
+        **Pagination**: 
+        - `page`: Page number starting from 1
+        - `limit`: Number of items per page (replaces per_page)
+        - Response includes total count and calculated offset
+
+        **Use Cases**:
+        - Content management and episode browsing
+        - Search and discovery of podcast episodes
+        - Bulk episode status management
+        - Analytics preparation and reporting
+
+        **Rate Limiting**: 30 requests per minute
       tags:
         - Items
       security:
@@ -1567,95 +1620,46 @@ paths:
         - $ref: '#/components/parameters/limit'
         - $ref: '#/components/parameters/page'
         - $ref: '#/components/parameters/search'
-        - name: channel_id
-          in: query
-          schema:
-            type: integer
-          description: Filter items by their parent channel's ID
-        - name: status
-          in: query
-          schema:
-            type: string
-            enum:
-              - active
-              - pending-archive
-              - archived
-              - pending-delete
-          description: Filter items by their flag status (`item_flag_status.status`)
-        - name: published_after
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: Filter items published after this date
-        - name: published_before
-          in: query
-          schema:
-            type: string
-            format: date-time
-          description: Filter items published before this date
-        - name: sort_by
-          in: query
-          schema:
-            type: string
-            enum:
-              - pub_date
-              - title
-              - id
-          description: Field to sort results by (supports `pub_date`, `title`, or `id`)
-        - name: sort_order
-          in: query
-          schema:
-            type: string
-            enum:
-              - asc
-              - desc
-            default: desc
-          description: Sort order (ascending or descending)
+        - $ref: '#/components/parameters/sort_by'
+        - $ref: '#/components/parameters/sort_order'
       responses:
         '200':
-          description: List of items returned
+          description: Items retrieved successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Item'
-                  meta:
-                    type: object
-                    properties:
-                      total:
-                        type: integer
-                        description: Total number of matching items
-                      limit:
-                        type: integer
-                        description: Limit applied to query
-                      offset:
-                        type: integer
-                        description: Offset applied to query
+                $ref: '#/components/schemas/ItemsResponse'
         '400':
-          description: Invalid request parameters
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /items/{id}:
     get:
       summary: Get item by ID
       description: |
-        Retrieves a specific item (episode) by its ID.
+        Retrieves detailed information for a specific podcast episode/item by its ID.
+        Returns the same data structure as the list endpoint but for a single item.
 
-        **Primary table:** `item`
+        **Data Sources**:
+        - Primary table: `item` (episode metadata)
+        - Related tables: `item_flag_status` (for detailed status information)
+        - Eager loading: channel, stats, flag_status relationships
 
-        **Related tables:**
-        - `channel`: provides information about the parent channel
-        - `item_flag_status`: provides the current flag status
-        - `stats_aggregated_item`: optionally used to return usage statistics for the item
+        **Response Includes**:
+        - **Complete Item Info**: ID, title, slug, publication date, GUIDs
+        - **Channel Relationship**: Channel ID and reference
+        - **Flag Status**: Full flag status object with lifecycle information
+        - **Content Metadata**: Publication date, RSS identifiers, URL slug
+
+        **Use Cases**:
+        - Individual episode management and editing
+        - Content details and metadata review
+        - Episode status management
+        - API integration for episode-specific operations
+
+        **Rate Limiting**: 60 requests per minute 
       tags:
         - Items
       security:
@@ -1666,129 +1670,24 @@ paths:
           required: true
           schema:
             type: integer
-          description: Unique ID of the item
+            minimum: 1
+          description: Unique ID of the item to retrieve
+          example: 1
       responses:
         '200':
-          description: Item found
+          description: Item retrieved successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Item'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
-          description: Item not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /items/export:
-    get:
-      summary: Export episode-level data
-      description: |
-        Exports detailed episode (item) data including:
-        - Basic info: id, title, pub_date, duration, guid
-        - Relations: channel_id, feed_id
-        - Content: description, language
-        - Status: parsed_status and related metadata
-
-        This endpoint is useful for:
-        - Auditing episode data quality
-        - QA checks on parsing completeness
-        - Bulk episode management and analysis
-      tags:
-        - Items
-      security:
-        - Auth0Bearer: []
-      parameters:
-        - name: format
-          in: query
-          required: true
-          schema:
-            type: string
-            enum:
-              - csv
-              - json
-            default: csv
-        - name: status
-          in: query
-          required: false
-          schema:
-            type: string
-            enum:
-              - active
-              - archived
-              - error
-              - all
-            default: active
-          description: Filter items by their status
-        - name: channel_id
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: Filter items by channel ID
-        - name: feed_id
-          in: query
-          required: false
-          schema:
-            type: integer
-          description: Filter items by feed ID
-        - name: start_date
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-          description: Filter items by publication date (start)
-        - name: end_date
-          in: query
-          required: false
-          schema:
-            type: string
-            format: date
-          description: Filter items by publication date (end)
-      responses:
-        '200':
-          description: Items export file
-          content:
-            text/csv:
-              schema:
-                type: string
-                description: CSV format (when format=csv)
-            application/json:
-              schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Item'
-                  meta:
-                    type: object
-                    properties:
-                      total:
-                        type: integer
-                      filters:
-                        type: object
-                        properties:
-                          status:
-                            type: string
-                          channel_id:
-                            type: integer
-                          feed_id:
-                            type: integer
-                          date_range:
-                            type: object
-                            properties:
-                              start:
-                                type: string
-                                format: date
-                              end:
-                                type: string
-                                format: date
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimit'
         '500':
           $ref: '#/components/responses/InternalServerError'
   /admin/export_logs:
@@ -1798,71 +1697,85 @@ paths:
       summary: List export logs
       description: |
         Retrieve a paginated list of export logs with comprehensive filtering, sorting, and search capabilities.
+        Provides complete audit trail for all export operations with real-time file status.
 
-        **Features:**
-        - **Pagination**: Control page size and navigation with `page` and `limit` parameters
-        - **Filtering**: Filter by status, export type, user email, format, date ranges, duration, error status, and specific ID
-        - **Sorting**: Sort by any field including computed duration (created_at, completed_at, status, export_type, format, duration)
-        - **Search**: Search within error messages using `search_term`
-        - **Real-time Data**: Get current file existence and expiration status
+        **Data Sources**: 
+        - Primary table: `export_log` (complete export operation records)
+        - No joins required - all data self-contained in export log entries
 
-        **Available Filters:**
-        - `status`: pending, success, failed, skipped, expired
-        - `export_type`: channels, feeds, items
-        - `format`: csv, json
-        - `export_by`: User email who initiated the export
-        - `id`: Specific export log ID
-        - `has_error`: true/false to filter by error status
-        - `min_duration`/`max_duration`: Duration range in seconds (only for completed exports)
-        - `start_date`/`end_date`: Date range for created_at (must be used together)
-        - `search_term`: Search in error messages (case-insensitive)
+        **Filtering Capabilities**:
+        - **Status**: `pending`, `success`, `failed`, `skipped`, `expired`
+        - **Source**: `channels`, `feeds`, `items` (data type that was exported)
+        - **Format**: `csv`, `json` (export file format)
+        - **User**: Filter by `export_by` email address for user-specific exports
+        - **Error Status**: `has_error` boolean to filter failed vs successful exports
+        - **Date Range**: `start_date` and `end_date` for created_at filtering (must be used together)
+        - **Duration**: `min_duration` and `max_duration` in seconds (only applies to completed exports)
+        - **Search**: `search_term` for case-insensitive search within error messages
+        - **ID**: Filter by specific export log ID
 
-        **Use Cases:**
-        - Monitor export job status and progress
-        - Track user export activity and usage
-        - Analyze export performance and duration
-        - Debug failed exports by searching error messages
-        - Generate reports on export history
+        **Sorting Options**:
+        - `created_at`: Export creation time (default, descending)
+        - `completed_at`: Export completion time
+        - `status`: Export status (alphabetical)
+        - `export_type`: Source data type
+        - `format`: File format
+        - `duration`: Computed export duration (special handling for null values)
 
-        **Primary table:** `export_log`
-        **Related tables:** None
+        **Response Structure**:
+        - Returns paginated results with comprehensive metadata
+        - Each log includes computed fields: `duration`, `is_expired`, `has_file`
+        - Duration calculated as difference between completed_at and created_at
+        - File existence checked in real-time against actual file system
+        - Expiration based on 30-day retention policy
 
-        **Authentication Required**: Bearer token
+        **Use Cases**:
+        - Monitor export job status and progress tracking
+        - User activity auditing and export usage analytics
+        - Performance analysis with duration metrics
+        - Debugging failed exports with error message search
+        - Compliance reporting with complete audit trails
+        - File availability checking before download attempts
 
         **Rate Limit**: 100 requests per day
       security:
         - Auth0Bearer: []
       parameters:
-        - $ref: '#/components/parameters/limit'
         - $ref: '#/components/parameters/page'
-        - $ref: '#/components/parameters/search'
+        - $ref: '#/components/parameters/limit'
+        - $ref: '#/components/parameters/sort_by'
+        - $ref: '#/components/parameters/sort_order'
         - $ref: '#/components/parameters/export_logs_status'
+        - $ref: '#/components/parameters/export_logs_source'
         - $ref: '#/components/parameters/export_format'
         - $ref: '#/components/parameters/export_by'
         - $ref: '#/components/parameters/id_filter'
-        - $ref: '#/components/parameters/export_logs_export_type'
         - $ref: '#/components/parameters/export_logs_has_error'
         - $ref: '#/components/parameters/export_logs_min_duration'
         - $ref: '#/components/parameters/export_logs_max_duration'
         - $ref: '#/components/parameters/export_logs_start_date'
         - $ref: '#/components/parameters/export_logs_end_date'
+        - name: search_term
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Search within error messages (case-insensitive)
       responses:
         '200':
-          description: Successfully retrieved export logs
+          description: Export logs retrieved successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExportLogsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '429':
-          description: Rate limit exceeded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/RateLimit'
         '500':
           $ref: '#/components/responses/InternalServerError'
   /admin/export_logs/{log_id}:
@@ -1871,21 +1784,25 @@ paths:
         - Export Logs
       summary: Get export log details
       description: |
-        Retrieve detailed information about a specific export log by ID, including computed fields and real-time status.
+        Retrieve detailed information about a specific export log by ID with complete metadata and computed fields.
+        Returns the same data structure as list items but for a single export log.
 
-        **Computed Fields:**
-        - **duration**: Calculated time difference between created_at and completed_at
-        - **is_expired**: Whether the export file has expired (based on retention policy)
-        - **has_file**: Whether the export file currently exists on the server
+        **Data Included**:
+        - **Export Metadata**: ID, source, format, user attribution, creation/completion times
+        - **Filter Context**: Complete filter conditions that were applied during export
+        - **Result Counts**: Number of records exported by type (channels_count, feeds_count, items_count)
+        - **Status Information**: Current status, error messages (if any), file path
+        - **Computed Fields**:
+          - `duration`: Export execution time in seconds (null if not completed)
+          - `is_expired`: File expiration status based on 30-day retention policy
+          - `has_file`: Real-time file existence check on server filesystem
 
-        **Use Cases:**
-        - Get detailed status of a specific export job
-        - Check if export file is still available for download
-        - Monitor export progress and completion time
-        - Debug export issues with full context
-        - Verify export parameters and filters used
-
-        **Authentication Required**: Bearer token
+        **Use Cases**:
+        - Get comprehensive status of specific export operations
+        - Verify export parameters and filter conditions used
+        - Check file availability before initiating download
+        - Debug export issues with complete context and timing
+        - Audit trail verification for compliance reporting
 
         **Rate Limit**: 100 requests per day
       security:
@@ -1901,23 +1818,29 @@ paths:
           example: 25
       responses:
         '200':
-          description: Successfully retrieved export log
+          description: Export log retrieved successfully
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ExportLog'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
-        '429':
-          description: Rate limit exceeded
+          description: Export log not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: 'Export log not found (Status Code: 404)'
+        '429':
+          $ref: '#/components/responses/RateLimit'
         '500':
           $ref: '#/components/responses/InternalServerError'
   /admin/export_logs/{log_id}/download:
@@ -1927,29 +1850,36 @@ paths:
       summary: Download export file
       description: |
         Download the exported file for a specific export log in its original format (CSV or JSON).
+        Handles both local file serving and S3 URL redirects seamlessly.
 
-        **File Formats:**
-        - **CSV**: Comma-separated values with headers, suitable for spreadsheet applications
-        - **JSON**: Structured data format, suitable for programmatic processing
+        **File Handling**:
+        - **Local Files**: Served directly with proper headers and MIME types
+        - **S3 URLs**: Redirects to S3 URL for direct download
+        - **File Types**: Automatically detects CSV or JSON based on export format
+        - **Headers**: Sets Content-Disposition for proper filename and download behavior
 
-        **File Availability:**
-        - Only available for exports with `status: "success"`
-        - File must exist on server (`has_file: true`)
-        - File must not be expired (`is_expired: false`)
-        - For S3 URLs, redirects to the S3 URL
-        - For local files, serves the file directly
+        **File Availability Requirements**:
+        - Export must have `status: "success"` (only successful exports have files)
+        - File must exist on server or S3 (`has_file: true` in log response)
+        - File must not be expired (`is_expired: false` based on retention policy)
+        - Valid file_path must be present in export log
 
-        **Response Headers:**
-        - `Content-Type`: application/json or text/csv
-        - `Content-Disposition`: attachment with original filename
+        **Response Formats**:
+        - **CSV**: `text/csv` MIME type with comma-separated values and headers
+        - **JSON**: `application/json` MIME type with structured data
 
-        **Use Cases:**
-        - Download completed export data for analysis
-        - Integrate exported data into external systems
-        - Generate reports from exported data
-        - Backup export results for archival purposes
+        **Response Headers**:
+        - `Content-Type`: Automatically set based on export format
+        - `Content-Disposition`: attachment with original timestamped filename
+        - `Content-Length`: File size information
+        - Cache control headers to prevent unwanted caching
 
-        **Authentication Required**: Bearer token
+        **Use Cases**:
+        - Download completed export data for external analysis
+        - Integrate exported data into business intelligence tools
+        - Create data backups and archival copies
+        - Share export results with stakeholders
+        - Process exported data through custom applications
 
         **Rate Limit**: 50 requests per day
       security:
@@ -1965,45 +1895,10 @@ paths:
           example: 25
       responses:
         '200':
-          description: Successfully downloaded export file
-          content:
-            application/json:
-              schema:
-                type: object
-                description: |
-                  **JSON Format Response**
-
-                  When the export format is JSON, the response contains the exported data as a JSON object.
-                  The structure varies based on export_type:
-
-                  - **channels**: Array of channel objects with properties like id, title, description, etc.
-                  - **feeds**: Array of feed objects with properties like id, title, url, status, etc.
-                  - **items**: Array of item objects with properties like id, title, description, duration, etc.
-                properties:
-                  message:
-                    type: string
-                    example: File downloaded successfully
-            text/csv:
-              schema:
-                type: string
-                description: |
-                  **CSV Format Response**
-
-                  When the export format is CSV, the response contains the exported data as a CSV file.
-                  The CSV includes headers and data rows with the following structure:
-
-                  **Headers**: `id,export_by,export_type,status,format,file_path,created_at,completed_at,feeds_count,channels_count,items_count,error_message`
-
-                  **Example CSV Content**:
-                  ```
-                  id,export_by,export_type,status,format,file_path,created_at,completed_at,feeds_count,channels_count,items_count,error_message
-                  25,nicholasgriffin@example.com,feeds,success,csv,/app/exports/feeds_export_20250718_214804_e0b23bf0.csv,2025-07-18T19:48:04.595678,2025-07-18T21:42:04.595596,400,,,
-                  ```
-
-                  **Note**: Empty fields are represented as empty strings in CSV format.
+          description: Export file download successful
           headers:
             Content-Disposition:
-              description: File attachment header with appropriate filename
+              description: File attachment header with timestamped filename
               schema:
                 type: string
                 example: attachment; filename=feeds_export_20250718_214804_e0b23bf0.csv
@@ -2015,6 +1910,44 @@ paths:
                   - application/json
                   - text/csv
                 example: text/csv
+            Content-Length:
+              description: File size in bytes
+              schema:
+                type: integer
+                example: 187
+          content:
+            text/csv:
+              schema:
+                type: string
+                description: |
+                  CSV format with headers and data rows. Structure depends on source:
+                  - **channels**: Channel data with id, title, metadata columns
+                  - **feeds**: Feed data with id, url, parsing info columns
+                  - **items**: Item data with id, title, publication info columns
+                example: |
+                  id,url,parsing_priority
+                  1,https://example.com/feed1.xml,2
+                  2,https://example.com/feed2.xml,0
+            application/json:
+              schema:
+                type: array
+                description: |
+                  JSON array of objects. Structure depends on source and selected fields:
+                  - **channels**: Array of channel objects
+                  - **feeds**: Array of feed objects  
+                  - **items**: Array of item objects
+                items:
+                  type: object
+                  description: Object structure varies based on source and selected fields
+                example:
+                  - id: 1
+                    url: https://example.com/feed1.xml
+                    parsing_priority: 2
+                  - id: 2
+                    url: https://example.com/feed2.xml
+                    parsing_priority: 0
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2024,15 +1957,134 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: 'Export file not found or has expired (Status Code: 404)'
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: 'Export file not found or has expired (Status Code: 404)'
         '429':
-          description: Rate limit exceeded
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /admin/reports/custom:
+    post:
+      summary: Generate custom data export report
+      description: |
+        Creates a flexible custom export report with dynamic field selection, advanced filtering, and multiple output formats.
+        Generates timestamped export files and creates comprehensive audit logs for tracking and compliance.
+
+        **Data Sources**:
+        - **`channels`**: Export channel/podcast data from the channels table 
+        - **`feeds`**: Export RSS feed data from the feeds table 
+        - **`stats_items`**: Export item statistics from stats_aggregated_item table 
+        - **`stats_channels`**: Export channel statistics from stats_aggregated_channel table 
+
+        **Dynamic Field Selection**:
+        - Specify exactly which database columns to include in the export
+        - Field names must match actual database column names
+        - Supports any combination of available fields for flexible reporting
+
+        **Advanced Filtering System**:
+        - **`__gt`**: Greater than (e.g., `day_current_count__gt: 100`)
+        - **`__lt`**: Less than (e.g., `parsing_priority__lt: 3`)
+        - **`__gte`**: Greater than or equal to (e.g., `id__gte: 50`)
+        - **`__lte`**: Less than or equal to (e.g., `all_time_count__lte: 1000`)
+        - **`__eq`**: Equal to (default if no operator specified)
+        - **`__ne`**: Not equal to (e.g., `parsing_priority__ne: 0`)
+        - **`__ilike`**: Case-insensitive pattern matching (e.g., `title__ilike: "podcast"`)
+
+        **Export Formats**:
+        - **CSV**: Comma-separated values with headers, optimized for spreadsheet applications and data analysis
+        - **JSON**: Structured data with proper typing, ideal for programmatic processing and API integration
+
+        **File Management**:
+        - Creates timestamped files in format: `{source}_custom_export_{YYYYMMDD_HHMMSS}.{format}`
+        - Files stored in dedicated exports directory for organized access
+        - Automatic directory creation if needed
+
+        **Audit & Logging**:
+        - Creates detailed export log entries for compliance and tracking
+        - Includes user attribution, source data, filter conditions, and execution metadata
+        - Tracks export count and completion status
+
+        **Validation & Error Handling**:
+        - Comprehensive input validation with detailed error messages
+        - Required field enforcement (source, selected_fields, format, export_by)
+        - Email format validation for export attribution
+        - Source and format enum validation
+
+        **Use Cases**:
+        - Custom analytics reports with specific field combinations
+        - Filtered data exports for external analysis tools
+        - Bulk data migration and backup operations
+        - Compliance reporting with audit trails
+        - Integration data feeds for external systems
+
+        **Rate Limiting**: Not explicitly limited (handles potentially large datasets) 
+      tags:
+        - Reports
+      security:
+        - Auth0Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomReportRequest'
+      responses:
+        '200':
+          description: Export report generated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/CustomReportResponse'
+        '400':
+          description: Validation error - invalid parameters or missing required fields
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Validation Error
+                      status_code:
+                        type: integer
+                        example: 400
+                      errors:
+                        type: object
+                        additionalProperties:
+                          type: array
+                          items:
+                            type: string
+                        example:
+                          source:
+                            - 'Must be one of: channels, feeds, stats_items, stats_channels.'
+                          export_by:
+                            - Not a valid email address.
+                          selected_fields:
+                            - Missing data for required field.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Data integrity constraint violation (known issue with stats sources)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Data integrity constraint violation
+                      status_code:
+                        type: integer
+                        example: 409
         '500':
           $ref: '#/components/responses/InternalServerError'
 components:
@@ -2131,10 +2183,9 @@ components:
         type: string
         format: email
       description: Filter by user email who initiated the export
-    time_filter:
-      name: time_filter
+    view:
+      name: view
       in: query
-      description: Filter results by time window (e.g., daily, weekly, monthly)
       required: false
       schema:
         type: string
@@ -2142,6 +2193,9 @@ components:
           - daily
           - weekly
           - monthly
+          - all_time
+        default: monthly
+      description: Time period view for statistics data for response format options
     export_logs_status:
       name: status
       in: query
@@ -2155,8 +2209,8 @@ components:
           - skipped
           - expired
       description: Filter by export status
-    export_logs_export_type:
-      name: export_type
+    export_logs_source:
+      name: source
       in: query
       required: false
       schema:
@@ -2164,7 +2218,7 @@ components:
         enum:
           - channels
           - feeds
-      description: Filter by export type.
+      description: Filter by source of exported data.
     export_logs_has_error:
       name: has_error
       in: query
@@ -2209,6 +2263,33 @@ components:
         type: string
         format: date-time
       description: Filter by end date (created_at <= end_date). Must be used with start_date.
+    time_filter:
+      name: time_filter
+      in: query
+      description: Filter results by time window (e.g., daily, weekly, monthly)
+      required: false
+      schema:
+        type: string
+        enum:
+          - daily
+          - weekly
+          - monthly
+    flag_status:
+      name: flag_status
+      in: query
+      required: false
+      schema:
+        type: string
+        enum:
+          - active
+          - archived
+          - spam
+          - parse_error
+          - fetch_error
+          - always-parse
+          - pending-archive
+          - takedown
+      description: Filter by feed flag status
     id:
       $ref: '#/components/parameters/id_filter'
     format:
@@ -2225,33 +2306,9 @@ components:
       $ref: '#/components/parameters/export_logs_start_date'
     status:
       $ref: '#/components/parameters/export_logs_status'
-    export_type:
-      $ref: '#/components/parameters/export_logs_export_type'
+    source:
+      $ref: '#/components/parameters/export_logs_source'
   schemas:
-    LoginRequest:
-      type: object
-      properties:
-        id_token:
-          type: string
-          description: Firebase-issued ID token from frontend
-      required:
-        - id_token
-    LoginResponse:
-      type: object
-      properties:
-        access_token:
-          type: string
-          description: JWT access token
-        expires_in:
-          type: integer
-          description: Token expiration (seconds)
-        user:
-          type: object
-          properties:
-            email:
-              type: string
-            admin:
-              type: boolean
     FeedLog:
       type: object
       properties:
@@ -2890,6 +2947,1091 @@ components:
           type: integer
           description: Current day event count (flattened from stats[0].day_current_count)
           example: 131
+    StatsAggregatedChannel:
+      type: object
+      required:
+        - id
+        - channel_id
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for aggregated channel stats
+          example: 100
+        channel_id:
+          type: integer
+          description: Foreign key reference to channel table
+          example: 100
+        day_current_count:
+          type: integer
+          description: Current day's aggregated count
+          example: 117
+          default: 0
+        day_1_count:
+          type: integer
+          description: Previous day's count (1 day ago)
+          example: 105
+          default: 0
+        day_2_count:
+          type: integer
+          description: Count from 2 days ago
+          example: 93
+          default: 0
+        day_3_count:
+          type: integer
+          description: Count from 3 days ago
+          example: 81
+          default: 0
+        day_4_count:
+          type: integer
+          description: Count from 4 days ago
+          example: 70
+          default: 0
+        day_5_count:
+          type: integer
+          description: Count from 5 days ago
+          example: 58
+          default: 0
+        day_6_count:
+          type: integer
+          description: Count from 6 days ago
+          example: 46
+          default: 0
+        day_7_count:
+          type: integer
+          description: Count from 7 days ago
+          example: 35
+          default: 0
+        day_8_count:
+          type: integer
+          description: Count from 8 days ago
+          example: 23
+          default: 0
+        week_current_count:
+          type: integer
+          description: Current week's aggregated count
+          example: 605
+          default: 0
+        week_1_count:
+          type: integer
+          description: Previous week's count (1 week ago)
+          example: 363
+          default: 0
+        week_2_count:
+          type: integer
+          description: Count from 2 weeks ago
+          example: 302
+          default: 0
+        week_3_count:
+          type: integer
+          description: Count from 3 weeks ago
+          example: 242
+          default: 0
+        week_4_count:
+          type: integer
+          description: Count from 4 weeks ago
+          example: 181
+          default: 0
+        month_current_count:
+          type: integer
+          description: Current month's aggregated count
+          example: 1512
+          default: 0
+        month_1_count:
+          type: integer
+          description: Previous month's count (1 month ago)
+          example: 1088
+          default: 0
+        all_time_count:
+          type: integer
+          description: All-time cumulative count
+          example: 9636
+          default: 0
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of last update
+          example: '2024-01-01T10:00:00Z'
+    StatsChannelsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          description: Array of channel statistics based on the requested view mode
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/StatsAggregatedChannel'
+              - type: object
+                title: Daily View Channel Stats
+                required:
+                  - id
+                  - channel_id
+                properties:
+                  id:
+                    type: integer
+                    description: Stats record ID
+                    example: 100
+                  channel_id:
+                    type: integer
+                    description: Channel ID this stats record belongs to
+                    example: 100
+                  day_current_count:
+                    type: integer
+                    description: Current day count
+                    example: 117
+                  day_1_count:
+                    type: integer
+                    description: Previous day count
+                    example: 105
+                  day_2_count:
+                    type: integer
+                    description: 2 days ago count
+                    example: 93
+                  day_3_count:
+                    type: integer
+                    description: 3 days ago count
+                    example: 81
+                  day_4_count:
+                    type: integer
+                    description: 4 days ago count
+                    example: 70
+                  day_5_count:
+                    type: integer
+                    description: 5 days ago count
+                    example: 58
+                  day_6_count:
+                    type: integer
+                    description: 6 days ago count
+                    example: 46
+                  day_7_count:
+                    type: integer
+                    description: 7 days ago count
+                    example: 35
+                  day_8_count:
+                    type: integer
+                    description: 8 days ago count
+                    example: 23
+              - type: object
+                title: Weekly View Channel Stats
+                required:
+                  - id
+                  - channel_id
+                properties:
+                  id:
+                    type: integer
+                    description: Stats record ID
+                    example: 100
+                  channel_id:
+                    type: integer
+                    description: Channel ID this stats record belongs to
+                    example: 100
+                  week_current_count:
+                    type: integer
+                    description: Current week count
+                    example: 605
+                  week_1_count:
+                    type: integer
+                    description: Previous week count
+                    example: 363
+                  week_2_count:
+                    type: integer
+                    description: 2 weeks ago count
+                    example: 302
+                  week_3_count:
+                    type: integer
+                    description: 3 weeks ago count
+                    example: 242
+                  week_4_count:
+                    type: integer
+                    description: 4 weeks ago count
+                    example: 181
+        meta:
+          type: object
+          required:
+            - page
+            - per_page
+            - total
+            - view
+          properties:
+            page:
+              type: integer
+              description: Current page number
+              example: 1
+            per_page:
+              type: integer
+              description: Number of items per page
+              example: 5
+            total:
+              type: integer
+              description: Total number of channel statistics records
+              example: 100
+            view:
+              type: string
+              enum:
+                - daily
+                - weekly
+                - monthly
+                - all_time
+              description: |
+                The view mode that determines which fields are returned:
+                - `daily`: Returns only daily count fields (day_current_count through day_8_count)
+                - `weekly`: Returns only weekly count fields (week_current_count through week_4_count)
+                - `monthly`: Returns all fields including monthly and all-time counts (default)
+                - `all_time`: Same as monthly, returns all fields
+              example: monthly
+    ChannelStatsDetailed:
+      type: object
+      properties:
+        data:
+          type: object
+          required:
+            - id
+            - title
+            - channel_id
+          properties:
+            id:
+              type: integer
+              description: Channel ID
+              example: 100
+            id_text:
+              type: string
+              description: Text-based channel identifier
+              example: 113108bdf9ibrk
+            slug:
+              type: string
+              description: Channel URL slug
+              example: traditional-a
+            title:
+              type: string
+              description: Channel title
+              example: Both along call.
+            sortable_title:
+              type: string
+              description: Title for sorting purposes
+              example: man
+            podcast_guid:
+              type: string
+              format: uuid
+              description: Podcast GUID
+              example: 02e5d394-0730-4fa3-838f-a57c95d02c3e
+            podcast_index_id:
+              type: integer
+              description: Podcast Index ID
+              example: 73545
+            medium_id:
+              type: integer
+              description: Medium type ID
+              example: 9
+            has_podcast_index_value:
+              type: boolean
+              description: Whether channel has podcast index value
+              example: false
+            has_value_time_splits:
+              type: boolean
+              description: Whether channel has value time splits
+              example: false
+            feed_id:
+              type: integer
+              description: Associated feed ID
+              example: 100
+            feed_url:
+              type: string
+              format: uri
+              description: RSS feed URL
+              example: https://parker-richardson.com/under-girl-draw-18d62d/rss
+            medium:
+              type: object
+              properties:
+                value:
+                  type: string
+                  description: Medium type
+                  example: course
+            categories:
+              type: array
+              description: Channel categories
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 183
+                  display_name:
+                    type: string
+                    example: Islam
+                  mapping_key:
+                    type: string
+                    example: islam
+                  parent_id:
+                    type: integer
+                    example: 123
+                  slug:
+                    type: string
+                    example: islam
+            feed:
+              type: object
+              description: Complete feed information with recent logs
+              properties:
+                id:
+                  type: integer
+                  example: 100
+                url:
+                  type: string
+                  format: uri
+                  example: https://parker-richardson.com/under-girl-draw-18d62d/rss
+                container_id:
+                  type: string
+                  example: '2145893038'
+                flag_status:
+                  type: string
+                  example: active
+                is_parsing:
+                  type: boolean
+                  example: false
+                parsing_priority:
+                  type: integer
+                  example: 0
+                last_parsed_file_hash:
+                  type: string
+                  example: f567a29f6318c8bae80eb58b94bf4765
+                created_at:
+                  type: string
+                  format: date-time
+                  example: '2025-07-25T03:57:13.025060'
+                updated_at:
+                  type: string
+                  format: date-time
+                  example: '2025-07-25T04:26:13.025062'
+                channel_title:
+                  type: string
+                  example: Both along call.
+                channel_podcast_index_id:
+                  type: integer
+                  example: 73545
+                recent_logs:
+                  type: array
+                  description: Recent parsing logs
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 214
+                      feed_id:
+                        type: integer
+                        example: 100
+                      started_at:
+                        type: string
+                        format: date-time
+                        example: '2025-07-25T04:24:13.024940'
+                      finished_at:
+                        type: string
+                        format: date-time
+                        example: '2025-07-25T04:32:13.024940'
+                      http_status:
+                        type: integer
+                        example: 200
+                      is_success:
+                        type: boolean
+                        example: true
+                      parse_error_message:
+                        type: string
+                        example: Feed successfully parsed. 3 new items added, 1 item updated.
+                      parse_errors:
+                        type: integer
+                        example: 0
+                      parsed_by:
+                        type: string
+                        example: auth0|admin2
+            items:
+              type: array
+              description: Channel items/episodes
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 200
+                  id_text:
+                    type: string
+                    example: 113372axvsthjg
+                  channel_id:
+                    type: integer
+                    example: 100
+                  title:
+                    type: string
+                    example: Which forward party machine wife inside.
+                  slug:
+                    type: string
+                    example: air-finish-open-ten
+                  guid:
+                    type: string
+                    example: https://macdonald.net/categories/categorylogin.html
+                  guid_enclosure_url:
+                    type: string
+                    example: http://hunt.com/
+                  pub_date:
+                    type: string
+                    format: date-time
+                    example: '2024-12-16T14:23:03.383386+00:00'
+                  item_flag_status_id:
+                    type: integer
+                    example: 1
+                  flag_status:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      status:
+                        type: string
+                        example: active
+                      created_at:
+                        type: string
+                        format: date-time
+                        example: '2025-07-25T04:16:27.006613'
+                      updated_at:
+                        type: string
+                        format: date-time
+                        example: '2025-07-25T04:16:27.006613'
+            stats:
+              type: array
+              description: Aggregated channel statistics
+              items:
+                $ref: '#/components/schemas/StatsAggregatedChannel'
+            raw_event_count:
+              type: integer
+              description: Raw event count for the specified time range (computed field)
+              example: 1250
+    StatsAggregatedItem:
+      type: object
+      required:
+        - id
+        - item_id
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for aggregated item stats
+          example: 201
+        item_id:
+          type: integer
+          description: Foreign key reference to item table
+          example: 200
+        day_current_count:
+          type: integer
+          description: Current day's aggregated count
+          example: 45
+          default: 0
+        day_1_count:
+          type: integer
+          description: Previous day's count (1 day ago)
+          example: 42
+          default: 0
+        day_2_count:
+          type: integer
+          description: Count from 2 days ago
+          example: 38
+          default: 0
+        day_3_count:
+          type: integer
+          description: Count from 3 days ago
+          example: 35
+          default: 0
+        day_4_count:
+          type: integer
+          description: Count from 4 days ago
+          example: 31
+          default: 0
+        day_5_count:
+          type: integer
+          description: Count from 5 days ago
+          example: 28
+          default: 0
+        day_6_count:
+          type: integer
+          description: Count from 6 days ago
+          example: 24
+          default: 0
+        day_7_count:
+          type: integer
+          description: Count from 7 days ago
+          example: 21
+          default: 0
+        day_8_count:
+          type: integer
+          description: Count from 8 days ago
+          example: 18
+          default: 0
+        week_current_count:
+          type: integer
+          description: Current week's aggregated count
+          example: 264
+          default: 0
+        week_1_count:
+          type: integer
+          description: Previous week's count (1 week ago)
+          example: 198
+          default: 0
+        week_2_count:
+          type: integer
+          description: Count from 2 weeks ago
+          example: 156
+          default: 0
+        week_3_count:
+          type: integer
+          description: Count from 3 weeks ago
+          example: 132
+          default: 0
+        week_4_count:
+          type: integer
+          description: Count from 4 weeks ago
+          example: 108
+          default: 0
+        month_current_count:
+          type: integer
+          description: Current month's aggregated count
+          example: 858
+          default: 0
+        month_1_count:
+          type: integer
+          description: Previous month's count (1 month ago)
+          example: 654
+          default: 0
+        all_time_count:
+          type: integer
+          description: All-time cumulative count
+          example: 4276
+          default: 0
+    StatsTrackEventItem:
+      type: object
+      description: Schema for tracking item-level events
+      required:
+        - id
+        - account_guid
+        - item_id
+        - created_at
+        - event_type
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the event
+          example: 1
+        account_guid:
+          type: string
+          format: uuid
+          description: UUID of the account that triggered the event
+          example: 123e4567-e89b-12d3-a456-426614174000
+        item_id:
+          type: integer
+          description: ID of the item this event is for
+          example: 42
+        created_at:
+          type: string
+          format: date-time
+          description: When the event occurred
+          example: '2024-01-15T10:30:00Z'
+        event_type:
+          type: string
+          enum:
+            - listen
+            - view
+            - share
+            - download
+            - favorite
+            - unfavorite
+          description: Type of event
+          example: listen
+        metadata:
+          type: object
+          description: Additional metadata about the event (implementation specific)
+          additionalProperties: true
+    ItemStatsDetailed:
+      type: object
+      required:
+        - id
+        - title
+        - channel_id
+      properties:
+        id:
+          type: integer
+          description: Item ID
+          example: 200
+        id_text:
+          type: string
+          description: Text-based item identifier
+          example: 113372axvsthjg
+        title:
+          type: string
+          description: Item title
+          example: Which forward party machine wife inside.
+        slug:
+          type: string
+          description: Item URL slug
+          example: air-finish-open-ten
+        guid:
+          type: string
+          description: Item GUID from RSS feed
+          example: https://macdonald.net/categories/categorylogin.html
+        guid_enclosure_url:
+          type: string
+          description: Enclosure URL from RSS feed
+          example: http://hunt.com/
+        pub_date:
+          type: string
+          format: date-time
+          description: Publication date
+          example: '2024-12-16T14:23:03.383386+00:00'
+        channel_id:
+          type: integer
+          description: Associated channel ID
+          example: 100
+        channel:
+          type: integer
+          description: Channel reference (same as channel_id)
+          example: 100
+        item_flag_status_id:
+          type: integer
+          description: Item flag status ID
+          example: 1
+        flag_status:
+          type: integer
+          description: Flag status reference
+          example: 1
+        stats:
+          type: array
+          description: Aggregated statistics (array of stat IDs or objects)
+          items:
+            oneOf:
+              - type: integer
+                description: Statistics record ID
+                example: 201
+              - $ref: '#/components/schemas/StatsAggregatedItem'
+        events:
+          type: array
+          description: Tracking events for this item
+          items:
+            $ref: '#/components/schemas/StatsTrackEventItem'
+        raw_event_count:
+          type: integer
+          description: Raw event count for the specified time range (computed field)
+          example: 42
+    Item:
+      type: object
+      required:
+        - id
+        - id_text
+        - channel_id
+        - title
+        - item_flag_status_id
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the item
+          example: 1
+        id_text:
+          type: string
+          maxLength: 64
+          description: Short identifier used in public-facing URLs
+          example: 113258si1o5f8f
+        title:
+          type: string
+          maxLength: 255
+          description: Title of the item (usually the episode title)
+          example: Nature call range beautiful around over tell oil.
+        slug:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: URL-friendly slug for the item
+          example: episode-1-getting-started
+        channel_id:
+          type: integer
+          description: ID of the channel this item belongs to
+          example: 1
+        guid:
+          type: string
+          maxLength: 2083
+          nullable: true
+          description: RSS `<guid>` of the item (either guid or guid_enclosure_url must be present)
+          example: https://example.com/items/1
+        guid_enclosure_url:
+          type: string
+          maxLength: 2083
+          nullable: true
+          description: Enclosure URL from RSS used as fallback if GUID is missing (either guid or guid_enclosure_url must be present)
+          example: https://example.com/items/ep1.mp3
+        pub_date:
+          type: string
+          format: date-time
+          nullable: true
+          description: Publication date of the item
+          example: '2024-11-02T17:28:36.547572+00:00'
+        item_flag_status_id:
+          type: integer
+          description: Foreign key to the item_flag_status table
+          example: 1
+        flag_status:
+          type: object
+          description: Item flag status details
+          required:
+            - id
+            - status
+          properties:
+            id:
+              type: integer
+              description: Flag status ID
+              example: 1
+            status:
+              type: string
+              enum:
+                - active
+                - pending-archive
+                - archived
+                - pending-delete
+              description: |
+                Status assigned to an item to control lifecycle behavior.
+                - `active`: Item is live and visible
+                - `pending-archive`: Scheduled for archival  
+                - `archived`: No longer active but kept in the system
+                - `pending-delete`: Marked for removal
+              example: active
+            created_at:
+              type: string
+              format: date-time
+              description: Timestamp of creation
+              example: '2025-07-25T04:16:27.006613'
+            updated_at:
+              type: string
+              format: date-time
+              description: Timestamp of last update
+              example: '2025-07-25T04:16:27.006613'
+    ItemsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          description: Array of item objects
+          items:
+            $ref: '#/components/schemas/Item'
+        meta:
+          type: object
+          required:
+            - total
+            - limit
+            - offset
+          properties:
+            total:
+              type: integer
+              description: Total number of items matching the query
+              example: 250
+            limit:
+              type: integer
+              description: Number of items per page
+              example: 3
+            offset:
+              type: integer
+              description: Number of items skipped (calculated as (page-1) * limit)
+              example: 0
+    ExportLog:
+      type: object
+      required:
+        - id
+        - export_by
+        - source
+        - status
+        - format
+        - created_at
+        - is_expired
+        - has_file
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the export log
+          example: 25
+        export_by:
+          type: string
+          description: Email of the user who triggered the export or system
+          example: nicholasgriffin@example.com
+        source:
+          type: string
+          enum:
+            - channels
+            - feeds
+            - items
+          description: Source of data being exported
+          example: feeds
+        status:
+          type: string
+          enum:
+            - pending
+            - success
+            - failed
+            - skipped
+            - expired
+          description: |
+            Current status of the export operation:
+            - `pending`: Export is queued or in progress
+            - `success`: Export completed successfully
+            - `failed`: Export encountered an error
+            - `skipped`: Export was skipped (various reasons)
+            - `expired`: Export file has expired and been cleaned up
+          example: success
+        format:
+          type: string
+          enum:
+            - csv
+            - json
+          description: File format of the export
+          example: csv
+        file_path:
+          type: string
+          nullable: true
+          description: |
+            Path to the exported file on the server or S3 URL.
+            May be null for failed/skipped exports or expired files.
+          example: /app/exports/feeds_custom_export_20250725_060759.csv
+        filters:
+          type: object
+          nullable: true
+          description: |
+            JSON object containing the search and filter parameters that were used for the export.
+            Structure varies based on the source and specific filters applied.
+          example:
+            date_from: '2025-06-18T21:48:04.595674'
+            date_to: '2025-07-18T21:48:04.595676'
+            status: active
+        channels_count:
+          type: integer
+          nullable: true
+          description: Number of channels exported (only for channel exports)
+          example: 400
+        feeds_count:
+          type: integer
+          nullable: true
+          description: Number of feeds exported (only for feed exports)
+          example: 100
+        items_count:
+          type: integer
+          nullable: true
+          description: Number of items exported (only for item exports)
+          example: null
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the export was initiated
+          example: '2025-07-18T19:48:04.595678'
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            Timestamp when the export was completed.
+            Will be null for pending exports or exports that never completed.
+          example: '2025-07-25T06:07:59.015563'
+        error_message:
+          type: string
+          nullable: true
+          description: Error message if the export failed (only present for failed exports)
+          example: null
+        duration:
+          type: number
+          nullable: true
+          description: |
+            Duration of the export operation in seconds (computed field).
+            Calculated as the difference between completed_at and created_at.
+            Will be null if export hasn't completed.
+          example: 0.000004
+        is_expired:
+          type: boolean
+          description: |
+            Whether the export file has expired based on retention policy (computed field).
+            Files older than 30 days are considered expired.
+          example: false
+        has_file:
+          type: boolean
+          description: |
+            Whether the export file currently exists on the server (computed field).
+            Checks actual file existence, not just file_path presence.
+          example: true
+    ExportLogsResponse:
+      type: object
+      required:
+        - logs
+        - page
+        - limit
+        - total_items
+        - total_pages
+        - has_next
+        - has_prev
+      properties:
+        logs:
+          type: array
+          description: Array of export log objects
+          items:
+            $ref: '#/components/schemas/ExportLog'
+        page:
+          type: integer
+          description: Current page number
+          minimum: 1
+          example: 1
+        limit:
+          type: integer
+          description: Number of items per page
+          minimum: 1
+          maximum: 100
+          example: 3
+        total_items:
+          type: integer
+          description: Total number of export logs matching the query
+          minimum: 0
+          example: 42
+        total_pages:
+          type: integer
+          description: Total number of pages available
+          minimum: 1
+          example: 14
+        has_next:
+          type: boolean
+          description: Whether there are more pages after the current page
+          example: true
+        has_prev:
+          type: boolean
+          description: Whether there are pages before the current page
+          example: false
+    CustomReportRequest:
+      type: object
+      required:
+        - source
+        - selected_fields
+        - format
+        - export_by
+      properties:
+        source:
+          type: string
+          enum:
+            - channels
+            - feeds
+            - stats_items
+            - stats_channels
+          description: |
+            Data source table to export from:
+            - `channels`: Export channel data from the channels table
+            - `feeds`: Export feed data from the feeds table  
+            - `stats_items`: Export item statistics from stats_aggregated_item table (currently has issues)
+            - `stats_channels`: Export channel statistics from stats_aggregated_channel table (currently has issues)
+          example: channels
+        selected_fields:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          description: |
+            List of field names to include in the export. Must correspond to actual database column names.
+
+            **Available fields by source:**
+            - **channels**: id, title, slug, description, podcast_index_id, podcast_guid, medium_id, etc.
+            - **feeds**: id, url, parsing_priority, flag_status_id, created_at, updated_at, etc.
+            - **stats_items**: id, item_id, day_current_count, week_current_count, month_current_count, all_time_count, etc.
+            - **stats_channels**: id, channel_id, day_current_count, week_current_count, month_current_count, all_time_count, etc.
+          example:
+            - id
+            - title
+            - description
+        filters:
+          type: object
+          additionalProperties: true
+          description: |
+            Filter conditions to apply to the data. Uses field names with optional operators.
+
+            **Supported operators:**
+            - `__gt`: Greater than (e.g., `day_current_count__gt: 100`)
+            - `__lt`: Less than
+            - `__gte`: Greater than or equal to
+            - `__lte`: Less than or equal to
+            - `__eq`: Equal to (default if no operator specified)
+            - `__ne`: Not equal to
+            - `__ilike`: Case-insensitive pattern matching (for text fields)
+
+            **Examples:**
+            - `{"id__gte": 1, "title__ilike": "podcast"}` - ID >= 1 AND title contains "podcast"
+            - `{"parsing_priority__ne": 0}` - parsing_priority not equal to 0
+            - `{"created_at__gte": "2024-01-01"}` - created after Jan 1, 2024
+          example:
+            id__gte: 1
+            title__ilike: podcast
+        format:
+          type: string
+          enum:
+            - csv
+            - json
+          description: |
+            Export file format:
+            - `csv`: Comma-separated values with headers, suitable for spreadsheet applications
+            - `json`: Structured data format with proper typing, suitable for programmatic processing
+          example: csv
+        export_by:
+          type: string
+          format: email
+          description: Email address of the user requesting the export (for audit logging)
+          example: admin@example.com
+    CustomReportResponse:
+      type: object
+      required:
+        - message
+        - log_id
+        - filename
+        - count
+      properties:
+        message:
+          type: string
+          description: Success message confirming the export completion
+          example: Report exported successfully
+        log_id:
+          type: integer
+          description: ID of the export log entry created for tracking and audit purposes
+          example: 123
+        filename:
+          type: string
+          description: Generated filename for the exported file (includes timestamp)
+          pattern: ^[a-z_]+_custom_export_\d{8}_\d{6}\.(csv|json)$
+          example: channels_custom_export_20250725_060644.json
+        count:
+          type: integer
+          description: Number of records successfully exported
+          minimum: 0
+          example: 150
+    ItemFlagStatus:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the item flag status
+          example: 2
+        status:
+          type: string
+          enum:
+            - active
+            - pending-archive
+            - archived
+            - pending-delete
+          description: |
+            Status assigned to an item to control lifecycle behavior.
+            - `active`: Item is live and visible
+            - `pending-archive`: Scheduled for archival
+            - `archived`: No longer active but kept in the system
+            - `pending-delete`: Marked for removal
+          example: archived
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp of creation
+          example: '2024-01-01T12:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp of last update
+          example: '2024-01-05T09:30:00Z'
+      required:
+        - id
+        - status
     StatsChannel:
       type: object
       properties:
@@ -2917,6 +4059,34 @@ components:
         - channel_id
         - podcast_index_id
         - title
+        - total_listens
+    StatsItem:
+      type: object
+      properties:
+        item_id:
+          type: integer
+          description: Unique ID of the episode
+        title:
+          type: string
+          description: Episode title
+        channel_id:
+          type: integer
+          description: Parent channel ID
+        total_listens:
+          type: integer
+          description: Total listens during the selected time period
+        start_date:
+          type: string
+          format: date
+          description: Start date of the aggregation window (ISO 8601)
+        end_date:
+          type: string
+          format: date
+          description: End date of the aggregation window (ISO 8601)
+      required:
+        - item_id
+        - title
+        - channel_id
         - total_listens
     StatsTrackEventChannel:
       type: object
@@ -2962,540 +4132,6 @@ components:
           example:
             duration: 300
             source: web_player
-    StatsAggregatedChannel:
-      type: object
-      required:
-        - id
-        - channel_id
-      properties:
-        id:
-          type: integer
-          description: Unique identifier for aggregated channel stats
-          example: 1
-        channel_id:
-          type: integer
-          description: Foreign key reference to channel table
-          example: 123
-        day_current_count:
-          type: integer
-          description: Current day's aggregated count
-          example: 150
-          default: 0
-        day_1_count:
-          type: integer
-          description: Previous day's count
-          example: 120
-          default: 0
-        day_2_count:
-          type: integer
-          description: Count from 2 days ago
-          example: 110
-          default: 0
-        day_3_count:
-          type: integer
-          description: Count from 3 days ago
-          example: 95
-          default: 0
-        day_4_count:
-          type: integer
-          description: Count from 4 days ago
-          example: 105
-          default: 0
-        day_5_count:
-          type: integer
-          description: Count from 5 days ago
-          example: 115
-          default: 0
-        day_6_count:
-          type: integer
-          description: Count from 6 days ago
-          example: 125
-          default: 0
-        day_7_count:
-          type: integer
-          description: Count from 7 days ago
-          example: 130
-          default: 0
-        day_8_count:
-          type: integer
-          description: Count from 8 days ago
-          example: 140
-          default: 0
-        week_current_count:
-          type: integer
-          description: Current week's aggregated count
-          example: 800
-          default: 0
-        week_1_count:
-          type: integer
-          description: Previous week's count
-          example: 750
-          default: 0
-        week_2_count:
-          type: integer
-          description: Count from 2 weeks ago
-          example: 720
-          default: 0
-        week_3_count:
-          type: integer
-          description: Count from 3 weeks ago
-          example: 680
-          default: 0
-        week_4_count:
-          type: integer
-          description: Count from 4 weeks ago
-          example: 650
-          default: 0
-        month_current_count:
-          type: integer
-          description: Current month's aggregated count
-          example: 3200
-          default: 0
-        month_1_count:
-          type: integer
-          description: Previous month's count
-          example: 2800
-          default: 0
-        all_time_count:
-          type: integer
-          description: All-time aggregated count
-          example: 125000
-          default: 0
-        updated_at:
-          type: string
-          format: date-time
-          description: Timestamp of last update
-          example: '2024-01-01T10:00:00Z'
-    StatsItem:
-      type: object
-      properties:
-        item_id:
-          type: integer
-          description: Unique ID of the episode
-        title:
-          type: string
-          description: Episode title
-        channel_id:
-          type: integer
-          description: Parent channel ID
-        total_listens:
-          type: integer
-          description: Total listens during the selected time period
-        start_date:
-          type: string
-          format: date
-          description: Start date of the aggregation window (ISO 8601)
-        end_date:
-          type: string
-          format: date
-          description: End date of the aggregation window (ISO 8601)
-      required:
-        - item_id
-        - title
-        - channel_id
-        - total_listens
-    ItemFlagStatus:
-      type: object
-      properties:
-        id:
-          type: integer
-          description: Unique identifier for the item flag status
-          example: 2
-        status:
-          type: string
-          enum:
-            - active
-            - pending-archive
-            - archived
-            - pending-delete
-          description: |
-            Status assigned to an item to control lifecycle behavior.
-            - `active`: Item is live and visible
-            - `pending-archive`: Scheduled for archival
-            - `archived`: No longer active but kept in the system
-            - `pending-delete`: Marked for removal
-          example: archived
-        created_at:
-          type: string
-          format: date-time
-          description: Timestamp of creation
-          example: '2024-01-01T12:00:00Z'
-        updated_at:
-          type: string
-          format: date-time
-          description: Timestamp of last update
-          example: '2024-01-05T09:30:00Z'
-      required:
-        - id
-        - status
-    StatsAggregatedItem:
-      type: object
-      required:
-        - id
-        - item_id
-      properties:
-        id:
-          type: integer
-          description: Unique identifier for the aggregated stats
-          example: 1
-        item_id:
-          type: integer
-          description: ID of the item these stats are for
-          example: 42
-        day_current_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for current day
-          example: 150
-        day_1_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for day 1
-          example: 145
-        day_2_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for day 2
-          example: 140
-        day_3_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for day 3
-          example: 135
-        day_4_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for day 4
-          example: 130
-        day_5_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for day 5
-          example: 125
-        day_6_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for day 6
-          example: 120
-        day_7_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for day 7
-          example: 115
-        day_8_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for day 8
-          example: 110
-        week_current_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for current week
-          example: 1000
-        week_1_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for week 1
-          example: 950
-        week_2_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for week 2
-          example: 900
-        week_3_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for week 3
-          example: 850
-        week_4_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for week 4
-          example: 800
-        month_current_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for current month
-          example: 4000
-        month_1_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Event count for month 1
-          example: 3800
-        all_time_count:
-          type: integer
-          minimum: 0
-          default: 0
-          description: Total event count since tracking began
-          example: 25000
-        updated_at:
-          type: string
-          format: date-time
-          description: Timestamp of last update
-          example: '2024-01-01T10:00:00Z'
-    StatsTrackEventItem:
-      type: object
-      description: Schema for tracking item-level events
-      required:
-        - id
-        - account_guid
-        - item_id
-        - created_at
-        - event_type
-      properties:
-        id:
-          type: integer
-          description: Unique identifier for the event
-          example: 1
-        account_guid:
-          type: string
-          format: uuid
-          description: UUID of the account that triggered the event
-          example: 123e4567-e89b-12d3-a456-426614174000
-        item_id:
-          type: integer
-          description: ID of the item this event is for
-          example: 42
-        created_at:
-          type: string
-          format: date-time
-          description: When the event occurred
-          example: '2024-01-15T10:30:00Z'
-        event_type:
-          type: string
-          enum:
-            - listen
-            - view
-            - share
-            - download
-            - favorite
-            - unfavorite
-          description: Type of event
-          example: listen
-        metadata:
-          type: object
-          description: Additional metadata about the event (implementation specific)
-          additionalProperties: true
-    Item:
-      type: object
-      required:
-        - id
-        - id_text
-        - channel_id
-        - title
-        - item_flag_status_id
-      properties:
-        id:
-          type: integer
-          description: Unique identifier for the item
-          example: 1
-        id_text:
-          type: string
-          maxLength: 64
-          description: Short identifier used in public-facing URLs
-          example: ep_2a3f9c
-        slug:
-          type: string
-          maxLength: 100
-          nullable: true
-          description: URL-friendly slug for the item
-          example: episode-1-getting-started
-        channel_id:
-          type: integer
-          description: ID of the channel this item belongs to
-          example: 42
-        guid:
-          type: string
-          maxLength: 2083
-          nullable: true
-          description: RSS `<guid>` of the item (either guid or guid_enclosure_url must be present)
-          example: https://example.com/items/1
-        guid_enclosure_url:
-          type: string
-          maxLength: 2083
-          nullable: true
-          description: Enclosure URL from RSS used as fallback if GUID is missing (either guid or guid_enclosure_url must be present)
-          example: https://example.com/items/ep1.mp3
-        pub_date:
-          type: string
-          format: date-time
-          nullable: true
-          description: Publication date of the item
-          example: '2024-01-15T10:30:00Z'
-        title:
-          type: string
-          maxLength: 255
-          description: Title of the item (usually the episode title)
-          example: 'Episode 1: Getting Started'
-        item_flag_status_id:
-          type: integer
-          description: Foreign key to the item_flag_status table
-          example: 1
-        flag_status:
-          $ref: '#/components/schemas/ItemFlagStatus'
-        stats:
-          $ref: '#/components/schemas/StatsAggregatedItem'
-        events:
-          type: array
-          items:
-            $ref: '#/components/schemas/StatsTrackEventItem'
-          description: Item tracking events
-    ExportLog:
-      type: object
-      properties:
-        id:
-          type: integer
-          description: Unique identifier for the export log
-          example: 25
-        export_by:
-          type: string
-          description: Email of the user who triggered the export or system
-          example: nicholasgriffin@example.com
-        export_type:
-          type: string
-          enum:
-            - channels
-            - feeds
-            - items
-          description: Type of data being exported
-          example: feeds
-        status:
-          type: string
-          enum:
-            - pending
-            - success
-            - failed
-            - skipped
-            - expired
-          description: Current status of the export operation
-          example: success
-        format:
-          type: string
-          enum:
-            - csv
-            - json
-          description: File format of the export
-          example: csv
-        file_path:
-          type: string
-          nullable: true
-          description: Path to the exported file on the server
-          example: /app/exports/feeds_export_20250718_214804_e0b23bf0.csv
-        filters:
-          type: object
-          nullable: true
-          description: JSON object containing search and filter parameters used for the export
-          example:
-            date_from: '2025-06-18T21:48:04.595674'
-            date_to: '2025-07-18T21:48:04.595676'
-            status: active
-        channels_count:
-          type: integer
-          nullable: true
-          description: Number of channels exported (only for channel exports)
-          example: 400
-        feeds_count:
-          type: integer
-          nullable: true
-          description: Number of feeds exported (only for feed exports)
-          example: 100
-        items_count:
-          type: integer
-          nullable: true
-          description: Number of items exported (only for item exports)
-        created_at:
-          type: string
-          format: date-time
-          description: Timestamp when the export was initiated
-          example: '2025-07-18T19:48:04.595678'
-        completed_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: Timestamp when the export was completed
-          example: '2025-07-18T21:42:04.595596'
-        error_message:
-          type: string
-          nullable: true
-          description: Error message if the export failed
-        duration:
-          type: number
-          nullable: true
-          description: Duration of the export operation in seconds
-          example: 6839.999918
-        is_expired:
-          type: boolean
-          description: Whether the export file has expired
-          example: false
-        has_file:
-          type: boolean
-          description: Whether the export file exists on the server
-          example: false
-      required:
-        - id
-        - export_by
-        - export_type
-        - status
-        - format
-        - created_at
-        - is_expired
-        - has_file
-    ExportLogsResponse:
-      type: object
-      properties:
-        logs:
-          type: array
-          items:
-            $ref: '#/components/schemas/ExportLog'
-          description: Array of export logs
-        page:
-          type: integer
-          description: Current page number
-          example: 1
-        limit:
-          type: integer
-          description: Number of items per page
-          example: 10
-        total_items:
-          type: integer
-          description: Total number of export logs
-          example: 32
-        total_pages:
-          type: integer
-          description: Total number of pages
-          example: 4
-        has_next:
-          type: boolean
-          description: Whether there is a next page
-          example: true
-        has_prev:
-          type: boolean
-          description: Whether there is a previous page
-          example: false
-      required:
-        - logs
-        - page
-        - limit
-        - total_items
-        - total_pages
-        - has_next
-        - has_prev
   responses:
     BadRequest:
       description: Bad request (400)

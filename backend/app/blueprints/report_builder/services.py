@@ -6,8 +6,8 @@ from app.blueprints.report_builder.query_builder import build_dynamic_query
 from app.extensions import db
 
 def export_custom_report(user_email, source, fields, filters, export_format):
-    tiemstamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
-    filename = f"{source}_custom_export_{tiemstamp}.{export_format}"
+    timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+    filename = f"{source}_custom_export_{timestamp}.{export_format}"
     export_dir = os.path.join(os.getcwd(), "exports")
     os.makedirs(export_dir, exist_ok=True)
     full_path = os.path.join(export_dir, filename)
@@ -23,7 +23,8 @@ def export_custom_report(user_email, source, fields, filters, export_format):
             for row in rows:
                 writer.writerow({f: getattr(row, f, "") for f in fields})
         elif export_format == "json":
-            json.dump([{f: getattr(row, f, "") for f in fields} for row in rows], f, indent=2)
+            #json.dump([{f: getattr(row, f, "") for f in fields} for row in rows], f, indent=2)
+            json.dump([{f: getattr(row, f, "") for f in fields} for row in rows], f, indent=2, default=str)
     
     success, error = safe_write_file(full_path, write_file)
     if not success:

@@ -6,113 +6,117 @@ properties:
   id:
     type: integer
     description: Unique identifier for aggregated channel stats
-    example: 1
+    example: 100
   
   channel_id:
     type: integer
     description: Foreign key reference to channel table
-    example: 123
+    example: 100
   
+  # Daily counts (current + 8 historical days)
   day_current_count:
     type: integer
     description: Current day's aggregated count
-    example: 150
+    example: 117
     default: 0
   
   day_1_count:
     type: integer
-    description: Previous day's count
-    example: 120
+    description: Previous day's count (1 day ago)
+    example: 105
     default: 0
   
   day_2_count:
     type: integer
     description: Count from 2 days ago
-    example: 110
+    example: 93
     default: 0
   
   day_3_count:
     type: integer
     description: Count from 3 days ago
-    example: 95
+    example: 81
     default: 0
   
   day_4_count:
     type: integer
     description: Count from 4 days ago
-    example: 105
+    example: 70
     default: 0
   
   day_5_count:
     type: integer
     description: Count from 5 days ago
-    example: 115
+    example: 58
     default: 0
   
   day_6_count:
     type: integer
     description: Count from 6 days ago
-    example: 125
+    example: 46
     default: 0
   
   day_7_count:
     type: integer
     description: Count from 7 days ago
-    example: 130
+    example: 35
     default: 0
-  
+    
   day_8_count:
     type: integer
     description: Count from 8 days ago
-    example: 140
+    example: 23
     default: 0
-  
+
+  # Weekly counts (current + 4 historical weeks)
   week_current_count:
     type: integer
     description: Current week's aggregated count
-    example: 800
+    example: 605
     default: 0
-  
+
   week_1_count:
     type: integer
-    description: Previous week's count
-    example: 750
+    description: Previous week's count (1 week ago)
+    example: 363
     default: 0
-  
+
   week_2_count:
     type: integer
     description: Count from 2 weeks ago
-    example: 720
+    example: 302
     default: 0
-  
+
   week_3_count:
     type: integer
     description: Count from 3 weeks ago
-    example: 680
+    example: 242
     default: 0
-  
+
   week_4_count:
     type: integer
     description: Count from 4 weeks ago
-    example: 650
+    example: 181
     default: 0
-  
+
+  # Monthly counts (current + 1 historical month)
   month_current_count:
     type: integer
     description: Current month's aggregated count
-    example: 3200
+    example: 1512
     default: 0
-  
+
   month_1_count:
     type: integer
-    description: Previous month's count
-    example: 2800
+    description: Previous month's count (1 month ago)
+    example: 1088
     default: 0
-  
+
+  # All time total
   all_time_count:
     type: integer
-    description: All-time aggregated count
-    example: 125000
+    description: All-time cumulative count
+    example: 9636
     default: 0
   
   updated_at:

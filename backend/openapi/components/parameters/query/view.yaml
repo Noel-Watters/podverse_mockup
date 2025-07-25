@@ -1,0 +1,8 @@
+name: view
+in: query
+required: false
+schema:
+  type: string
+  enum: [daily, weekly, monthly, all_time]
+  default: monthly
+description: Time period view for statistics data for response format options

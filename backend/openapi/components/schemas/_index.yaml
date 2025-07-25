@@ -14,18 +14,30 @@ ChannelDetails:
   $ref: "./ChannelDetails.yaml"
 ChannelExport:
   $ref: "./ChannelExport.yaml"
+ChannelStatsDetailed:
+  $ref: "./ChannelStatsDetailed.yaml"
+CustomReportRequest:
+  $ref: "./CustomReportRequest.yaml"
+CustomReportResponse:
+  $ref: "./CustomReportResponse.yaml"
 ExportLog:
   $ref: "./ExportLog.yaml"
 ExportLogsResponse:
   $ref: "./ExportLogsResponse.yaml"
 Item:
   $ref: "./Item.yaml"
+ItemsResponse:
+  $ref: "./ItemsResponse.yaml"
 ItemFlagStatus:
   $ref: "./ItemFlagStatus.yaml"
+ItemStatsDetailed:
+  $ref: "./ItemStatsDetailed.yaml"
 StatsChannel:
   $ref: "./StatsChannel.yaml"
 StatsItem:
   $ref: "./StatsItem.yaml"
+StatsChannelsResponse:
+  $ref: "./StatsChannelsResponse.yaml"
 StatsAggregatedChannel:
   $ref: "./StatsAggregatedChannel.yaml"
 StatsAggregatedItem:

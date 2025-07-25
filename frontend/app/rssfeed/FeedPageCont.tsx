@@ -11,7 +11,7 @@ import { fetchFeeds, resetFeeds, setFilters, setSearchTerm } from "@/redux/feedS
 import type { AppDispatch, RootState } from "@/redux/store";
 import { fetchChannelsByFeedIds } from "@/redux/batchChannelSlice";
 import { useDebounce } from "@/hooks/useDebounce";
-import { FEED_STATUS_MAP } from "@/types/feed";   
+import { FEED_STATUS_MAP } from "@/types/feed"; 
 
 export default function FeedsPageContent() {
   const dispatch = useDispatch<AppDispatch>();
@@ -48,6 +48,7 @@ const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     dispatch(fetchFeeds());
   }
 };
+
 
 
 

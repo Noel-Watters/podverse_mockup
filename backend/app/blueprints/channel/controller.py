@@ -49,13 +49,14 @@ def export_channels():
     Export channels as CSV with optional filtering and sorting.
     Reuses the same filtering logic as list_channels but without pagination.
     """
+    log = None
     try:
         # Get export format and user
         format, export_by = get_export_format_and_user()
 
         # Create export log
         log = create_export_log_with_filters(
-            export_type="channels",
+            source="channels",
             filters=request.args.to_dict(),
             export_by=export_by
         )
@@ -144,6 +145,7 @@ def get_channels_by_feed():
         }
         
         logger.info(f"Successfully retrieved {len(channels)} channels for {len(feed_ids)} feed IDs")
+        return jsonify(result)
         return jsonify(result)
         
     except ValidationError as e:

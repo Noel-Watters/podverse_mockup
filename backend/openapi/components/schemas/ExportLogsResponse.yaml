@@ -1,34 +1,4 @@
 type: object
-properties:
-  logs:
-    type: array
-    items:
-      $ref: './ExportLog.yaml'
-    description: Array of export logs
-  page:
-    type: integer
-    description: Current page number
-    example: 1
-  limit:
-    type: integer
-    description: Number of items per page
-    example: 10
-  total_items:
-    type: integer
-    description: Total number of export logs
-    example: 32
-  total_pages:
-    type: integer
-    description: Total number of pages
-    example: 4
-  has_next:
-    type: boolean
-    description: Whether there is a next page
-    example: true
-  has_prev:
-    type: boolean
-    description: Whether there is a previous page
-    example: false
 required:
   - logs
   - page
@@ -36,4 +6,46 @@ required:
   - total_items
   - total_pages
   - has_next
-  - has_prev 
+  - has_prev
+properties:
+  logs:
+    type: array
+    description: Array of export log objects
+    items:
+      $ref: "./ExportLog.yaml"
+  
+  # Pagination metadata
+  page:
+    type: integer
+    description: Current page number
+    minimum: 1
+    example: 1
+  
+  limit:
+    type: integer
+    description: Number of items per page
+    minimum: 1
+    maximum: 100
+    example: 3
+  
+  total_items:
+    type: integer
+    description: Total number of export logs matching the query
+    minimum: 0
+    example: 42
+  
+  total_pages:
+    type: integer
+    description: Total number of pages available
+    minimum: 1
+    example: 14
+  
+  has_next:
+    type: boolean
+    description: Whether there are more pages after the current page
+    example: true
+  
+  has_prev:
+    type: boolean
+    description: Whether there are pages before the current page
+    example: false 

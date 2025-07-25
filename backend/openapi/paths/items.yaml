@@ -1,18 +1,48 @@
-# i might add POST item/{id} reparsse endpoint
-
 /items:
   get:
-    summary: List all items
+    summary: List all items (episodes)
     description: |
-      Returns a paginated list of items (episodes) with optional filters such as
-      channel ID and publish date range. Also supports search and sorting.
-
-      **Primary table:** `item`
-
-      **Related tables:**
-      - `channel`: used to filter items by parent channel (`channel_id`)
-      - `item_flag_status`: used to determine current flag/status of the item
-      - `stats_aggregated_item`: optionally joined to provide aggregated stats like play/download count
+      Returns a paginated list of podcast episodes with search, filtering, and sorting capabilities.
+      Provides comprehensive access to episode metadata and status information.
+      
+      **Data Sources**: 
+      - Primary table: `item` (episode/content metadata)
+      - Joined tables: `channel` (for channel relationship), `item_flag_status` (for status details)
+      
+      **Search Capabilities**: 
+      - Searches across item titles using case-insensitive pattern matching
+      - No description search in current implementation
+      
+      **Sorting Options**: 
+      - `id`: Sort by item identifier (default)
+      - `title`: Sort by episode title
+      - Supports both ascending and descending order
+      
+      **Filtering Options**:
+      - Text search across item titles
+      - Publication date range filtering (planned but not implemented)
+      - Flag status filtering (planned but not implemented) 
+      - Channel-based filtering (planned but not implemented)
+      
+      **Response Structure**:
+      - Returns `data` array containing item objects
+      - Each item includes nested `flag_status` object with full details
+      - Meta object includes total count and pagination information
+      - Uses limit/offset pagination model
+      
+      **Pagination**: 
+      - `page`: Page number starting from 1
+      - `limit`: Number of items per page (replaces per_page)
+      - Response includes total count and calculated offset
+      
+      **Use Cases**:
+      - Content management and episode browsing
+      - Search and discovery of podcast episodes
+      - Bulk episode status management
+      - Analytics preparation and reporting
+      
+      **Rate Limiting**: 30 requests per minute
+      
     tags:
       - Items
     security:
@@ -21,87 +51,47 @@
       - $ref: "../components/parameters/query/limit.yaml"
       - $ref: "../components/parameters/query/page.yaml"
       - $ref: "../components/parameters/query/search.yaml"
-      - name: channel_id
-        in: query
-        schema:
-          type: integer
-        description: Filter items by their parent channel's ID
-      - name: status
-        in: query
-        schema:
-          type: string
-          enum: [active, pending-archive, archived, pending-delete]
-        description: Filter items by their flag status (`item_flag_status.status`)
-      - name: published_after
-        in: query
-        schema:
-          type: string
-          format: date-time
-        description: Filter items published after this date
-      - name: published_before
-        in: query
-        schema:
-          type: string
-          format: date-time
-        description: Filter items published before this date
-      - name: sort_by
-        in: query
-        schema:
-          type: string
-          enum: [pub_date, title, id]
-        description: Field to sort results by (supports `pub_date`, `title`, or `id`)
-      - name: sort_order
-        in: query
-        schema:
-          type: string
-          enum: [asc, desc]
-          default: desc
-        description: Sort order (ascending or descending)
+      - $ref: "../components/parameters/query/sort_by.yaml"
+      - $ref: "../components/parameters/query/sort_order.yaml"
     responses:
       '200':
-        description: List of items returned
+        description: Items retrieved successfully
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                data:
-                  type: array
-                  items:
-                    $ref: "../components/schemas/Item.yaml"
-                meta:
-                  type: object
-                  properties:
-                    total:
-                      type: integer
-                      description: Total number of matching items
-                    limit:
-                      type: integer
-                      description: Limit applied to query
-                    offset:
-                      type: integer
-                      description: Offset applied to query
+              $ref: "../components/schemas/ItemsResponse.yaml"
       '400':
-        description: Invalid request parameters
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/Error.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
+        $ref: "../components/responses/BadRequest.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml"
 
 /items/{id}:
   get:
     summary: Get item by ID
     description: |
-      Retrieves a specific item (episode) by its ID.
-
-      **Primary table:** `item`
-
-      **Related tables:**
-      - `channel`: provides information about the parent channel
-      - `item_flag_status`: provides the current flag status
-      - `stats_aggregated_item`: optionally used to return usage statistics for the item
+      Retrieves detailed information for a specific podcast episode/item by its ID.
+      Returns the same data structure as the list endpoint but for a single item.
+      
+      **Data Sources**:
+      - Primary table: `item` (episode metadata)
+      - Related tables: `item_flag_status` (for detailed status information)
+      - Eager loading: channel, stats, flag_status relationships
+      
+      **Response Includes**:
+      - **Complete Item Info**: ID, title, slug, publication date, GUIDs
+      - **Channel Relationship**: Channel ID and reference
+      - **Flag Status**: Full flag status object with lifecycle information
+      - **Content Metadata**: Publication date, RSS identifiers, URL slug
+      
+      **Use Cases**:
+      - Individual episode management and editing
+      - Content details and metadata review
+      - Episode status management
+      - API integration for episode-specific operations
+      
+      **Rate Limiting**: 60 requests per minute 
     tags:
       - Items
     security:
@@ -112,123 +102,23 @@
         required: true
         schema:
           type: integer
-        description: Unique ID of the item
+          minimum: 1
+        description: Unique ID of the item to retrieve
+        example: 1
     responses:
       '200':
-        description: Item found
+        description: Item retrieved successfully
         content:
           application/json:
             schema:
               $ref: "../components/schemas/Item.yaml"
+      '400':
+        $ref: "../components/responses/BadRequest.yaml"
+      '401':
+        $ref: "../components/responses/Unauthorized.yaml"
       '404':
-        description: Item not found
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/Error.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
-
-/items/export:
-  get:
-    summary: Export episode-level data
-    description: |
-      Exports detailed episode (item) data including:
-      - Basic info: id, title, pub_date, duration, guid
-      - Relations: channel_id, feed_id
-      - Content: description, language
-      - Status: parsed_status and related metadata
-      
-      This endpoint is useful for:
-      - Auditing episode data quality
-      - QA checks on parsing completeness
-      - Bulk episode management and analysis
-    tags:
-      - Items
-    security:
-      - Auth0Bearer: []
-    parameters:
-      - name: format
-        in: query
-        required: true
-        schema:
-          type: string
-          enum: [csv, json]
-          default: csv
-      - name: status
-        in: query
-        required: false
-        schema:
-          type: string
-          enum: [active, archived, error, all]
-          default: active
-        description: Filter items by their status
-      - name: channel_id
-        in: query
-        required: false
-        schema:
-          type: integer
-        description: Filter items by channel ID
-      - name: feed_id
-        in: query
-        required: false
-        schema:
-          type: integer
-        description: Filter items by feed ID
-      - name: start_date
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-        description: Filter items by publication date (start)
-      - name: end_date
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-        description: Filter items by publication date (end)
-    responses:
-      '200':
-        description: Items export file
-        content:
-          text/csv:
-            schema:
-              type: string
-              description: CSV format (when format=csv)
-          application/json:
-            schema:
-              type: object
-              properties:
-                data:
-                  type: array
-                  items:
-                    $ref: "../components/schemas/Item.yaml"
-                meta:
-                  type: object
-                  properties:
-                    total:
-                      type: integer
-                    filters:
-                      type: object
-                      properties:
-                        status:
-                          type: string
-                        channel_id:
-                          type: integer
-                        feed_id:
-                          type: integer
-                        date_range:
-                          type: object
-                          properties:
-                            start:
-                              type: string
-                              format: date
-                            end:
-                              type: string
-                              format: date
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
+        $ref: "../components/responses/NotFound.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
       '500':
         $ref: "../components/responses/InternalServerError.yaml"

@@ -12,8 +12,8 @@ const COLORS = ["#0d7ab3", "#b1cae3"];
 
 export default function FeedStatsChart({ healthy, flagged }: FeedStatsChartProps) {
   const data = [
-    { name: "Healthy", value: healthy },
-    { name: "Flagged", value: flagged },
+    { name: "Active", value: healthy },
+    { name: "Error", value: flagged },
   ];
   const COLORS = [
     "#0d7ab3", // Healthy

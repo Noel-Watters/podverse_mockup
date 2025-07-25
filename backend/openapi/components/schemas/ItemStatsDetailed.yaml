@@ -1,0 +1,81 @@
+type: object
+required:
+  - id
+  - title
+  - channel_id
+properties:
+  # Core item information
+  id:
+    type: integer
+    description: Item ID
+    example: 200
+  id_text:
+    type: string
+    description: Text-based item identifier
+    example: "113372axvsthjg"
+  title:
+    type: string
+    description: Item title
+    example: "Which forward party machine wife inside."
+  slug:
+    type: string
+    description: Item URL slug
+    example: "air-finish-open-ten"
+  
+  # Publication information
+  guid:
+    type: string
+    description: Item GUID from RSS feed
+    example: "https://macdonald.net/categories/categorylogin.html"
+  guid_enclosure_url:
+    type: string
+    description: Enclosure URL from RSS feed
+    example: "http://hunt.com/"
+  pub_date:
+    type: string
+    format: date-time
+    description: Publication date
+    example: "2024-12-16T14:23:03.383386+00:00"
+  
+  # Channel relationship
+  channel_id:
+    type: integer
+    description: Associated channel ID
+    example: 100
+  channel:
+    type: integer
+    description: Channel reference (same as channel_id)
+    example: 100
+  
+  # Flag status
+  item_flag_status_id:
+    type: integer
+    description: Item flag status ID
+    example: 1
+  flag_status:
+    type: integer
+    description: Flag status reference
+    example: 1
+  
+  # Statistics and events
+  stats:
+    type: array
+    description: Aggregated statistics (array of stat IDs or objects)
+    items:
+      oneOf:
+        - type: integer
+          description: Statistics record ID
+          example: 201
+        - $ref: "./StatsAggregatedItem.yaml"
+  
+  events:
+    type: array
+    description: Tracking events for this item
+    items:
+      $ref: "./StatsTrackEventItem.yaml"
+  
+  # Computed fields (added by service layer)
+  raw_event_count:
+    type: integer
+    description: Raw event count for the specified time range (computed field)
+    example: 42 

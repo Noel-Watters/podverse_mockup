@@ -23,45 +23,6 @@ from app.utils.request_logger import get_logger, log_database_operation
 
 logger = get_logger(__name__)
 
-# class BaseFilterBuilder:
-#     def __init__(self, query, model_class):
-#         self.query = query
-#         self.model_class = model_class
-    
-#     def apply_sorting(self, sort_by, sort_order='desc'):
-#         """
-#         Generic sorting that works with any model
-        
-#         Args:
-#             sort_by: Field name to sort by
-#             sort_order: 'asc' or 'desc'
-#             allowed_fields: List of allowed field names for security
-#         """
-        
-#         # Check if the field exists on the model
-#         if hasattr(self.model_class, sort_by):
-#             column = getattr(self.model_class, sort_by)
-            
-#             if sort_order.lower() == 'desc':
-#                 self.query = self.query.order_by(desc(column))
-#             else:
-#                 self.query = self.query.order_by(asc(column))
-#         else:
-#             raise ValueError(f"Field '{sort_by}' does not exist on {self.model_class.__name__}")
-        
-#         return self
-    
-#     def paginate(self, page, per_page):
-#         """Generic pagination"""
-#         return self.query.paginate(
-#             page=page,
-#             per_page=per_page,
-#             error_out=False
-#         )
-    
-#     def get_query(self):
-#         return self.query
-
 def get_channel_stats(filters: Dict[str, Any]) -> Dict[str, Any]:
     """
     Retrieve aggregated channel statistics

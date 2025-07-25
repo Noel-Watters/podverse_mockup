@@ -2,10 +2,10 @@
 //Used on every page
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter, usePathname } from "next/navigation";
-import {
-  RssIcon,
-} from "@heroicons/react/24/outline";
+import {  usePathname } from "next/navigation";
+import {RssIcon } from "@heroicons/react/24/outline";
+import { useDispatch } from "react-redux";
+import { resetFilters } from "@/redux/feedSlice";
 
 // Simple class name joiner utility
 function cn(...classes: (string | false | undefined)[]) {
@@ -22,14 +22,18 @@ const navLinks = [
 ];
 
 export default function Sidebar() {
-  const router = useRouter();
   const pathname = usePathname();
+  const dispatch = useDispatch();
 
-  return (
+   return (
     <aside className="w-20 h-auto bg-bar p-4 space-y-4">
       <nav className="flex flex-col gap-2">
         {navLinks.map(({ href, label, icon }) => (
-          <Link key={href} href={href}>
+          <Link
+            key={href}
+            href={href}
+            onClick={href === "/rssfeed" ? () => dispatch(resetFilters()) : undefined}
+          >
             <span
               className={cn(
                 "px-2 py-2 rounded hover:bg-accent transition cursor-pointer flex items-center gap-2",

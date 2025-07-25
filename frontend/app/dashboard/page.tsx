@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchFeeds, resetFeeds, setFilters } from "@/redux/feedSlice";
 import { RootState, AppDispatch } from "@/redux/store";
 import { fetchChannelsByFeedIds } from "@/redux/batchChannelSlice";
+import { on } from "events";
 
 export default function Page() {
   const dispatch = useDispatch<AppDispatch>();

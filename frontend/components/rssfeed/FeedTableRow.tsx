@@ -35,6 +35,14 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
 }) => {
 
   const feedState = useSelector((state: RootState) => state.reparse[feed.id]);
+  const logs = (feedState?.logs && feedState.logs.length > 0
+  ? feedState.logs
+  : (feed.recent_logs ?? [])
+).map(log => ({
+  ...log,
+  finished_at: log.finished_at ?? "",
+  parse_errors: log.parse_errors ?? 0,
+}));
 
   return (
     <div
@@ -57,11 +65,7 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
 
       {/* Dates */}
     <div>
-        <HealthDuration recent_logs={(feed.recent_logs ?? []).map(log => ({
-          ...log,
-          finished_at: log.finished_at ?? "",
-        }))} 
-        />
+        <HealthDuration recent_logs={logs} />
     </div>
     <div>
         <FeedUpdated updated_at={feed.updated_at ?? ""} />
@@ -69,11 +73,7 @@ const FeedTableRow: React.FC<FeedTableRowProps> = ({
 
     {/* Feed Status */}
     <div>
-      <Healthbadge recent_logs={(feed.recent_logs ?? []).map(log => ({
-        ...log,
-        finished_at: log.finished_at ?? "",
-        parse_errors: log.parse_errors ?? 0,
-      }))}
+      <Healthbadge recent_logs={logs}
         reparsing={feedState?.reparsing}
         flag_status={feedState?.flag_status ?? feed.flag_status}
       />

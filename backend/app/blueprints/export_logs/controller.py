@@ -1,5 +1,7 @@
 # app/blueprints/export_logs/controller.py
 
+# app/blueprints/export_logs/controller.py
+
 from app.extensions import db
 from app.models.export_logs import ExportLog
 from app.utils.error_exceptions import NotFoundError, ValidationError
@@ -116,6 +118,7 @@ def download_export_file_controller(log_id):
             raise NotFoundError("Export file not found or has expired")
         
         filename = os.path.basename(log.file_path)
+        return {"type": "file", "path": log.file_path, "filename": filename, "format": log.format}
         return {"type": "file", "path": log.file_path, "filename": filename, "format": log.format}
         
     except NotFoundError:

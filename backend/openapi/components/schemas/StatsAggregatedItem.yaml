@@ -5,135 +5,116 @@ required:
 properties:
   id:
     type: integer
-    description: Unique identifier for the aggregated stats
-    example: 1
-
+    description: Unique identifier for aggregated item stats
+    example: 201
+  
   item_id:
     type: integer
-    description: ID of the item these stats are for
-    example: 42
-
+    description: Foreign key reference to item table
+    example: 200
+  
+  # Daily counts (current + 8 historical days)
   day_current_count:
     type: integer
-    minimum: 0
+    description: Current day's aggregated count
+    example: 45
     default: 0
-    description: Event count for current day
-    example: 150
-
+  
   day_1_count:
     type: integer
-    minimum: 0
+    description: Previous day's count (1 day ago)
+    example: 42
     default: 0
-    description: Event count for day 1
-    example: 145
-
+  
   day_2_count:
     type: integer
-    minimum: 0
+    description: Count from 2 days ago
+    example: 38
     default: 0
-    description: Event count for day 2
-    example: 140
-
+  
   day_3_count:
     type: integer
-    minimum: 0
+    description: Count from 3 days ago
+    example: 35
     default: 0
-    description: Event count for day 3
-    example: 135
-
+  
   day_4_count:
     type: integer
-    minimum: 0
+    description: Count from 4 days ago
+    example: 31
     default: 0
-    description: Event count for day 4
-    example: 130
-
+  
   day_5_count:
     type: integer
-    minimum: 0
+    description: Count from 5 days ago
+    example: 28
     default: 0
-    description: Event count for day 5
-    example: 125
-
+  
   day_6_count:
     type: integer
-    minimum: 0
+    description: Count from 6 days ago
+    example: 24
     default: 0
-    description: Event count for day 6
-    example: 120
-
+  
   day_7_count:
     type: integer
-    minimum: 0
+    description: Count from 7 days ago
+    example: 21
     default: 0
-    description: Event count for day 7
-    example: 115
-
+    
   day_8_count:
     type: integer
-    minimum: 0
+    description: Count from 8 days ago
+    example: 18
     default: 0
-    description: Event count for day 8
-    example: 110
 
+  # Weekly counts (current + 4 historical weeks)
   week_current_count:
     type: integer
-    minimum: 0
+    description: Current week's aggregated count
+    example: 264
     default: 0
-    description: Event count for current week
-    example: 1000
 
   week_1_count:
     type: integer
-    minimum: 0
+    description: Previous week's count (1 week ago)
+    example: 198
     default: 0
-    description: Event count for week 1
-    example: 950
 
   week_2_count:
     type: integer
-    minimum: 0
+    description: Count from 2 weeks ago
+    example: 156
     default: 0
-    description: Event count for week 2
-    example: 900
 
   week_3_count:
     type: integer
-    minimum: 0
+    description: Count from 3 weeks ago
+    example: 132
     default: 0
-    description: Event count for week 3
-    example: 850
 
   week_4_count:
     type: integer
-    minimum: 0
+    description: Count from 4 weeks ago
+    example: 108
     default: 0
-    description: Event count for week 4
-    example: 800
 
+  # Monthly counts (current + 1 historical month)
   month_current_count:
     type: integer
-    minimum: 0
+    description: Current month's aggregated count
+    example: 858
     default: 0
-    description: Event count for current month
-    example: 4000
 
   month_1_count:
     type: integer
-    minimum: 0
+    description: Previous month's count (1 month ago)
+    example: 654
     default: 0
-    description: Event count for month 1
-    example: 3800
 
+  # All time total
   all_time_count:
     type: integer
-    minimum: 0
+    description: All-time cumulative count
+    example: 4276
     default: 0
-    description: Total event count since tracking began
-    example: 25000
-
-  updated_at:
-    type: string
-    format: date-time
-    description: Timestamp of last update
-    example: "2024-01-01T10:00:00Z"

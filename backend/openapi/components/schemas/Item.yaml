@@ -15,60 +15,72 @@ properties:
     type: string
     maxLength: 64
     description: Short identifier used in public-facing URLs
-    example: "ep_2a3f9c"
-
+    example: "113258si1o5f8f"
+  title:
+    type: string
+    maxLength: 255
+    description: Title of the item (usually the episode title)
+    example: "Nature call range beautiful around over tell oil."
   slug:
     type: string
     maxLength: 100
     nullable: true
     description: URL-friendly slug for the item
     example: "episode-1-getting-started"
-
   channel_id:
     type: integer
     description: ID of the channel this item belongs to
-    example: 42
-
+    example: 1
   guid:
     type: string
     maxLength: 2083
     nullable: true
     description: RSS `<guid>` of the item (either guid or guid_enclosure_url must be present)
     example: "https://example.com/items/1"
-
   guid_enclosure_url:
     type: string
     maxLength: 2083
     nullable: true
     description: Enclosure URL from RSS used as fallback if GUID is missing (either guid or guid_enclosure_url must be present)
     example: "https://example.com/items/ep1.mp3"
-
   pub_date:
     type: string
     format: date-time
     nullable: true
     description: Publication date of the item
-    example: "2024-01-15T10:30:00Z"
-
-  title:
-    type: string
-    maxLength: 255
-    description: Title of the item (usually the episode title)
-    example: "Episode 1: Getting Started"
-
+    example: "2024-11-02T17:28:36.547572+00:00"
   item_flag_status_id:
     type: integer
     description: Foreign key to the item_flag_status table
     example: 1
-
   flag_status:
-    $ref: "./ItemFlagStatus.yaml"
-
-  stats:
-    $ref: "./StatsAggregatedItem.yaml"
-
-  events:
-    type: array
-    items:
-      $ref: "./StatsTrackEventItem.yaml"
-    description: Item tracking events
+    type: object
+    description: Item flag status details
+    required:
+      - id
+      - status
+    properties:
+      id:
+        type: integer
+        description: Flag status ID
+        example: 1
+      status:
+        type: string
+        enum: [active, pending-archive, archived, pending-delete]
+        description: |
+          Status assigned to an item to control lifecycle behavior.
+          - `active`: Item is live and visible
+          - `pending-archive`: Scheduled for archival  
+          - `archived`: No longer active but kept in the system
+          - `pending-delete`: Marked for removal
+        example: "active"
+      created_at:
+        type: string
+        format: date-time
+        description: Timestamp of creation
+        example: "2025-07-25T04:16:27.006613"
+      updated_at:
+        type: string
+        format: date-time
+        description: Timestamp of last update
+        example: "2025-07-25T04:16:27.006613"

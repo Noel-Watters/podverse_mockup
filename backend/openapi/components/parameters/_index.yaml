@@ -29,6 +29,12 @@ export_by:
 feed_id:
   $ref: "path/feed_id.yaml"
 
+view:
+  $ref: "query/view.yaml"
+
+flag_status:
+  $ref: "query/flag_status.yaml"
+
 # Export Logs
 end_date:
   $ref: "query/export_logs_end_date.yaml"

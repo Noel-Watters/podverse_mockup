@@ -8,6 +8,10 @@ from app.utils.error_exceptions import NotFoundError, DatabaseError
 
 # ---- Mock Classes ----
 
+class MockFlagStatus:
+    def __init__(self, status="active"):
+        self.status = status
+
 class MockFeed:
     def __init__(self, **kwargs):
         self.id = kwargs.get('id', 1)
@@ -18,6 +22,8 @@ class MockFeed:
         self.updated_at = kwargs.get('updated_at', datetime.utcnow())
         self.channels = kwargs.get('channels', [])
         self.logs = kwargs.get('logs', [])
+        # Add flag_status with default active status
+        self.flag_status = kwargs.get('flag_status', MockFlagStatus())
 
 class MockChannel:
     def __init__(self, **kwargs):
@@ -404,14 +410,12 @@ def test_bulk_reparse_feeds_with_not_found(mock_session):
     """Test bulk_reparse_feeds with some feeds not found."""
     from app.blueprints.feed.services.parsing_service import bulk_reparse_feeds
     
-    feed1 = MockFeed(id=1, is_parsing=False)
-    feed1.flag_status = Mock()
-    feed1.flag_status.status = "active"
-    
-    mock_session.get.side_effect = [feed1, None]
-    
     with patch("app.blueprints.feed.services.parsing_service.parse_and_update_feed") as mock_parse:
-        mock_parse.return_value = {"status": "success", "feed_id": 1}
+        # First call succeeds, second call raises NotFoundError
+        mock_parse.side_effect = [
+            {"status": "success", "feed_id": 1},
+            NotFoundError("Feed not found")
+        ]
         
         result = bulk_reparse_feeds([1, 999])
         
@@ -426,19 +430,14 @@ def test_bulk_reparse_feeds_with_not_found(mock_session):
 def test_bulk_reparse_feeds_with_already_parsing(mock_session):
     """Test bulk_reparse_feeds with feeds already parsing."""
     from app.blueprints.feed.services.parsing_service import bulk_reparse_feeds
-    
-    feed1 = MockFeed(id=1, is_parsing=True)
-    feed1.flag_status = Mock()
-    feed1.flag_status.status = "active"
-    
-    feed2 = MockFeed(id=2, is_parsing=False)
-    feed2.flag_status = Mock()
-    feed2.flag_status.status = "active"
-    
-    mock_session.get.side_effect = [feed1, feed2]
+    from app.utils.error_exceptions import ValidationError
     
     with patch("app.blueprints.feed.services.parsing_service.parse_and_update_feed") as mock_parse:
-        mock_parse.return_value = {"status": "success", "feed_id": 2}
+        # First call raises ValidationError for already parsing, second call succeeds
+        mock_parse.side_effect = [
+            ValidationError("Feed is already being parsed", status_code=409),
+            {"status": "success", "feed_id": 2}
+        ]
         
         result = bulk_reparse_feeds([1, 2])
         
@@ -453,19 +452,14 @@ def test_bulk_reparse_feeds_with_already_parsing(mock_session):
 def test_bulk_reparse_feeds_with_skipped_flag(mock_session):
     """Test bulk_reparse_feeds with feeds having non-active flag status."""
     from app.blueprints.feed.services.parsing_service import bulk_reparse_feeds
-    
-    feed1 = MockFeed(id=1, is_parsing=False)
-    feed1.flag_status = Mock()
-    feed1.flag_status.status = "inactive"
-    
-    feed2 = MockFeed(id=2, is_parsing=False)
-    feed2.flag_status = Mock()
-    feed2.flag_status.status = "active"
-    
-    mock_session.get.side_effect = [feed1, feed2]
+    from app.utils.error_exceptions import ValidationError
     
     with patch("app.blueprints.feed.services.parsing_service.parse_and_update_feed") as mock_parse:
-        mock_parse.return_value = {"status": "success", "feed_id": 2}
+        # First call raises ValidationError for non-eligible flag status, second call succeeds
+        mock_parse.side_effect = [
+            ValidationError("Feed is not eligible (status: inactive)", status_code=400),
+            {"status": "success", "feed_id": 2}
+        ]
         
         result = bulk_reparse_feeds([1, 2])
         

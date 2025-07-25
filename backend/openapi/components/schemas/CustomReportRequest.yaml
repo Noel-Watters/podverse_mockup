@@ -1,0 +1,70 @@
+type: object
+required:
+  - source
+  - selected_fields
+  - format
+  - export_by
+properties:
+  source:
+    type: string
+    enum: [channels, feeds, stats_items, stats_channels]
+    description: |
+      Data source table to export from:
+      - `channels`: Export channel data from the channels table
+      - `feeds`: Export feed data from the feeds table  
+      - `stats_items`: Export item statistics from stats_aggregated_item table (currently has issues)
+      - `stats_channels`: Export channel statistics from stats_aggregated_channel table (currently has issues)
+    example: "channels"
+  
+  selected_fields:
+    type: array
+    items:
+      type: string
+    minItems: 1
+    description: |
+      List of field names to include in the export. Must correspond to actual database column names.
+      
+      **Available fields by source:**
+      - **channels**: id, title, slug, description, podcast_index_id, podcast_guid, medium_id, etc.
+      - **feeds**: id, url, parsing_priority, flag_status_id, created_at, updated_at, etc.
+      - **stats_items**: id, item_id, day_current_count, week_current_count, month_current_count, all_time_count, etc.
+      - **stats_channels**: id, channel_id, day_current_count, week_current_count, month_current_count, all_time_count, etc.
+    example: ["id", "title", "description"]
+  
+  filters:
+    type: object
+    additionalProperties: true
+    description: |
+      Filter conditions to apply to the data. Uses field names with optional operators.
+      
+      **Supported operators:**
+      - `__gt`: Greater than (e.g., `day_current_count__gt: 100`)
+      - `__lt`: Less than
+      - `__gte`: Greater than or equal to
+      - `__lte`: Less than or equal to
+      - `__eq`: Equal to (default if no operator specified)
+      - `__ne`: Not equal to
+      - `__ilike`: Case-insensitive pattern matching (for text fields)
+      
+      **Examples:**
+      - `{"id__gte": 1, "title__ilike": "podcast"}` - ID >= 1 AND title contains "podcast"
+      - `{"parsing_priority__ne": 0}` - parsing_priority not equal to 0
+      - `{"created_at__gte": "2024-01-01"}` - created after Jan 1, 2024
+    example:
+      id__gte: 1
+      title__ilike: "podcast"
+  
+  format:
+    type: string
+    enum: [csv, json]
+    description: |
+      Export file format:
+      - `csv`: Comma-separated values with headers, suitable for spreadsheet applications
+      - `json`: Structured data format with proper typing, suitable for programmatic processing
+    example: "csv"
+  
+  export_by:
+    type: string
+    format: email
+    description: Email address of the user requesting the export (for audit logging)
+    example: "admin@example.com" 

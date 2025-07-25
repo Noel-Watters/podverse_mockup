@@ -1,5 +1,5 @@
 from app.models import Channel, Feed, StatsAggregatedItem, StatsAggregatedChannel
-from sqlalchemy.orm import load_only
+#from sqlalchemy.orm import load_only
 from sqlalchemy import and_
 from app.extensions import db
 
@@ -27,7 +27,8 @@ def build_dynamic_query(source, fields, filters, db_session):
     if not Model:
         raise ValueError("Invalid Source")
     
-    query = db_session.query(Model).options(load_only(*fields))
+    #query = db_session.query(Model).options(load_only(*fields))
+    query = db_session.query(Model)
 
     conditions = []
     for operator, value in filters.items():

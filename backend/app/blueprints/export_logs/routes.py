@@ -1,6 +1,7 @@
 # backend/app/blueprints/export_logs/routes.py
 
 from flask import jsonify, request, send_file, redirect
+from flask import jsonify, request, send_file, redirect
 from . import export_logs_bp
 from app.extensions import limiter
 from app.blueprints.export_logs.controller import *
@@ -63,5 +64,6 @@ def download_export_file(log_id):
         result["path"],
         as_attachment=True,
         download_name=result["filename"],
-        mimetype='text/csv' if result["format"] == 'csv' else 'application/json'
+        mimetype='text/csv' if result["format"] == 'csv' else 'application/json',
+        max_age=0
     )
