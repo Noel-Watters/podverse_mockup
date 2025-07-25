@@ -14,6 +14,8 @@ ChannelDetails:
   $ref: "./ChannelDetails.yaml"
 ChannelExport:
   $ref: "./ChannelExport.yaml"
+ChannelsByFeedResponse:
+  $ref: "./ChannelsByFeedResponse.yaml"
 ChannelStatsDetailed:
   $ref: "./ChannelStatsDetailed.yaml"
 CustomReportRequest:

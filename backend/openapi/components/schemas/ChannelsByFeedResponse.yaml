@@ -1,5 +1,3 @@
-# Channel schema for responses
-
 type: object
 required:
   - data
@@ -7,7 +5,7 @@ required:
 properties:
   data:
     type: array
-    description: Array of channel objects
+    description: Array of channel objects for the requested feed IDs
     items:
       type: object
       required:
@@ -25,55 +23,55 @@ properties:
         id:
           type: integer
           description: Unique numeric ID for the channel
-          example: 201
+          example: 1
 
         id_text:
           type: string
           maxLength: 64
           description: Public-facing short ID for URLs
-          example: "ch_8a3f91"
+          example: "1130284ogiop7h"
 
         slug:
           type: string
           maxLength: 100
           nullable: true
-          description: URL-friendly slug
-          example: "the-daily-news"
+          description: URL-friendly slug derived from title
+          example: "learn-away-travel"
 
         feed_id:
           type: integer
-          description: ID of the associated feed
-          example: 104
+          description: ID of the associated RSS feed
+          example: 1
 
         podcast_index_id:
           type: integer
           description: External Podcast Index identifier
-          example: 872361
+          example: 43368
 
         podcast_guid:
           type: string
           format: uuid
           nullable: true
           description: "Podcast GUID from the RSS feed"
-          example: "1e8f3d7c-7fc0-4b70-90e1-991ed05bc4c4"
+          example: "9be5f1d6-8406-4fdc-8ed0-bfde2e7b3023"
 
         title:
           type: string
           maxLength: 255
           description: Title of the podcast or media channel
-          example: "The Daily News Podcast"
+          example: "Light."
 
         sortable_title:
           type: string
-          maxLength: 50
+          maxLength: 255
           nullable: true
           description: Lowercased, normalized version of title for sorting
-          example: "daily news podcast"
+          example: "stage"
 
         medium_id:
           type: integer
           description: Foreign key to the `medium` table
-          example: 2
+          example: 17
 
         has_podcast_index_value:
           type: boolean
@@ -98,15 +96,16 @@ properties:
               id:
                 type: integer
                 description: Category ID
-                example: 1
+                example: 215
               display_name:
                 type: string
-                description: Category display name
-                example: "Technology"
+                description: Human-readable category name
+                example: "Wrestling"
               mapping_key:
                 type: string
-                description: Category mapping key
-                example: "technology"
+                description: Internal category mapping key
+                example: "wrestling"
+                
         medium:
           type: object
           nullable: true
@@ -115,29 +114,45 @@ properties:
           properties:
             value:
               type: string
-              description: Medium type value (e.g. "podcast", "music", "mixed", etc.)
-              example: "podcast"
+              description: |
+                Medium type value indicating the content format:
+                - `podcast`: Traditional audio podcast
+                - `music`: Music content
+                - `blogL`: Blog-style content
+                - `publisherL`: Publisher content
+                - `course`: Educational course content
+                - `film`: Video/film content
+                - `mixed`: Mixed media content
+              example: "blogL"
 
   meta:
     type: object
     required:
-      - limit
-      - offset
       - total
+      - requested_feed_ids
+      - found_feed_ids
+      - missing_feed_ids
     properties:
-      limit:
-        type: integer
-        description: Number of items per page
-        minimum: 1
-        maximum: 100
-        example: 2
-      offset:
-        type: integer
-        description: Number of items skipped (calculated as (page-1) * limit)
-        minimum: 0
-        example: 0
       total:
         type: integer
-        description: Total number of channels matching the query
+        description: Number of channels found for the requested feed IDs
         minimum: 0
-        example: 100
+        example: 3
+      requested_feed_ids:
+        type: array
+        description: List of feed IDs that were requested
+        items:
+          type: integer
+        example: [1, 2, 3]
+      found_feed_ids:
+        type: array
+        description: List of feed IDs for which channels were found
+        items:
+          type: integer
+        example: [1, 2, 3]
+      missing_feed_ids:
+        type: array
+        description: List of feed IDs for which no channels were found
+        items:
+          type: integer
+        example: [] 

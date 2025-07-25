@@ -834,21 +834,35 @@ paths:
     get:
       summary: Retrieve a list of channels
       description: |
-        Returns a paginated list of channels with their basic metadata.
+        Retrieve a paginated list of podcast channels with comprehensive metadata and relationships.
+        Returns channels with eager-loaded feed, medium, categories, and statistics data.
 
+        **Data Sources:**
+        - Primary table: `channel` (podcast channel metadata)
+        - Joined tables: `feed` (RSS feed info), `medium` (content type), `channel_category` + `category` (categorization), `stats_aggregated_channel` (performance metrics)
 
-        **Features:**
-        - **Pagination**: Control page size and navigation with `page` and `limit` parameters
-        - **Filtering**: Filter by text-based search on `title`, specific channel ID, or podcast index ID
-        - **Sorting**: Sort by `id` or `title`
-        - **Search**: Search by `title` (case-insensitive)
+        **Filtering Capabilities:**
+        - **Text Search**: `search` parameter for case-insensitive title matching
+        - **Specific Channel**: `id` parameter to filter by exact channel ID
+        - **Podcast Index**: `podcast_index_id` parameter to filter by external identifier
 
-        **Primary table:** `channel`
-        **Related tables:**
-        - `medium`: provides the media type (e.g. podcast, video)
-        - `feed`: provides the associated RSS feed URL and status
-        - `channel_category` + `category`: provides channel categories
-        - `stats_aggregated_channel`: provides precomputed statistics
+        **Sorting Options:**
+        - `id`: Channel ID (numeric, default ascending)
+        - `title`: Channel title (alphabetical)
+        - Supports both `asc` and `desc` sort orders
+
+        **Response Structure:**
+        - Returns paginated results with `data` array and `meta` object
+        - Each channel includes nested `categories` array and `medium` object
+        - Categories include `id`, `display_name`, and `mapping_key`
+        - Medium provides content type classification (podcast, music, blogL, publisherL, course, film, mixed)
+
+        **Use Cases:**
+        - Channel discovery and browsing interfaces
+        - Admin dashboard channel management
+        - Content categorization and filtering
+        - Performance monitoring with metadata analysis
+        - Integration with external podcast platforms
 
         **Rate Limiting**: 30 requests per minute
       tags:
@@ -871,25 +885,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/Channel'
         '400':
-          description: Invalid request parameters
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
   /channels/{id}:
     get:
       summary: Retrieve a channel by ID
       description: |
-        Returns details for a specific channel.
-        Includes associated relationships and metadata such as slug, podcast index ID, feed reference, and medium.
-        Primary table is `channel`.
-        Related tables are :
-        - `feed`: provides the associated feed URL and parsing status
-        - `medium`: provides the media type of the channel
-        - `channel_category` + `category`: maps the channel to its categories
-        - `stats_aggregated_channel`: optionally used to show precomputed statistics
+        Retrieve comprehensive details for a specific channel by ID with complete relationship data.
+        Returns the same structure as list items but for a single channel with enhanced category details.
+
+        **Data Included:**
+        - **Channel Metadata**: ID, title, slug, podcast identifiers, medium classification
+        - **Feed Integration**: Associated RSS feed URL and feed ID
+        - **Category Details**: Enhanced category information including parent relationships and slugs
+        - **Medium Classification**: Content type with comprehensive format descriptions
+        - **Technical Flags**: Podcast Index integration and value time splits configuration
+
+        **Enhanced Category Format:**
+        Unlike the list endpoint, individual channel responses include:
+        - `parent_id`: Hierarchical category structure
+        - `slug`: URL-friendly category identifiers
+        - Full category metadata for improved navigation
+
+        **Use Cases:**
+        - Channel detail pages and profile views
+        - Edit forms with complete channel context
+        - Category hierarchy navigation
+        - Feed relationship management
+        - Technical configuration verification
 
         **Rate Limiting**: 30 requests per minute
       tags:
@@ -906,7 +936,7 @@ paths:
           description: The ID of the channel to retrieve
       responses:
         '200':
-          description: Channel details
+          description: Channel details retrieved successfully
           content:
             application/json:
               schema:
@@ -915,24 +945,58 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
-          $ref: '#/components/responses/NotFound'
+          description: Channel not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: 'Channel with ID 999 not found (Status Code: 404)'
+        '429':
+          $ref: '#/components/responses/RateLimit'
         '500':
           $ref: '#/components/responses/InternalServerError'
   /channels/by-feed:
     get:
       summary: Get channels by feed IDs
       description: |
-        Retrieves channels associated with specific feed IDs.
-        Accepts a comma-separated list of feed IDs and returns all channels associated with those feeds.
+        Retrieve channels associated with specific RSS feed IDs with intelligent tracking of found/missing relationships.
+        Accepts multiple feed IDs and returns comprehensive metadata about the lookup results.
 
-        This endpoint is useful for:
-        - Finding all channels from specific RSS feeds
+        **Request Processing:**
+        - Accepts comma-separated feed IDs in `feed_ids` parameter
+        - Maximum 100 feed IDs per request (configurable via `max_ids`)
+        - Performs validation and truncation if limits exceeded
+        - Uses same eager loading as other channel endpoints
+
+        **Response Metadata:**
+        - `total`: Number of channels found
+        - `requested_feed_ids`: Original request input
+        - `found_feed_ids`: Feed IDs that had associated channels
+        - `missing_feed_ids`: Feed IDs with no channels found
+
+        **Data Structure:**
+        Returns the same channel objects as list endpoint with:
+        - Complete category information
+        - Medium classification
+        - All standard channel metadata
+
+        **Use Cases:**
         - Bulk channel lookup operations
         - Feed-to-channel relationship analysis
+        - Data validation and integrity checking
+        - Migration and synchronization tools
+        - Multi-feed dashboard views
 
-        **Primary table:** `channel`
-        **Related tables:** `feed`, `medium`, `channel_category`, `category`
+        **Performance Considerations:**
+        - Optimized with eager loading to prevent N+1 queries
+        - Automatic limit enforcement for large requests
+        - Efficient IN clause filtering on feed_id column
 
         **Rate Limiting**: 30 requests per minute
       tags:
@@ -945,6 +1009,7 @@ paths:
           required: true
           schema:
             type: string
+            pattern: ^[0-9]+(,[0-9]+)*$
           description: |
             Comma-separated list of feed IDs to filter by.
             Example: "1,2,3,4,5"
@@ -964,77 +1029,59 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Channel'
-                    description: List of channels associated with the feed IDs
-                  meta:
-                    type: object
-                    properties:
-                      total:
-                        type: integer
-                        description: Total number of channels found
-                      requested_feed_ids:
-                        type: array
-                        items:
-                          type: integer
-                        description: List of feed IDs that were requested
-                      found_feed_ids:
-                        type: array
-                        items:
-                          type: integer
-                        description: List of feed IDs that had associated channels
-                      missing_feed_ids:
-                        type: array
-                        items:
-                          type: integer
-                        description: List of feed IDs that had no associated channels
+                $ref: '#/components/schemas/ChannelsByFeedResponse'
         '400':
-          description: Invalid request parameters
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimit'
         '500':
           $ref: '#/components/responses/InternalServerError'
   /channels/export:
     get:
       summary: Export channel data in CSV or JSON format
       description: |
-        Exports channel data in CSV or JSON format with comprehensive flattened data.
+        Export comprehensive channel data in CSV or JSON format with flattened relationship data.
+        Provides the same filtering and sorting options as the list endpoint but without pagination limits.
 
-        **Export Data Includes:**
-        - **Basic Channel Info**: id, id_text, slug, title, sortable_title
-        - **Feed Information**: feed_id, feed_url (flattened), feed_status (flattened)
-        - **Medium Data**: medium_id, medium_name (flattened from medium.value)
-        - **Podcast Metadata**: podcast_index_id, podcast_guid, has_podcast_index_value, has_value_time_splits
-        - **Statistics**: stats_all_time_count, stats_month_current_count, stats_week_current_count, stats_day_current_count
+        **Export Data Structure:**
+        - **Core Channel Fields**: id, id_text, slug, title, sortable_title, podcast_guid, feed_id, medium_id
+        - **Technical Configuration**: has_podcast_index_value, has_value_time_splits, podcast_index_id
+        - **Flattened Relationships**:
+          - `medium_name`: Flattened from medium.value (e.g., "podcast", "blogL", "course")
+          - `feed_url`: Flattened from feed.url (RSS feed URL)
+          - `feed_status`: Flattened from feed.flag_status.status (feed parsing status)
+          - `stats_*_count`: Flattened from stats aggregated data (all_time, month, week, day)
 
-        **Response Formats:**
-        - **CSV format**: Returns a downloadable file with `Content-Disposition: attachment`
-        - **JSON format**: Returns a direct JSON array of channel objects
+        **Export Formats:**
+        - **CSV**: Returns downloadable file with proper headers and Content-Disposition
+        - **JSON**: Returns structured array for programmatic processing
 
         **Filtering & Sorting:**
-        Supports the same options as the main channels list endpoint:
-        - Text search on channel title
-        - Filtering by specific channel ID or podcast index ID
-        - Sorting by id or title
-        - Export format selection (CSV/JSON)
-        - Row limit control (max_rows parameter)
+        Supports all the same options as list endpoint:
+        - Text search on channel titles
+        - Specific channel ID or podcast index ID filtering
+        - Sorting by id or title (ascending/descending)
+        - Row limit control via `max_rows` (default: 10,000, max: 50,000)
+
+        **Performance & Limits:**
+        - Eager loading prevents N+1 queries on large exports
+        - Automatic row limit enforcement for server protection
+        - Export logging for audit trails and monitoring
+        - Timestamp-based filename generation for uniqueness
 
         **Use Cases:**
-        - Analytics and reporting dashboards
-        - Channel auditing and management
-        - Data backup and migration
-        - Integration with external systems
-        - Bulk data analysis 
+        - Analytics and business intelligence reporting
+        - Data migration and backup operations
+        - Channel performance analysis
+        - Integration with external analytics platforms
+        - Bulk data processing and transformation
 
-        **Rate Limiting**: 10 requests per minute
+        **Rate Limiting**: 10 requests per minute (lower due to potentially large data transfers)
+        **Authentication**: Requires Auth0 Bearer token with admin access
       tags:
         - Channels
       security:
@@ -1049,6 +1096,7 @@ paths:
         - $ref: '#/components/parameters/export_by'
         - name: max_rows
           in: query
+          required: false
           schema:
             type: integer
             minimum: 1
@@ -1060,56 +1108,56 @@ paths:
       responses:
         '200':
           description: Channel data exported successfully
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment; filename=channels_export_20250725_063737_876549_admin_example_com.csv
+              description: Download filename with timestamp (CSV format only)
+            Content-Type:
+              schema:
+                type: string
+                enum:
+                  - text/csv
+                  - application/json
+                example: text/csv
+              description: Content type based on export format
           content:
             text/csv:
               schema:
                 type: string
                 format: binary
                 description: |
-                  CSV file download containing flattened channel data.
-                  File includes all channel fields plus flattened relationships (feed_url, medium_name, feed_status, stats).
-                  Headers are automatically generated from the data structure.
-              example: |
-                "id","id_text","slug","feed_id","podcast_index_id","podcast_guid","title","sortable_title","medium_id","has_podcast_index_value","has_value_time_splits","medium_name","feed_url","feed_status","stats_all_time_count","stats_month_current_count","stats_week_current_count","stats_day_current_count"
-                "1","284106psal33xh","stay-at-girl","1","88067","e2e03fd2-c96f-4fee-aa83-20ebe6f61054","Water issue.","law","15","true","true","audiobookL","https://austin.net/vote-information-production-eae170/rss","archived","6466","1691","677","131"
+                  CSV file with headers and flattened channel data.
+                  Includes all core fields plus computed relationship fields.
+                  Headers are dynamically generated from the export schema.
+                example: |
+                  id,id_text,slug,title,feed_id,medium_name,feed_url,stats_all_time_count
+                  1,1130284ogiop7h,learn-away-travel,Light.,1,blogL,https://smith.net/feed.xml,6466
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ChannelExport'
+                  type: object
+                  description: Channel object with flattened export data
                 description: |
-                  JSON array of channel objects with flattened export data.
-                  Returns the same data as CSV but in JSON format for API integration.
-                  No file download headers are included.
-          headers:
-            Content-Disposition:
-              schema:
-                type: string
-                example: attachment; filename=channels_export_20240101_120000.csv
-              description: |
-                Specifies the filename for download (only present when format=csv).
-                Filename includes timestamp for uniqueness.
-            Content-Type:
-              schema:
-                type: string
-                example: text/csv
-              description: |
-                Content type header (only present when format=csv).
-                JSON format returns application/json without this header.
+                  JSON array of channel objects with all flattened relationship data.
+                  Same data as CSV but in structured format for API consumption.
+                example:
+                  - id: 1
+                    id_text: 1130284ogiop7h
+                    title: Light.
+                    medium_name: blogL
+                    feed_url: https://smith.net/feed.xml
+                    stats_all_time_count: 6466
         '400':
-          description: Invalid request parameters or unsupported format
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
-          description: Rate limit exceeded
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          $ref: '#/components/responses/RateLimit'
         '500':
           $ref: '#/components/responses/InternalServerError'
   /stats/channels:
@@ -2622,9 +2670,13 @@ components:
         - results
     Channel:
       type: object
+      required:
+        - data
+        - meta
       properties:
         data:
           type: array
+          description: Array of channel objects
           items:
             type: object
             required:
@@ -2633,6 +2685,11 @@ components:
               - title
               - feed_id
               - podcast_index_id
+              - medium_id
+              - has_podcast_index_value
+              - has_value_time_splits
+              - categories
+              - medium
             properties:
               id:
                 type: integer
@@ -2727,12 +2784,19 @@ components:
           properties:
             limit:
               type: integer
-              example: 3
+              description: Number of items per page
+              minimum: 1
+              maximum: 100
+              example: 2
             offset:
               type: integer
+              description: Number of items skipped (calculated as (page-1) * limit)
+              minimum: 0
               example: 0
             total:
               type: integer
+              description: Total number of channels matching the query
+              minimum: 0
               example: 100
     ChannelDetails:
       type: object
@@ -2740,6 +2804,14 @@ components:
         - id
         - id_text
         - title
+        - feed_id
+        - podcast_index_id
+        - medium_id
+        - has_podcast_index_value
+        - has_value_time_splits
+        - categories
+        - medium
+        - feed_url
       properties:
         id:
           type: integer
@@ -2794,18 +2866,6 @@ components:
           type: boolean
           description: Indicates whether channel items use value time split logic
           example: true
-        created_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: Timestamp when the channel was created
-          example: '2024-01-01T10:00:00Z'
-        updated_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: Timestamp when the channel was last updated
-          example: '2024-01-02T10:00:00Z'
         feed_url:
           type: string
           format: uri
@@ -2817,6 +2877,12 @@ components:
           description: Categories associated with this channel
           items:
             type: object
+            required:
+              - id
+              - display_name
+              - mapping_key
+              - parent_id
+              - slug
             properties:
               id:
                 type: integer
@@ -2837,116 +2903,178 @@ components:
                 example: soccer
               mapping_key:
                 type: string
-                description: Category mapping key
-                example: soccer
-            required:
-              - id
-              - display_name
-              - slug
-              - mapping_key
+                description: Internal category mapping key
+                example: buddhism
         medium:
           type: object
           nullable: true
+          required:
+            - value
           properties:
             value:
               type: string
-              description: Medium type value
-              example: podcast
-          required:
-            - value
-    ChannelExport:
+              description: |
+                Medium type value indicating the content format:
+                - `podcast`: Traditional audio podcast
+                - `music`: Music content
+                - `blogL`: Blog-style content
+                - `publisherL`: Publisher content
+                - `course`: Educational course content
+                - `film`: Video/film content
+                - `mixed`: Mixed media content
+              example: blogL
+    ChannelsByFeedResponse:
       type: object
       required:
-        - id
-        - id_text
-        - title
-        - feed_id
-        - podcast_index_id
+        - data
+        - meta
       properties:
-        id:
-          type: integer
-          description: Unique numeric ID for the channel
-          example: 1
-        id_text:
-          type: string
-          maxLength: 15
-          description: Public-facing short ID for URLs
-          example: 284106psal33xh
-        slug:
-          type: string
-          maxLength: 100
-          nullable: true
-          description: URL-friendly slug
-          example: stay-at-girl
-        feed_id:
-          type: integer
-          description: ID of the associated feed
-          example: 1
-        podcast_index_id:
-          type: integer
-          description: External Podcast Index identifier
-          example: 88067
-        podcast_guid:
-          type: string
-          format: uuid
-          nullable: true
-          description: '`<podcast:guid>` from the RSS feed'
-          example: e2e03fd2-c96f-4fee-aa83-20ebe6f61054
-        title:
-          type: string
-          maxLength: 255
-          description: Title of the podcast or media channel
-          example: Water issue.
-        sortable_title:
-          type: string
-          maxLength: 255
-          nullable: true
-          description: Lowercased, normalized version of title for sorting
-          example: law
-        medium_id:
-          type: integer
-          description: Foreign key to the `medium` table
-          example: 15
-        has_podcast_index_value:
-          type: boolean
-          description: Indicates if channel uses Podcast Index's value tag data
-          example: true
-        has_value_time_splits:
-          type: boolean
-          description: Indicates whether channel items use value time split logic
-          example: true
-        medium_name:
-          type: string
-          nullable: true
-          description: Medium type name (flattened from medium.value)
-          example: audiobookL
-        feed_url:
-          type: string
-          format: uri
-          nullable: true
-          description: URL of the associated RSS feed (flattened from feed.url)
-          example: https://austin.net/vote-information-production-eae170/rss
-        feed_status:
-          type: string
-          nullable: true
-          description: Status of the associated feed (flattened from feed.flag_status.status)
-          example: archived
-        stats_all_time_count:
-          type: integer
-          description: All-time event count (flattened from stats[0].all_time_count)
-          example: 6466
-        stats_month_current_count:
-          type: integer
-          description: Current month event count (flattened from stats[0].month_current_count)
-          example: 1691
-        stats_week_current_count:
-          type: integer
-          description: Current week event count (flattened from stats[0].week_current_count)
-          example: 677
-        stats_day_current_count:
-          type: integer
-          description: Current day event count (flattened from stats[0].day_current_count)
-          example: 131
+        data:
+          type: array
+          description: Array of channel objects for the requested feed IDs
+          items:
+            type: object
+            required:
+              - id
+              - id_text
+              - title
+              - feed_id
+              - podcast_index_id
+              - medium_id
+              - has_podcast_index_value
+              - has_value_time_splits
+              - categories
+              - medium
+            properties:
+              id:
+                type: integer
+                description: Unique numeric ID for the channel
+                example: 1
+              id_text:
+                type: string
+                maxLength: 64
+                description: Public-facing short ID for URLs
+                example: 1130284ogiop7h
+              slug:
+                type: string
+                maxLength: 100
+                nullable: true
+                description: URL-friendly slug derived from title
+                example: learn-away-travel
+              feed_id:
+                type: integer
+                description: ID of the associated RSS feed
+                example: 1
+              podcast_index_id:
+                type: integer
+                description: External Podcast Index identifier
+                example: 43368
+              podcast_guid:
+                type: string
+                format: uuid
+                nullable: true
+                description: Podcast GUID from the RSS feed
+                example: 9be5f1d6-8406-4fdc-8ed0-bfde2e7b3023
+              title:
+                type: string
+                maxLength: 255
+                description: Title of the podcast or media channel
+                example: Light.
+              sortable_title:
+                type: string
+                maxLength: 255
+                nullable: true
+                description: Lowercased, normalized version of title for sorting
+                example: stage
+              medium_id:
+                type: integer
+                description: Foreign key to the `medium` table
+                example: 17
+              has_podcast_index_value:
+                type: boolean
+                description: Indicates if channel uses Podcast Index's value tag data
+                example: false
+              has_value_time_splits:
+                type: boolean
+                description: Indicates whether channel items use value time split logic
+                example: true
+              categories:
+                type: array
+                description: Categories associated with this channel
+                items:
+                  type: object
+                  required:
+                    - id
+                    - display_name
+                    - mapping_key
+                  properties:
+                    id:
+                      type: integer
+                      description: Category ID
+                      example: 215
+                    display_name:
+                      type: string
+                      description: Human-readable category name
+                      example: Wrestling
+                    mapping_key:
+                      type: string
+                      description: Internal category mapping key
+                      example: wrestling
+              medium:
+                type: object
+                nullable: true
+                required:
+                  - value
+                properties:
+                  value:
+                    type: string
+                    description: |
+                      Medium type value indicating the content format:
+                      - `podcast`: Traditional audio podcast
+                      - `music`: Music content
+                      - `blogL`: Blog-style content
+                      - `publisherL`: Publisher content
+                      - `course`: Educational course content
+                      - `film`: Video/film content
+                      - `mixed`: Mixed media content
+                    example: blogL
+        meta:
+          type: object
+          required:
+            - total
+            - requested_feed_ids
+            - found_feed_ids
+            - missing_feed_ids
+          properties:
+            total:
+              type: integer
+              description: Number of channels found for the requested feed IDs
+              minimum: 0
+              example: 3
+            requested_feed_ids:
+              type: array
+              description: List of feed IDs that were requested
+              items:
+                type: integer
+              example:
+                - 1
+                - 2
+                - 3
+            found_feed_ids:
+              type: array
+              description: List of feed IDs for which channels were found
+              items:
+                type: integer
+              example:
+                - 1
+                - 2
+                - 3
+            missing_feed_ids:
+              type: array
+              description: List of feed IDs for which no channels were found
+              items:
+                type: integer
+              example: []
     StatsAggregatedChannel:
       type: object
       required:
@@ -3998,6 +4126,99 @@ components:
           description: Number of records successfully exported
           minimum: 0
           example: 150
+    ChannelExport:
+      type: object
+      required:
+        - id
+        - id_text
+        - title
+        - feed_id
+        - podcast_index_id
+      properties:
+        id:
+          type: integer
+          description: Unique numeric ID for the channel
+          example: 1
+        id_text:
+          type: string
+          maxLength: 15
+          description: Public-facing short ID for URLs
+          example: 284106psal33xh
+        slug:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: URL-friendly slug
+          example: stay-at-girl
+        feed_id:
+          type: integer
+          description: ID of the associated feed
+          example: 1
+        podcast_index_id:
+          type: integer
+          description: External Podcast Index identifier
+          example: 88067
+        podcast_guid:
+          type: string
+          format: uuid
+          nullable: true
+          description: '`<podcast:guid>` from the RSS feed'
+          example: e2e03fd2-c96f-4fee-aa83-20ebe6f61054
+        title:
+          type: string
+          maxLength: 255
+          description: Title of the podcast or media channel
+          example: Water issue.
+        sortable_title:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Lowercased, normalized version of title for sorting
+          example: law
+        medium_id:
+          type: integer
+          description: Foreign key to the `medium` table
+          example: 15
+        has_podcast_index_value:
+          type: boolean
+          description: Indicates if channel uses Podcast Index's value tag data
+          example: true
+        has_value_time_splits:
+          type: boolean
+          description: Indicates whether channel items use value time split logic
+          example: true
+        medium_name:
+          type: string
+          nullable: true
+          description: Medium type name (flattened from medium.value)
+          example: audiobookL
+        feed_url:
+          type: string
+          format: uri
+          nullable: true
+          description: URL of the associated RSS feed (flattened from feed.url)
+          example: https://austin.net/vote-information-production-eae170/rss
+        feed_status:
+          type: string
+          nullable: true
+          description: Status of the associated feed (flattened from feed.flag_status.status)
+          example: archived
+        stats_all_time_count:
+          type: integer
+          description: All-time event count (flattened from stats[0].all_time_count)
+          example: 6466
+        stats_month_current_count:
+          type: integer
+          description: Current month event count (flattened from stats[0].month_current_count)
+          example: 1691
+        stats_week_current_count:
+          type: integer
+          description: Current week event count (flattened from stats[0].week_current_count)
+          example: 677
+        stats_day_current_count:
+          type: integer
+          description: Current day event count (flattened from stats[0].day_current_count)
+          example: 131
     ItemFlagStatus:
       type: object
       properties:

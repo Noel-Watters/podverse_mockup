@@ -3,6 +3,14 @@ required:
   - id
   - id_text
   - title
+  - feed_id
+  - podcast_index_id
+  - medium_id
+  - has_podcast_index_value
+  - has_value_time_splits
+  - categories
+  - medium
+  - feed_url
 properties:
   id:
     type: integer
@@ -68,20 +76,6 @@ properties:
     description: Indicates whether channel items use value time split logic
     example: true
 
-  created_at:
-    type: string
-    format: date-time
-    nullable: true
-    description: Timestamp when the channel was created
-    example: "2024-01-01T10:00:00Z"
-
-  updated_at:
-    type: string
-    format: date-time
-    nullable: true
-    description: Timestamp when the channel was last updated
-    example: "2024-01-02T10:00:00Z"
-
   feed_url:
     type: string
     format: uri
@@ -94,6 +88,12 @@ properties:
     description: Categories associated with this channel
     items:
       type: object
+      required:
+        - id
+        - display_name
+        - mapping_key
+        - parent_id
+        - slug
       properties:
         id:
           type: integer
@@ -114,21 +114,24 @@ properties:
           example: "soccer"
         mapping_key:
           type: string
-          description: Category mapping key
-          example: "soccer"
-      required:
-        - id
-        - display_name
-        - slug
-        - mapping_key
+          description: Internal category mapping key
+          example: "buddhism"
 
   medium:
     type: object
     nullable: true
+    required:
+      - value
     properties:
       value:
         type: string
-        description: Medium type value
-        example: "podcast"
-    required:
-      - value
+        description: |
+          Medium type value indicating the content format:
+          - `podcast`: Traditional audio podcast
+          - `music`: Music content
+          - `blogL`: Blog-style content
+          - `publisherL`: Publisher content
+          - `course`: Educational course content
+          - `film`: Video/film content
+          - `mixed`: Mixed media content
+        example: "blogL"
