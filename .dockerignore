@@ -1,0 +1,57 @@
+# Version control
+.git
+.gitignore
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor/IDE settings
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Node.js cache and build artifacts
+node_modules/
+.npm/
+.pnpm-debug.log*
+.eslintcache
+.next/
+out/
+.cache/
+.parcel-cache
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Test outputs and coverage
+.coverage
+coverage/
+.nyc_output
+
+# Docker build artifacts
+*.tar.gz
+*.zip
+*.rar
+*.7z
