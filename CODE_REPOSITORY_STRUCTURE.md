@@ -1,19 +1,4 @@
-# CODE REPOSITORY & STRUCTURE
-
-## Repository Information
-
-**Main Repository:** [GitHub URL - Podverse Mockup]
-- **Project Type:** Full-stack podcast management platform
-- **Technology Stack:** Next.js 15 + Flask + PostgreSQL + Redis
-- **Branch Strategy:** 
-  - `main` - Production-ready code
-  - `develop` - Feature development and integration
-  - `feature/*` - Individual feature branches
-  - `hotfix/*` - Critical production fixes
-- **Access:** 
-  - **Admin:** Full repository access, deployment rights
-  - **Developers:** Read/write access to assigned modules
-  - **Reviewers:** Pull request review and approval rights
+# CODE STRUCTURE
 
 ## Project Structure
 
