@@ -40,3 +40,4 @@ tzdata==2025.2
 uuid==1.30
 vine==5.1.0
 boto3==1.34.0
+psycopg2-binary==2.9.10
