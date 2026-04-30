@@ -1,0 +1,21 @@
+FROM python:3.12-bookworm
+
+WORKDIR /app
+
+COPY backend/requirements.txt ./requirements.txt
+COPY backend/ ./
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+            build-essential gcc libc6-dev libpq-dev curl postgresql-client \
+            && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+
+EXPOSE 8000
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:8000", "main:app"]
