@@ -12,12 +12,12 @@ export async function GET(req: NextRequest) {
   try {
     const response = await axios.get(url, { responseType: "arraybuffer" });
     // If backend returns CSV, set correct headers
-    const contentType = response.headers["content-type"] || "application/octet-stream";
+    const contentType = String(response.headers["content-type"] || "application/octet-stream");
     return new NextResponse(response.data, {
       status: response.status,
       headers: {
         "Content-Type": contentType,
-        "Content-Disposition": response.headers["content-disposition"] || "attachment; filename=feeds_export.csv"
+        "Content-Disposition": String(response.headers["content-disposition"] || "attachment; filename=feeds_export.csv")
       }
     });
   } catch (error: any) {
