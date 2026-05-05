@@ -1,0 +1,111 @@
+type: object
+required:
+  - id
+  - export_by
+  - source
+  - status
+  - format
+  - created_at
+  - is_expired
+  - has_file
+properties:
+  id:
+    type: integer
+    description: Unique identifier for the export log
+    example: 25
+  export_by:
+    type: string
+    description: Email of the user who triggered the export or system
+    example: "nicholasgriffin@example.com"
+  source:
+    type: string
+    enum: [channels, feeds, items]
+    description: Source of data being exported
+    example: "feeds"
+  status:
+    type: string
+    enum: [pending, success, failed, skipped, expired]
+    description: |
+      Current status of the export operation:
+      - `pending`: Export is queued or in progress
+      - `success`: Export completed successfully
+      - `failed`: Export encountered an error
+      - `skipped`: Export was skipped (various reasons)
+      - `expired`: Export file has expired and been cleaned up
+    example: "success"
+  format:
+    type: string
+    enum: [csv, json]
+    description: File format of the export
+    example: "csv"
+  file_path:
+    type: string
+    nullable: true
+    description: |
+      Path to the exported file on the server or S3 URL.
+      May be null for failed/skipped exports or expired files.
+    example: "/app/exports/feeds_custom_export_20250725_060759.csv"
+  filters:
+    type: object
+    nullable: true
+    description: |
+      JSON object containing the search and filter parameters that were used for the export.
+      Structure varies based on the source and specific filters applied.
+    example:
+      date_from: "2025-06-18T21:48:04.595674"
+      date_to: "2025-07-18T21:48:04.595676"
+      status: "active"
+  channels_count:
+    type: integer
+    nullable: true
+    description: Number of channels exported (only for channel exports)
+    example: 400
+  feeds_count:
+    type: integer
+    nullable: true
+    description: Number of feeds exported (only for feed exports)
+    example: 100
+  items_count:
+    type: integer
+    nullable: true
+    description: Number of items exported (only for item exports)
+    example: null
+  created_at:
+    type: string
+    format: date-time
+    description: Timestamp when the export was initiated
+    example: "2025-07-18T19:48:04.595678"
+  completed_at:
+    type: string
+    format: date-time
+    nullable: true
+    description: |
+      Timestamp when the export was completed.
+      Will be null for pending exports or exports that never completed.
+    example: "2025-07-25T06:07:59.015563"
+  error_message:
+    type: string
+    nullable: true
+    description: Error message if the export failed (only present for failed exports)
+    example: null
+  # Computed fields (added by the schema/service layer)
+  duration:
+    type: number
+    nullable: true
+    description: |
+      Duration of the export operation in seconds (computed field).
+      Calculated as the difference between completed_at and created_at.
+      Will be null if export hasn't completed.
+    example: 0.000004
+  is_expired:
+    type: boolean
+    description: |
+      Whether the export file has expired based on retention policy (computed field).
+      Files older than 30 days are considered expired.
+    example: false
+  has_file:
+    type: boolean
+    description: |
+      Whether the export file currently exists on the server (computed field).
+      Checks actual file existence, not just file_path presence.
+    example: true 

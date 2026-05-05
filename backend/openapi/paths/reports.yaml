@@ -1,0 +1,118 @@
+/admin/reports/custom:
+  post:
+    summary: Generate custom data export report
+    description: |
+      Creates a flexible custom export report with dynamic field selection, advanced filtering, and multiple output formats.
+      Generates timestamped export files and creates comprehensive audit logs for tracking and compliance.
+      
+      **Data Sources**:
+      - **`channels`**: Export channel/podcast data from the channels table 
+      - **`feeds`**: Export RSS feed data from the feeds table 
+      - **`stats_items`**: Export item statistics from stats_aggregated_item table 
+      - **`stats_channels`**: Export channel statistics from stats_aggregated_channel table 
+      
+      **Dynamic Field Selection**:
+      - Specify exactly which database columns to include in the export
+      - Field names must match actual database column names
+      - Supports any combination of available fields for flexible reporting
+      
+      **Advanced Filtering System**:
+      - **`__gt`**: Greater than (e.g., `day_current_count__gt: 100`)
+      - **`__lt`**: Less than (e.g., `parsing_priority__lt: 3`)
+      - **`__gte`**: Greater than or equal to (e.g., `id__gte: 50`)
+      - **`__lte`**: Less than or equal to (e.g., `all_time_count__lte: 1000`)
+      - **`__eq`**: Equal to (default if no operator specified)
+      - **`__ne`**: Not equal to (e.g., `parsing_priority__ne: 0`)
+      - **`__ilike`**: Case-insensitive pattern matching (e.g., `title__ilike: "podcast"`)
+      
+      **Export Formats**:
+      - **CSV**: Comma-separated values with headers, optimized for spreadsheet applications and data analysis
+      - **JSON**: Structured data with proper typing, ideal for programmatic processing and API integration
+      
+      **File Management**:
+      - Creates timestamped files in format: `{source}_custom_export_{YYYYMMDD_HHMMSS}.{format}`
+      - Files stored in dedicated exports directory for organized access
+      - Automatic directory creation if needed
+      
+      **Audit & Logging**:
+      - Creates detailed export log entries for compliance and tracking
+      - Includes user attribution, source data, filter conditions, and execution metadata
+      - Tracks export count and completion status
+      
+      **Validation & Error Handling**:
+      - Comprehensive input validation with detailed error messages
+      - Required field enforcement (source, selected_fields, format, export_by)
+      - Email format validation for export attribution
+      - Source and format enum validation
+      
+      **Use Cases**:
+      - Custom analytics reports with specific field combinations
+      - Filtered data exports for external analysis tools
+      - Bulk data migration and backup operations
+      - Compliance reporting with audit trails
+      - Integration data feeds for external systems
+      
+      **Rate Limiting**: Not explicitly limited (handles potentially large datasets) 
+    tags:
+      - Reports
+    security:
+      - Auth0Bearer: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../components/schemas/CustomReportRequest.yaml"
+    responses:
+      '200':
+        description: Export report generated successfully
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/CustomReportResponse.yaml"
+      '400':
+        description: Validation error - invalid parameters or missing required fields
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: "Validation Error"
+                    status_code:
+                      type: integer
+                      example: 400
+                    errors:
+                      type: object
+                      additionalProperties:
+                        type: array
+                        items:
+                          type: string
+                      example:
+                        source: ["Must be one of: channels, feeds, stats_items, stats_channels."]
+                        export_by: ["Not a valid email address."]
+                        selected_fields: ["Missing data for required field."]
+      '401':
+        $ref: "../components/responses/Unauthorized.yaml"
+      '409':
+        description: Data integrity constraint violation (known issue with stats sources)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: object
+                  properties:
+                    message:
+                      type: string
+                      example: "Data integrity constraint violation"
+                    status_code:
+                      type: integer
+                      example: 409
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml" 

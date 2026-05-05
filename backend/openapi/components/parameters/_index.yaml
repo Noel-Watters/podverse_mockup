@@ -1,12 +1,61 @@
-#query
+
 limit:
   $ref: "query/limit.yaml"
 
-offset:
-  $ref: "query/offset.yaml"
+page:
+  $ref: "query/page.yaml"
 
 search:
   $ref: "query/search.yaml"
 
+id:
+  $ref: "query/id_filter.yaml"
+
 time_filter:
   $ref: "query/time_filter.yaml"
+
+sort_order:
+  $ref: "query/sort_order.yaml"
+
+podcast_index_id:
+  $ref: "query/podcast_index_id.yaml"
+
+format:
+  $ref: "query/export_format.yaml"
+
+export_by:
+  $ref: "query/export_by.yaml"
+
+feed_id:
+  $ref: "path/feed_id.yaml"
+
+view:
+  $ref: "query/view.yaml"
+
+flag_status:
+  $ref: "query/flag_status.yaml"
+
+# Export Logs
+end_date:
+  $ref: "query/export_logs_end_date.yaml"
+
+has_error:
+  $ref: "query/export_logs_has_error.yaml"
+
+max_duration:
+  $ref: "query/export_logs_max_duration.yaml"
+
+min_duration:
+  $ref: "query/export_logs_min_duration.yaml"
+
+start_date:
+  $ref: "query/export_logs_start_date.yaml"
+
+status:
+  $ref: "query/export_logs_status.yaml"
+
+source:
+  $ref: "query/export_logs_source.yaml"
+
+
+

@@ -42,6 +42,7 @@ class FeedFlagStatus(Base):
 
     feeds = relationship("Feed", back_populates="flag_status")
 
+
 class FeedLog(Base):
     __tablename__ = "feed_log"
 
@@ -50,7 +51,7 @@ class FeedLog(Base):
     http_status: Mapped[Optional[int]] = mapped_column(db.Integer) # HTTP status based on result of parse
     is_success: Mapped[Optional[bool]] = mapped_column(db.Boolean) # T or F based on the Reparse Result
     parse_errors: Mapped[Optional[int]] = mapped_column(db.Integer, default=0)
-    parse_error_message: Mapped[Optional[str]] = mapped_column(String(255)) # new field to hold message
+    parse_error_message: Mapped[Optional[str]] = mapped_column(String(500)) # new field to hold message
     started_at: Mapped[Optional[DateTime]] = mapped_column(DateTime)
     finished_at: Mapped[Optional[DateTime]] = mapped_column(DateTime)
     parsed_by: Mapped[Optional[str]] = mapped_column(String(255)) # This will come as an Auth0 ID

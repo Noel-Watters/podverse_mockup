@@ -1,0 +1,7 @@
+name: flag_status
+in: query
+required: false
+schema:
+  type: string
+  enum: [active, archived, spam, parse_error, fetch_error, always-parse, pending-archive, takedown]
+description: Filter by feed flag status 

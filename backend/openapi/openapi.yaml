@@ -5,13 +5,86 @@ info:
   description: Admin API for Podverse podcast platform dashboard
 
 servers:
-  - description: Local development
+  - description: Local development (Admin endpoints)
     url: http://localhost:8000/admin
+  - description: Local development (Health endpoints)
+    url: http://localhost:8000
 
 security:
   - Auth0Bearer: []
 
 paths:
+  # ----Health & Status Endpoints (No Auth Required)----
+  # Note: These use the base URL (http://localhost:8000) not the admin URL
+  ../health:
+    get:
+      summary: Basic health check
+      description: Returns API status without authentication
+      tags:
+        - Health
+      security: []  # No authentication required
+      servers:
+        - url: http://localhost:8000
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "API running"
+
+  ../admin:
+    get:
+      summary: Admin API status check
+      description: Returns admin API status without authentication
+      tags:
+        - Health
+      security: []  # No authentication required
+      servers:
+        - url: http://localhost:8000
+      responses:
+        '200':
+          description: Admin API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Admin API is up and running"
+
+  ../test-db:
+    get:
+      summary: Database connectivity test
+      description: Tests database connection and returns current timestamp
+      tags:
+        - Health
+      security: []  # No authentication required
+      servers:
+        - url: http://localhost:8000
+      responses:
+        '200':
+          description: Database connection successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  current_time:
+                    type: string
+                    format: date-time
+                    example: "2025-07-25T04:41:23.411558+00:00"
+        '500':
+          $ref: "./components/responses/InternalServerError.yaml"
+
   /feeds:
     $ref: "./paths/feeds.yaml#/~1feeds"
 
@@ -21,8 +94,11 @@ paths:
   /feeds/{feed_id}/reparse:
     $ref: "./paths/feeds.yaml#/~1feeds~1{feed_id}~1reparse"
 
-  /feeds/import:
-    $ref: "./paths/feeds.yaml#/~1feeds~1import"
+  /feeds/{feed_id}/logs:
+    $ref: "./paths/feeds.yaml#/~1feeds~1{feed_id}~1logs"
+
+  /feeds/{feed_id}/export:
+    $ref: "./paths/feeds.yaml#/~1feeds~1{feed_id}~1export"
 
   /feeds/export:
     $ref: "./paths/feeds.yaml#/~1feeds~1export"
@@ -30,23 +106,26 @@ paths:
   /feeds/bulk-update:
     $ref: "./paths/feeds.yaml#/~1feeds~1bulk-update"
 
-  /feeds/bulk-delete:
-    $ref: "./paths/feeds.yaml#/~1feeds~1bulk-delete"
+  /feeds/bulk-reparse:
+    $ref: "./paths/feeds.yaml#/~1feeds~1bulk-reparse"
 
+  /feeds/auto-reparse-status:
+    $ref: "./paths/feeds.yaml#/~1feeds~1auto-reparse-status"
+
+  # ----Channels----
   /channels:
     $ref: "./paths/channels.yaml#/~1channels"
 
   /channels/{id}:
     $ref: "./paths/channels.yaml#/~1channels~1{id}"
 
+  /channels/by-feed:
+    $ref: "./paths/channels.yaml#/~1channels~1by-feed"
+
   /channels/export:
     $ref: "./paths/channels.yaml#/~1channels~1export"
 
-  /categories:
-    $ref: "./paths/categories.yaml#/~1categories"
-
-  /mediums:
-    $ref: "./paths/mediums.yaml#/~1mediums"
+  # ----Stats---
 
   /stats/channels:
     $ref: "./paths/stats.yaml#/~1stats~1channels"
@@ -54,32 +133,33 @@ paths:
   /stats/channels/{id}:
     $ref: "./paths/stats.yaml#/~1stats~1channels~1{id}"
 
-  /stats/channels/{id}/events:
-    $ref: "./paths/stats.yaml#/~1stats~1channels~1{id}~1events"
-
-  /stats/channels/export:
-    $ref: "./paths/stats.yaml#/~1stats~1channels~1export"
-
   /stats/items:
     $ref: "./paths/stats.yaml#/~1stats~1items"
 
   /stats/items/{id}:
     $ref: "./paths/stats.yaml#/~1stats~1items~1{id}"
 
-  /stats/items/{id}/events:
-    $ref: "./paths/stats.yaml#/~1stats~1items~1{id}~1events"
-
-  /stats/items/export:
-    $ref: "./paths/stats.yaml#/~1stats~1items~1export"
-
+  # ----Items----
+  
   /items:
     $ref: "./paths/items.yaml#/~1items"
 
   /items/{id}:
     $ref: "./paths/items.yaml#/~1items~1{id}"
 
-  /items/export:
-    $ref: "./paths/items.yaml#/~1items~1export"
+  # ----Export Logs----
+  /admin/export_logs:
+    $ref: "./paths/export_logs.yaml#/~1admin~1export_logs"
+
+  /admin/export_logs/{log_id}:
+    $ref: "./paths/export_logs.yaml#/~1admin~1export_logs~1{log_id}"
+
+  /admin/export_logs/{log_id}/download:
+    $ref: "./paths/export_logs.yaml#/~1admin~1export_logs~1{log_id}~1download"
+
+  # ----Reports----
+  /admin/reports/custom:
+    $ref: "./paths/reports.yaml#/~1admin~1reports~1custom"
 
 components:
   securitySchemes:

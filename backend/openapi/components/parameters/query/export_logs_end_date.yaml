@@ -1,0 +1,7 @@
+name: end_date
+in: query
+required: false
+schema:
+  type: string
+  format: date-time
+description: Filter by end date (created_at <= end_date). Must be used with start_date. 

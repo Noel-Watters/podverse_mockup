@@ -1,0 +1,28 @@
+type: object
+required:
+  - message
+  - log_id
+  - filename
+  - count
+properties:
+  message:
+    type: string
+    description: Success message confirming the export completion
+    example: "Report exported successfully"
+  
+  log_id:
+    type: integer
+    description: ID of the export log entry created for tracking and audit purposes
+    example: 123
+  
+  filename:
+    type: string
+    description: Generated filename for the exported file (includes timestamp)
+    pattern: '^[a-z_]+_custom_export_\d{8}_\d{6}\.(csv|json)$'
+    example: "channels_custom_export_20250725_060644.json"
+  
+  count:
+    type: integer
+    description: Number of records successfully exported
+    minimum: 0
+    example: 150 

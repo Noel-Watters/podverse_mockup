@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth0 } from "./lib/auth0"
 
+
 export async function middleware(request) {
     const authRes = await auth0.middleware(request);
 
@@ -9,8 +10,10 @@ export async function middleware(request) {
         return authRes;
     }
 
-    // public routes — no need to check for session
-    if (request.nextUrl.pathname === ("/")) {
+
+    // allow public static files (SVG, images, etc.) to bypass auth
+    const publicFilePattern = /^\/(.*\.(svg|png|jpg|jpeg|gif|ico|webp|css|js))$/i;
+    if (request.nextUrl.pathname === "/" || publicFilePattern.test(request.nextUrl.pathname)) {
         return authRes;
     }
 
@@ -34,3 +37,5 @@ export const config = {
         "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|api).*)",
     ],
 }
+
+export const runtime = 'nodejs';

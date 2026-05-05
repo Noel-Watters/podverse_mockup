@@ -2,79 +2,95 @@
   get:
     summary: Retrieve a list of channels
     description: |
-      Returns a paginated list of channels with their basic metadata.
-      Supports filtering by text-based search on `title`, and sorting by `id` or `title`.
-      Primary table is `channel`.
-      Related tables are :
-      - `medium`: used to include the medium type (e.g. podcast, video) 
-      - `feed`: used to show the associated RSS feed URL or status (optional).
+      Retrieve a paginated list of podcast channels with comprehensive metadata and relationships.
+      Returns channels with eager-loaded feed, medium, categories, and statistics data.
+      
+      **Data Sources:**
+      - Primary table: `channel` (podcast channel metadata)
+      - Joined tables: `feed` (RSS feed info), `medium` (content type), `channel_category` + `category` (categorization), `stats_aggregated_channel` (performance metrics)
+      
+      **Filtering Capabilities:**
+      - **Text Search**: `search` parameter for case-insensitive title matching
+      - **Specific Channel**: `id` parameter to filter by exact channel ID
+      - **Podcast Index**: `podcast_index_id` parameter to filter by external identifier
+      
+      **Sorting Options:**
+      - `id`: Channel ID (numeric, default ascending)
+      - `title`: Channel title (alphabetical)
+      - Supports both `asc` and `desc` sort orders
+      
+      **Response Structure:**
+      - Returns paginated results with `data` array and `meta` object
+      - Each channel includes nested `categories` array and `medium` object
+      - Categories include `id`, `display_name`, and `mapping_key`
+      - Medium provides content type classification (podcast, music, blogL, publisherL, course, film, mixed)
+      
+      **Use Cases:**
+      - Channel discovery and browsing interfaces
+      - Admin dashboard channel management
+      - Content categorization and filtering
+      - Performance monitoring with metadata analysis
+      - Integration with external podcast platforms
+      
+      **Rate Limiting**: 30 requests per minute
     tags:
       - Channels
     security:
       - Auth0Bearer: []
     parameters:
       - $ref: "../components/parameters/query/limit.yaml"
-      - $ref: "../components/parameters/query/offset.yaml"
+      - $ref: "../components/parameters/query/page.yaml"
       - $ref: "../components/parameters/query/search.yaml"
-      - name: sort_by
-        in: query
-        schema:
-          type: string
-        description: |
-          Field to sort results by. Supported fields: `id`, `title`. 
-          Invalid values will gracefully fall back to `id` (default behavior).
-      - name: sort_order
-        in: query
-        schema:
-          type: string
-          enum: [asc, desc]
-          default: desc
-        description: Sort order (ascending or descending).
+      - $ref: "../components/parameters/query/id_filter.yaml"
+      - $ref: "../components/parameters/query/podcast_index_id.yaml"
+      - $ref: "../components/parameters/query/sort_order.yaml"
+      - $ref: "../components/parameters/query/sort_by.yaml"
     responses:
       '200':
         description: List of channels returned
         content:
-          application/json:
+          application/json:            
             schema:
-              type: object
-              properties:
-                data:
-                  type: array
-                  items:
-                    $ref: "../components/schemas/Channel.yaml"
-                meta:
-                  type: object
-                  properties:
-                    total:
-                      type: integer
-                      description: Total number of matching channels
-                    limit:
-                      type: integer
-                      description: Limit applied to query
-                    offset:
-                      type: integer
-                      description: Offset applied to query
+              $ref: "../components/schemas/Channel.yaml"
       '400':
-        description: Invalid request parameters
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/Error.yaml"
+        $ref: "../components/responses/BadRequest.yaml"
       '401':
         $ref: "../components/responses/Unauthorized.yaml"
+      '403':
+        $ref: "../components/responses/Forbidden.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml"
 
 /channels/{id}:
   get:
     summary: Retrieve a channel by ID
     description: |
-      Returns details for a specific channel.
-      Includes associated relationships and metadata such as slug, podcast index ID, feed reference, and medium.
-      Primary table is `channel`.
-      Related tables are :
-      - `feed`: provides the associated feed URL and parsing status
-      - `medium`: provides the media type of the channel
-      - `channel_category` + `category`: maps the channel to its categories
-      - `stats_aggregated_channel`: optionally used to show precomputed statistics
+      Retrieve comprehensive details for a specific channel by ID with complete relationship data.
+      Returns the same structure as list items but for a single channel with enhanced category details.
+      
+      **Data Included:**
+      - **Channel Metadata**: ID, title, slug, podcast identifiers, medium classification
+      - **Feed Integration**: Associated RSS feed URL and feed ID
+      - **Category Details**: Enhanced category information including parent relationships and slugs
+      - **Medium Classification**: Content type with comprehensive format descriptions
+      - **Technical Flags**: Podcast Index integration and value time splits configuration
+      
+      **Enhanced Category Format:**
+      Unlike the list endpoint, individual channel responses include:
+      - `parent_id`: Hierarchical category structure
+      - `slug`: URL-friendly category identifiers
+      - Full category metadata for improved navigation
+      
+      **Use Cases:**
+      - Channel detail pages and profile views
+      - Edit forms with complete channel context
+      - Category hierarchy navigation
+      - Feed relationship management
+      - Technical configuration verification
+      
+      **Rate Limiting**: 30 requests per minute
     tags:
       - Channels
     security:
@@ -89,17 +105,109 @@
         description: The ID of the channel to retrieve
     responses:
       '200':
-        description: Channel details
+        description: Channel details retrieved successfully
         content:
           application/json:
             schema:
-              $ref: "../components/schemas/Channel.yaml"
+              $ref: "../components/schemas/ChannelDetails.yaml"
       '400':
         $ref: "../components/responses/BadRequest.yaml"
       '401':
         $ref: "../components/responses/Unauthorized.yaml"
+      '403':
+        $ref: "../components/responses/Forbidden.yaml"
       '404':
-        $ref: "../components/responses/NotFound.yaml"
+        description: Channel not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "Channel with ID 999 not found (Status Code: 404)"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml"
+
+/channels/by-feed:
+  get:
+    summary: Get channels by feed IDs
+    description: |
+      Retrieve channels associated with specific RSS feed IDs with intelligent tracking of found/missing relationships.
+      Accepts multiple feed IDs and returns comprehensive metadata about the lookup results.
+      
+      **Request Processing:**
+      - Accepts comma-separated feed IDs in `feed_ids` parameter
+      - Maximum 100 feed IDs per request (configurable via `max_ids`)
+      - Performs validation and truncation if limits exceeded
+      - Uses same eager loading as other channel endpoints
+      
+      **Response Metadata:**
+      - `total`: Number of channels found
+      - `requested_feed_ids`: Original request input
+      - `found_feed_ids`: Feed IDs that had associated channels
+      - `missing_feed_ids`: Feed IDs with no channels found
+      
+      **Data Structure:**
+      Returns the same channel objects as list endpoint with:
+      - Complete category information
+      - Medium classification
+      - All standard channel metadata
+      
+      **Use Cases:**
+      - Bulk channel lookup operations
+      - Feed-to-channel relationship analysis
+      - Data validation and integrity checking
+      - Migration and synchronization tools
+      - Multi-feed dashboard views
+      
+      **Performance Considerations:**
+      - Optimized with eager loading to prevent N+1 queries
+      - Automatic limit enforcement for large requests
+      - Efficient IN clause filtering on feed_id column
+      
+      **Rate Limiting**: 30 requests per minute
+    tags:
+      - Channels
+    security:
+      - Auth0Bearer: []
+    parameters:
+      - name: feed_ids
+        in: query
+        required: true
+        schema:
+          type: string
+          pattern: '^[0-9]+(,[0-9]+)*$'
+        description: |
+          Comma-separated list of feed IDs to filter by.
+          Example: "1,2,3,4,5"
+          Maximum 100 feed IDs allowed per request.
+      - name: max_ids
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 100
+        description: Maximum number of feed IDs allowed per request
+    responses:
+      '200':
+        description: Channels found for the specified feed IDs
+        content:
+          application/json:
+            schema:
+              $ref: "../components/schemas/ChannelsByFeedResponse.yaml"
+      '400':
+        $ref: "../components/responses/BadRequest.yaml"
+      '401':
+        $ref: "../components/responses/Unauthorized.yaml"
+      '403':
+        $ref: "../components/responses/Forbidden.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
       '500':
         $ref: "../components/responses/InternalServerError.yaml"
 
@@ -107,55 +215,60 @@
   get:
     summary: Export channel data in CSV or JSON format
     description: |
-      Exports channel data in CSV or JSON format. The export includes:
+      Export comprehensive channel data in CSV or JSON format with flattened relationship data.
+      Provides the same filtering and sorting options as the list endpoint but without pagination limits.
       
-      - Basic channel info (id, title, slug, sortable_title, id_text)
-      - Feed information (URL, status)
-      - Medium type and name
-      - Podcast metadata (podcast_index_id, podcast_guid, value flags)
-      - Statistics (aggregated counts)
-      - Timestamps (created_at, updated_at)
+      **Export Data Structure:**
+      - **Core Channel Fields**: id, id_text, slug, title, sortable_title, podcast_guid, feed_id, medium_id
+      - **Technical Configuration**: has_podcast_index_value, has_value_time_splits, podcast_index_id
+      - **Flattened Relationships**:
+        - `medium_name`: Flattened from medium.value (e.g., "podcast", "blogL", "course")
+        - `feed_url`: Flattened from feed.url (RSS feed URL)
+        - `feed_status`: Flattened from feed.flag_status.status (feed parsing status)
+        - `stats_*_count`: Flattened from stats aggregated data (all_time, month, week, day)
       
-      This endpoint is useful for:
-      - Analytics and reporting
-      - Channel auditing and management
-      - Data backup and migration
-      - Integration with external systems
+      **Export Formats:**
+      - **CSV**: Returns downloadable file with proper headers and Content-Disposition
+      - **JSON**: Returns structured array for programmatic processing
       
-      The endpoint supports the same filtering and sorting options as the 
-      main channels list endpoint for consistency.
+      **Filtering & Sorting:**
+      Supports all the same options as list endpoint:
+      - Text search on channel titles
+      - Specific channel ID or podcast index ID filtering
+      - Sorting by id or title (ascending/descending)
+      - Row limit control via `max_rows` (default: 10,000, max: 50,000)
       
-      **Note**: OPML format is not supported for channel exports (only available for feeds).
+      **Performance & Limits:**
+      - Eager loading prevents N+1 queries on large exports
+      - Automatic row limit enforcement for server protection
+      - Export logging for audit trails and monitoring
+      - Timestamp-based filename generation for uniqueness
+      
+      **Use Cases:**
+      - Analytics and business intelligence reporting
+      - Data migration and backup operations
+      - Channel performance analysis
+      - Integration with external analytics platforms
+      - Bulk data processing and transformation
+      
+      **Rate Limiting**: 10 requests per minute (lower due to potentially large data transfers)
+      **Authentication**: Requires Auth0 Bearer token with admin access
+      
     tags:
       - Channels
     security:
       - Auth0Bearer: []
     parameters:
-      - name: format
-        in: query
-        required: false
-        schema:
-          type: string
-          enum: [csv, json]
-          default: csv
-        description: Export format - CSV for spreadsheet compatibility or JSON for API integration
+      - $ref: "../components/parameters/query/export_format.yaml"
       - $ref: "../components/parameters/query/search.yaml"
-      - name: sort_by
-        in: query
-        schema:
-          type: string
-        description: |
-          Field to sort results by. Supported fields: `id`, `title`. 
-          Invalid values will gracefully fall back to `id` (default behavior).
-      - name: sort_order
-        in: query
-        schema:
-          type: string
-          enum: [asc, desc]
-          default: asc
-        description: Sort order (ascending or descending)
+      - $ref: "../components/parameters/query/sort_by.yaml"
+      - $ref: "../components/parameters/query/sort_order.yaml"
+      - $ref: "../components/parameters/query/id_filter.yaml"
+      - $ref: "../components/parameters/query/podcast_index_id.yaml"
+      - $ref: "../components/parameters/query/export_by.yaml"
       - name: max_rows
         in: query
+        required: false
         schema:
           type: integer
           minimum: 1
@@ -167,60 +280,53 @@
     responses:
       '200':
         description: Channel data exported successfully
+        headers:
+          Content-Disposition:
+            schema:
+              type: string
+              example: "attachment; filename=channels_export_20250725_063737_876549_admin_example_com.csv"
+            description: Download filename with timestamp (CSV format only)
+          Content-Type:
+            schema:
+              type: string
+              enum: [text/csv, application/json]
+              example: "text/csv"
+            description: Content type based on export format
         content:
           text/csv:
             schema:
               type: string
               format: binary
-              description: CSV file containing channel data with timestamped filename
-            example: |
-              "id","title","slug","feed_url","medium_name","stats_all_time_count"
-              "1","Tech Podcast","tech-podcast","https://example.com/feed.xml","podcast","1500"
+              description: |
+                CSV file with headers and flattened channel data.
+                Includes all core fields plus computed relationship fields.
+                Headers are dynamically generated from the export schema.
+              example: |
+                id,id_text,slug,title,feed_id,medium_name,feed_url,stats_all_time_count
+                1,1130284ogiop7h,learn-away-travel,Light.,1,blogL,https://smith.net/feed.xml,6466
           application/json:
             schema:
               type: array
               items:
                 type: object
-                properties:
-                  id:
-                    type: integer
-                  title:
-                    type: string
-                  slug:
-                    type: string
-                  feed_url:
-                    type: string
-                  medium_name:
-                    type: string
-                  stats_all_time_count:
-                    type: integer
-                description: JSON array of channel objects with complete metadata
-        headers:
-          Content-Disposition:
-            schema:
-              type: string
-              example: "attachment; filename=channels_export_20240101_120000.csv"
-            description: Specifies the filename for download (when format=csv)
+                description: Channel object with flattened export data
+              description: |
+                JSON array of channel objects with all flattened relationship data.
+                Same data as CSV but in structured format for API consumption.
+              example:
+                - id: 1
+                  id_text: "1130284ogiop7h"
+                  title: "Light."
+                  medium_name: "blogL"
+                  feed_url: "https://smith.net/feed.xml"
+                  stats_all_time_count: 6466
       '400':
-        description: Invalid request parameters or unsupported format
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/Error.yaml"
-            examples:
-              unsupported_format:
-                summary: Unsupported format requested
-                value:
-                  error:
-                    message: "OPML format is only supported for feeds. Use 'csv' or 'json' for other data types."
-                    status_code: 400
+        $ref: "../components/responses/BadRequest.yaml"
       '401':
         $ref: "../components/responses/Unauthorized.yaml"
+      '403':
+        $ref: "../components/responses/Forbidden.yaml"
       '429':
-        description: Rate limit exceeded
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/Error.yaml"
+        $ref: "../components/responses/RateLimit.yaml"
       '500':
         $ref: "../components/responses/InternalServerError.yaml"

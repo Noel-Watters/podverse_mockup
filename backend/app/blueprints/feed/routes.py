@@ -2,170 +2,143 @@
 
 from flask import jsonify
 from . import feed_bp
-from app.utils.logger import get_logger, log_request_start, log_request_end
-from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
+from app.utils.request_logger import get_logger, log_request_start, log_request_end
 from app.extensions import limiter
 from app.utils.auth import requires_auth
-from .controllers import reparse_feed_controller, get_all_feeds_controller, import_feeds_controller, get_feed_by_id_controller, create_feed_controller, bulk_export_feeds_controller, export_single_feed_controller, bulk_update_feeds_controller, bulk_reparse_feeds_controller
+from app.utils.error_handlers import handle_errors
+from app.utils.audit_decorators import audit_admin_access
+from app.utils.redis_lock import is_locked
+from .controllers.query import get_feed_logs_controller, get_feed_by_id_controller, get_all_feeds_controller
+from .controllers.parsing import reparse_feed_controller, bulk_reparse_feeds_controller
+from .controllers.export import export_single_feed_controller, bulk_export_feeds_controller
+from .controllers.feed_update import bulk_update_feeds_controller
 
 logger = get_logger(__name__)
 
 @feed_bp.before_request
 def before_request():
-    """Log the start of every request to feed endpoints"""
     log_request_start(logger)
 
 @feed_bp.after_request
 def after_request(response):
-    """Log the end of every request to feed endpoints"""
     return log_request_end(logger, response)
 
-
-@feed_bp.route('', methods=['POST'])
-@limiter.limit("10 per minute")  # Prevent spam feed creation
-#@requires_auth
-def create_feed():
-    """Create a single feed"""
-    try:
-        result = create_feed_controller()
-        return jsonify(result), 201
-    except ValidationError as e:
-        logger.warning(f"Validation error in create_feed: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in create_feed: {str(e)}")
-        raise DatabaseError("Failed to create feed")
+def is_auto_reparse_running() -> bool:
+    """Check if the auto_reparse_all task is currently running (utility for status endpoint)."""
+    is_running, error = is_locked("auto_reparse_all")
+    return is_running
 
 
 @feed_bp.route('/<int:feed_id>/reparse', methods=['POST'])
-@limiter.limit("8 per minute")  
+@handle_errors
+@audit_admin_access(action="REPARSE_FEED", resource="feed")
 #@requires_auth
-def reparse_feed(feed_id):
-    """Trigger reparse for a specific feed"""
-    try:
-        result = reparse_feed_controller(feed_id)
-        return jsonify(result), 200
-    except NotFoundError:
-        raise
-    except ValidationError as e:
-        logger.warning(f"Validation error in reparse_feed: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in reparse_feed: {str(e)}")
-        raise DatabaseError("Failed to reparse feed")
+@limiter.limit("10 per minute")
+def reparse_feed(feed_id: int):
+    result = reparse_feed_controller(feed_id)
+    # Return 202 for async mode, 200 for sync mode
+    status_code = 202 if result.get("status") == "queued" else 200
+    return jsonify(result), status_code
 
 
 @feed_bp.route('', methods=['GET'])
-@limiter.limit("80 per minute")  
+@limiter.limit("50 per minute")  
+@handle_errors
+@audit_admin_access(action="GET_FEEDS", resource="feed")
 #@requires_auth
 def get_feeds():
-    """Get all feeds with pagination"""
-    try:
-        result = get_all_feeds_controller()
-        return jsonify(result), 200
-    except ValidationError as e:
-        logger.warning(f"Validation error in get_feeds: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in get_feeds: {str(e)}")
-        raise DatabaseError("Failed to retrieve feeds")
+    result = get_all_feeds_controller()
+    return jsonify(result), 200
    
     
 @feed_bp.route('/<int:feed_id>', methods=['GET'])
-@limiter.limit("80 per minute")  
+@limiter.limit("50 per minute")  
+@handle_errors
+@audit_admin_access(action="GET_FEED", resource="feed")
 #@requires_auth
 def get_feed_by_id(feed_id):
-    """Get a single feed by ID"""
-    try:
-        result = get_feed_by_id_controller(feed_id)
-        return jsonify(result), 200
-    except NotFoundError:
-        raise
-    except ValidationError as e:
-        logger.warning(f"Validation error in get_feed_by_id: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in get_feed_by_id: {str(e)}")
-        raise DatabaseError("Failed to retrieve feed")
+    result = get_feed_by_id_controller(feed_id)
+    return jsonify(result), 200
+    
     
 @feed_bp.route('/<int:feed_id>/export', methods=['GET'])
-@limiter.limit("5 per minute")  # Protect against large download spam
+@limiter.limit("10 per minute")  # Protect against large download spam
+@audit_admin_access(action="EXPORT_FEED", resource="feed")
 #@requires_auth
+@handle_errors
 def export_single_feed(feed_id):
-    """Export a single feed as CSV/JSON/OPML"""
-    try:
-        return export_single_feed_controller(feed_id)
-    except NotFoundError:
-        raise
-    except ValidationError as e:
-        logger.warning(f"Validation error in export_single_feed: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in export_single_feed: {str(e)}")
-        raise DatabaseError("Failed to export feed")
+    result = export_single_feed_controller(feed_id)
+    # export controllers return response objects directly, no need jsonify them
+    return result
+
+
+@feed_bp.route('/<int:feed_id>/logs', methods=['GET'])
+@limiter.limit("50 per minute")
+@audit_admin_access(action="GET_FEED_LOGS", resource="feed")
+#@requires_auth
+@handle_errors
+def get_feed_logs(feed_id):
+    """
+    Get logs for a specific feed.
+    
+    This endpoint retrieves all parsing logs for a feed, providing a complete
+    history of parsing attempts, successes, failures, and error messages.
+    """
+    result = get_feed_logs_controller(feed_id)
+    return jsonify(result), 200
+
 
 #MARK: bulk endpoints   
-@feed_bp.route('/import', methods=['POST'])
-@limiter.limit("3 per minute") 
-#@requires_auth
-def import_feeds():
-    """Import feeds from OPML file upload """
-    try:
-        result = import_feeds_controller()
-        return jsonify(result), 200    
-    except ValidationError as e:
-        logger.warning(f"Validation error in import_feeds: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in import_feeds: {str(e)}")
-        raise DatabaseError("Failed to import feeds")
-
-
 @feed_bp.route('/export', methods=['GET'])
-@limiter.limit("5 per minute")  
+@limiter.limit("10 per minute")  
+@audit_admin_access(action="EXPORT_FEEDS", resource="feed")
 #@requires_auth
+@handle_errors
 def bulk_export_feeds():
-    """Export feeds in bulk as CSV/JSON/OPML"""
-    try:
-        return bulk_export_feeds_controller()
-    except ValidationError as e:
-        logger.warning(f"Validation error in bulk_export_feeds: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in bulk_export_feeds: {str(e)}")
-        raise DatabaseError("Failed to export feeds")
+    result = bulk_export_feeds_controller()
+    return result
 
 
-
-@feed_bp.route('/bulk-update-status', methods=['POST'])
+@feed_bp.route('/bulk-update', methods=['POST'])
 @limiter.limit("4 per minute")  
+@audit_admin_access(action="UPDATE_FEEDS", resource="feed")
 #@requires_auth
+@handle_errors
 def bulk_update_feeds():
-    """Update status/properties of multiple feeds"""
-    try:
-        result = bulk_update_feeds_controller()
-        return jsonify(result), 200
-    except ValidationError as e:
-        logger.warning(f"Validation error in bulk_update_feeds: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in bulk_update_feeds: {str(e)}")
-        raise DatabaseError("Failed to bulk update feeds")
+    """
+    Update status/properties of multiple feeds.
+    """
+    result = bulk_update_feeds_controller()
+    # Return 202 for async mode, 200 for sync mode
+    status_code = 202 if result.get("status") == "queued" else 200
+    return jsonify(result), status_code
 
 
 @feed_bp.route('/bulk-reparse', methods=['POST'])
 @limiter.limit("4 per minute")  
+@audit_admin_access(action="REPARSE_FEEDS", resource="feed")
 #@requires_auth
+@handle_errors
 def bulk_reparse_feeds():
-    """Trigger reparse for multiple feeds"""
-    try:
-        result = bulk_reparse_feeds_controller()
-        return jsonify(result), 200
-    except ValidationError as e:
-        logger.warning(f"Validation error in bulk_reparse_feeds: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error in bulk_reparse_feeds: {str(e)}")
-        raise DatabaseError("Failed to bulk reparse feeds")
+    result = bulk_reparse_feeds_controller()
+    status_code = 202 if result.get("status") == "queued" else 200
+    return jsonify(result), status_code
 
 
+@feed_bp.route('/auto-reparse-status', methods=['GET'])
+@limiter.limit("10 per minute")  
+@audit_admin_access(action="GET_AUTO_REPARSE_STATUS", resource="feed")
+# @requires_auth
+@handle_errors
+def auto_reparse_status():
+    """
+    Check if auto_reparse_all task is currently running.
+    
+    This endpoint provides status information about the automatic reparse
+    task that runs periodically to update feeds.
+    """
+    is_running = is_auto_reparse_running()
+    return jsonify({
+        "auto_reparse_running": is_running,
+        "status": "running" if is_running else "idle"
+    }), 200

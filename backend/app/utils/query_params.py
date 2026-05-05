@@ -2,12 +2,14 @@
 #Request-parsing utils - Parse request.args safely
 
 from flask import request
-import logging
+from app.utils.error_exceptions import ValidationError
+from app.utils.request_logger import get_logger
 
-logger = logging.getLogger(__name__)
+
+logger = get_logger(__name__)
 
 
-def get_pagination_params(request, default_page=1, default_limit=10, max_limit=50):
+def get_pagination_params(request, default_page=1, default_limit=20, max_limit=100):
     """
         Extract and validate pagination parameters from request arguments
         
@@ -19,19 +21,46 @@ def get_pagination_params(request, default_page=1, default_limit=10, max_limit=5
         
         Returns:
             tuple: (page, limit)
+            
+        Raises:
+            ValidationError: If page or limit parameters are invalid
     """
     
-    # Get 'page' from the query string (?page=2), default to 1 if missing
-    page = request.args.get('page', default_page, type=int) 
-    limit = request.args.get('limit', default_limit, type=int) 
+    # Get raw string values first
+    page_str = request.args.get('page')
+    limit_str = request.args.get('limit')
     
-    # Ensure page is always at least 1
-    page = max(1, page)
+    # Convert page parameter to int
+    if page_str is not None:
+        try:
+            page = int(page_str)
+        except (ValueError, TypeError):
+            raise ValidationError("Page parameter must be a valid integer")
+    else:
+        page = default_page
+    
+    # Convert limit parameter
+    if limit_str is not None:
+        try:
+            limit = int(limit_str)
+        except (ValueError, TypeError):
+            raise ValidationError("Limit parameter must be a valid integer")
+    else:
+        limit = default_limit
+    
+    # Validate page is positive
+    if page < 1:
+        raise ValidationError("Page must be a positive integer")
+    
+    # Validate limit is positive
+    if limit < 1:
+        raise ValidationError("Limit must be a positive integer")
 
     # writing this way so if limit exceed we can raise error with logging prevent abuse (not limit = min(limit, max_limit))
     if limit > max_limit:
         logger.warning(f"Client requested too many items: {limit}, capped to {max_limit}")
         limit = max_limit
+        
     return page, limit
 
 def get_sorting_params(request, allowed_fields, default_field='id', default_order='asc'):
@@ -106,19 +135,31 @@ def get_multi_filter_param(request, key, default=None, type_func=str): # mesela 
         logger.warning(f"Invalid multi-filter param for key: {key}")
         return default if default is not None else []
     
-def get_search_query(request, default_search='', type_func=str):
+def get_search_query(request, default_search='', type_func=str, max_length=100):
     """
-        Extract and validate search parameter from request arguments.
+    Extract and validate search parameter from request arguments.
         
     Parameters:
         request: The incoming HTTP request object.
         default_search (str, optional): The fallback value if 'search' param is not provided. Defaults to ''.
         type_func (callable, optional): A function to cast the value. Defaults to str.
+        max_length (int, optional): Maximum allowed length for search term. Defaults to 100.
         
-        Returns:
-            str: The cleaned and type-converted search term to apply in filtering logic.
+    Returns:
+        str: The cleaned and type-converted search term to apply in filtering logic.
+        
+    Raises:
+        ValidationError: If search term exceeds max length or contains invalid characters
     """
 
     # Get the search term from the query string (?search=term)
-    search = request.args.get('search', default_search, type=type_func) 
+    search = request.args.get('search', default_search, type=type_func)
+    
+    # Validate length
+    if len(search) > max_length:
+        raise ValidationError(f"Search query exceeds maximum length of {max_length} characters")
+    
+    # Escape special SQL LIKE characters to prevent SQL injection via LIKE
+    search = search.replace('%', r'\%').replace('_', r'\_')
+    
     return search

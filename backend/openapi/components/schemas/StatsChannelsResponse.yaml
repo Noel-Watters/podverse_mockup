@@ -1,0 +1,122 @@
+type: object
+properties:
+  data:
+    type: array
+    description: Array of channel statistics based on the requested view mode
+    items:
+      oneOf:
+        - $ref: "./StatsAggregatedChannel.yaml"
+        - type: object
+          title: "Daily View Channel Stats"
+          required:
+            - id
+            - channel_id
+          properties:
+            id:
+              type: integer
+              description: Stats record ID
+              example: 100
+            channel_id:
+              type: integer
+              description: Channel ID this stats record belongs to
+              example: 100
+            day_current_count:
+              type: integer
+              description: Current day count
+              example: 117
+            day_1_count:
+              type: integer
+              description: Previous day count
+              example: 105
+            day_2_count:
+              type: integer
+              description: 2 days ago count
+              example: 93
+            day_3_count:
+              type: integer
+              description: 3 days ago count
+              example: 81
+            day_4_count:
+              type: integer
+              description: 4 days ago count
+              example: 70
+            day_5_count:
+              type: integer
+              description: 5 days ago count
+              example: 58
+            day_6_count:
+              type: integer
+              description: 6 days ago count
+              example: 46
+            day_7_count:
+              type: integer
+              description: 7 days ago count
+              example: 35
+            day_8_count:
+              type: integer
+              description: 8 days ago count
+              example: 23
+        - type: object
+          title: "Weekly View Channel Stats"
+          required:
+            - id
+            - channel_id
+          properties:
+            id:
+              type: integer
+              description: Stats record ID
+              example: 100
+            channel_id:
+              type: integer
+              description: Channel ID this stats record belongs to
+              example: 100
+            week_current_count:
+              type: integer
+              description: Current week count
+              example: 605
+            week_1_count:
+              type: integer
+              description: Previous week count
+              example: 363
+            week_2_count:
+              type: integer
+              description: 2 weeks ago count
+              example: 302
+            week_3_count:
+              type: integer
+              description: 3 weeks ago count
+              example: 242
+            week_4_count:
+              type: integer
+              description: 4 weeks ago count
+              example: 181
+  meta:
+    type: object
+    required:
+      - page
+      - per_page
+      - total
+      - view
+    properties:
+      page:
+        type: integer
+        description: Current page number
+        example: 1
+      per_page:
+        type: integer
+        description: Number of items per page
+        example: 5
+      total:
+        type: integer
+        description: Total number of channel statistics records
+        example: 100
+      view:
+        type: string
+        enum: [daily, weekly, monthly, all_time]
+        description: |
+          The view mode that determines which fields are returned:
+          - `daily`: Returns only daily count fields (day_current_count through day_8_count)
+          - `weekly`: Returns only weekly count fields (week_current_count through week_4_count)
+          - `monthly`: Returns all fields including monthly and all-time counts (default)
+          - `all_time`: Same as monthly, returns all fields
+        example: "monthly" 

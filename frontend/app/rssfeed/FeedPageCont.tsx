@@ -1,226 +1,226 @@
 "use client";
-import React, { useState, useEffect, Suspense } from "react";
-import {Feed, FeedLog} from "@/types/feed";
+import React, { useState, useEffect } from "react";
 import AdminLayout from "@/layouts/AdminLayout";
-import {useSearchParams} from "next/navigation";
-
+import AddRssFeedModal from "@/components/AddRssFeedModal";
+import FeedTable from "@/components/rssfeed/FeedTable";
+import ReparseNotify from "@/components/reparsefeed/ReparseNotify";
+import FeedToolBar from "@/components/rssfeed/FeedToolbar";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchFeedLogs, bulkReparseFeeds, fetchFeedStatus } from "@/redux/reparseSlice";
+import { fetchFeeds, resetFeeds, setFilters, setSearchTerm } from "@/redux/feedSlice";
+import type { AppDispatch, RootState } from "@/redux/store";
+import { fetchChannelsByFeedIds } from "@/redux/batchChannelSlice";
+import { useDebounce } from "@/hooks/useDebounce";
+import { FEED_STATUS_MAP } from "@/types/feed"; 
 
 export default function FeedsPageContent() {
-  const [feeds, setFeeds] = useState<Feed[]>([]);
+  const dispatch = useDispatch<AppDispatch>();
+  const [isBulkReparseLoading, setIsBulkReparseLoading] = useState(false);
   const [expandedFeedId, setExpandedFeedId] = useState<number | null>(null);
-  const [error, setError] = useState<string>("");
-  const [logLoading, setLogLoading] = useState(false);
-  const [logError, setLogError] = useState<string | null>(null);
-  const searchParams = useSearchParams();
-  const initialSearch = searchParams.get("search") || "";
-  const [searchTerm, setSearchTerm] = useState<string>(initialSearch);
+  const [selectedFeeds, setSelectedFeeds] = useState<number[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const { items: feeds, loading, error, offset, hasMore } = useSelector((state: RootState) => state.feeds);
+  const { filters } = useSelector((state: RootState) => state.feeds);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const searchTerm = useSelector((state: RootState) => state.feeds.searchTerm);
+  const [inputValue, setInputValue] = useState(searchTerm);
+  const debouncedSearch = useDebounce(inputValue, 300);
+
+  const [notifies, setNotifies] = useState<
+    {
+      id: string; // unique id for each toast
+      type: "success" | "error";
+      message: string;
+      duration?: number;
+      details?: string[];
+    }[]
+  >([]);
 
 
-  //updated with new API
-  useEffect(() => {
-  const loadFeeds = async () => {
-    try {
-      const response = await fetch("/api/feeds");
-      if (!response.ok) throw new Error("Failed to load feeds");
-      const data = await response.json();
-      setFeeds(data); // assuming your API returns an array of feeds
-    } catch (err: any) {
-      setError("Failed to load feeds");
-      console.error(err);
-    }
-  };
-  loadFeeds();
+
+// Infinite scroll handler for feeds container
+const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const target = e.currentTarget;
+  if (!target) return;
+  const { scrollTop, scrollHeight, clientHeight } = target;
+  // If near bottom, not loading, and more feeds available, fetch next page
+  if (scrollTop + clientHeight >= scrollHeight - 40 && hasMore && !loading) {
+    dispatch(fetchFeeds());
+  }
+};
+
+
+
+
+// Only initialize inputValue from Redux on mount
+useEffect(() => {
+  setInputValue(searchTerm);
 }, []);
 
 
- const toggleExpand = async (feedId: number) => {
+// Debounce inputValue and update Redux searchTerm, then fetch feeds
+useEffect(() => {
+  dispatch(setSearchTerm(debouncedSearch));
+  dispatch(resetFeeds());
+  dispatch(fetchFeeds());
+  console.log('[DEBUG] Search triggered:', debouncedSearch);
+}, [debouncedSearch, dispatch, filters]);
+
+
+const handleSortChange = (sort: string) => {
+  dispatch(setFilters({ sort_by: sort as any }));
+};
+
+const handleOrderChange = (order: string) => {
+  dispatch(setFilters({ sort_order: order as any }));
+};
+
+const handleFilterChange = (filterName: string, value: string) => {
+  let parsedValue: any = value;
+  if (filterName === "feed_flag_status_id" || filterName === "parsing_priority") {
+    parsedValue = value ? Number(value) : undefined;
+  }
+  if (filterName === "is_parsing") {
+    if (value === "true") parsedValue = true;
+    else if (value === "false") parsedValue = false;
+    else parsedValue = undefined;
+  }
+  dispatch(setFilters({ [filterName]: parsedValue }));
+};
+
+const handleBulkReparse = async () => {
+  setIsBulkReparseLoading(true);
+  let failed: string[] = [];
+  try {
+    await dispatch(bulkReparseFeeds(selectedFeeds.map(Number))).unwrap();
+    await Promise.all(
+      selectedFeeds.map(feedId => {
+        dispatch(fetchFeedStatus(String(feedId)));
+        dispatch(fetchFeedLogs(String(feedId)));
+      })
+    );
+  } catch (err: any) {
+    failed = selectedFeeds.map(feedId => `Feed ${feedId}: ${err.message || "Unknown error"}`);
+  } finally {
+    setNotifies(prev => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        type: failed.length ? "error" : "success",
+        message: failed.length
+          ? `Bulk reparse completed with errors.`
+          : `Bulk reparse completed successfully for ${selectedFeeds.length} feeds.`,
+        details: failed.length ? failed : undefined,
+        duration: failed.length ? undefined : 2500,
+      },
+    ]);
+    setIsBulkReparseLoading(false);
+  }
+};
+
+const handleBulkUpdateStatus = async (newStatus: string) => {
+  const feed_flag_status_id = FEED_STATUS_MAP[newStatus]?.id;
+  if (!feed_flag_status_id) return; 
+  const res = await fetch("/api/feeds/bulk-update", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      feed_ids: selectedFeeds,
+      updates: { feed_flag_status_id }
+    }),
+  });
+  if (res.ok) {
+    await dispatch(fetchFeeds());
+    await Promise.all(
+    selectedFeeds.map(feedId => dispatch(fetchFeedStatus(String(feedId))))
+  );
+    setSelectedFeeds([]);
+  }
+};
+
+
+const toggleExpand = (feedId: number) => {
   if (expandedFeedId === feedId) {
     setExpandedFeedId(null);
-    setLogError(null);
     return;
   }
-
-  setLogLoading(true);
-  setLogError(null);
-
-  try {
-    const response = await fetch(`/api/feeds/${feedId}`);
-    if (!response.ok) throw new Error("Failed to fetch feed details");
-    const feedData = await response.json();
-
-    const updatedFeeds = feeds.map(f =>
-      f.id === feedId ? { ...f, logs: feedData.recent_logs || [] } : f
-    );
-    setFeeds(updatedFeeds);
-  } catch (err) {
-    setLogError("FAILED to load");
-  }
-
-  setLogLoading(false);
+  dispatch(fetchFeedLogs(String(feedId))); // Make sure to use String(feedId) if your state uses string keys
   setExpandedFeedId(feedId);
 };
 
-  const handleCopyLogs = (logs: FeedLog[]) => {
-    const text = logs.map((log) => `${log.created_at}: ${log.message}`).join("\n");
-    navigator.clipboard.writeText(text);
-    alert("Logs copied to clipboard!");
-  };
 
-  const handleDownloadLogs = (logs: FeedLog[], title: string) => {
-    const text = logs.map((log) => `${log.created_at}: ${log.message}`).join("\n");
-    const blob = new Blob([text], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${title}_logs.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
-  const filteredFeeds = feeds.filter(feed => feed.url.toLowerCase().includes(searchTerm.toLowerCase()))
+  useEffect(() => {
+    if (feeds.length > 0) {
+      dispatch(fetchChannelsByFeedIds(feeds.map(f => f.id)));
+    }
+  }, [feeds, dispatch]);
+
+
 
   return (
-
     <AdminLayout
-      searchValue={searchTerm}
-      onSearchChange={(e) => setSearchTerm(e.target.value)}
+      searchValue={inputValue}
+      onSearchChange={(e) => setInputValue(e.target.value)}
+    >
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className="overflow-y-auto max-h-[100vh] p-2"
+        style={{ position: "relative" }}
       >
+        {/* Notifications */}
+        {notifies.map((notify) => (
+          <ReparseNotify
+            key={notify.id}
+            type={notify.type}
+            message={notify.message}
+            duration={notify.duration}
+            details={notify.details}
+            onClose={() => setNotifies(notifies.filter(n => n.id !== notify.id))}
+          />
+        ))}
+
+        <AddRssFeedModal open={modalOpen} onClose={() => setModalOpen(false)} />
 
         {error && (
           <div className="text-red-500 font-semibold mb-4">{error}</div>
         )}
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-podverse-surface rounded shadow text-podverse-text text-sm">
-            <thead className="bg-podverse-accent text-black">
-              <tr>
-                {["ID", "URL", "Status", "Priority", "Created At", "Updated At", "Details", "Action"].map((header) => (
-                  <th key={header} className="text-left px-4 py-2 font-semibold">
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredFeeds.map((feed) => (
-                <React.Fragment key={feed.id}>
-                  <tr className="border-t border-podverse-border hover:bg-podverse-highlight transition">
-                    <td className="px-4 py-2 font-medium">{feed.id}</td>
-                    <td className="px-4 py-2 truncate max-w-xs">{feed.url}</td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`text-xs px-2 py-1 rounded font-semibold ${
-                          feed.feed_flag_status_id === 2
-                            ? "bg-yellow-500 text-black"
-                            : feed.feed_flag_status_id === 3
-                            ? "bg-red-500 text-white"
-                            : "bg-green-600 text-white"
-                        }`}
-                      >
-                        {feed.feed_flag_status_id === 2
-                          ? "Flagged"
-                          : feed.feed_flag_status_id === 3
-                          ? "Error"
-                          : "Live"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2">{feed.parsing_priority}</td>
-                    <td className="px-4 py-2 text-xs">
-                      {new Date(feed.created_at).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2 text-xs">
-                      {new Date(feed.updated_at).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2 text-sm">
-                      <button
-                        className="text-podverse-accent hover:underline text-xs"
-                        onClick={() => toggleExpand(feed.id)}
-                      >
-                        {expandedFeedId === feed.id ? "Hide Log" : "View Log"}
-                      </button>
-                    </td>
-                    <td className="px-4 py-2">
-                      <button
-                        className="bg-podverse-primary hover:bg-podverse-accent text-white text-sm px-3 py-1 rounded"
-                        onClick={() => alert(`Reparsing feed: ${feed.url}`)}
-                      >
-                        {feed.feed_flag_status_id === 3 ? "Retry" : "Reparse"}
-                      </button>
-                    </td>
-                  </tr>
-                  {expandedFeedId === feed.id && (
-  <tr className="bg-podverse-surface">
-    <td colSpan={8} className="px-6 py-3 border-t border-podverse-border">
-      <div>
-        <h3 className="font-semibold text-sm text-podverse-text mb-2">
-          Audit Log
-        </h3>
-        <div className="flex flex-col gap-2 mb-4 max-h-60 overflow-y-auto bg-gray-50 rounded p-2">
-          {logLoading ? (
-            <div className="text-podverse-muted">Loading logs...</div>
-          ) : logError ? (
-            <div className="text-red-500">{logError}</div>
-          ) : !feed.recent_logs || feed.recent_logs.length === 0 ? (
-            <div className="text-podverse-muted">No logs available</div>
-          ) : (
-            feed.recent_logs.map((log, i) => (
-              <div key={i} className="text-xs border-b border-gray-200 py-2">
-                <div>
-                  <strong>Time:</strong>{" "}
-                  {new Date(
-                    log.last_finished_parse_time ||
-                    log.last_good_http_status_time ||
-                    ""
-                  ).toLocaleString()}
-                </div>
-                <div>
-                  <strong>Status:</strong>{" "}
-                  <span className={log.parse_errors === 0 ? "text-green-600 font-semibold" : "text-red-600 font-semibold"}>
-                    {log.parse_errors === 0 ? "Live" : "Error"}
-                  </span>
-                </div>
-                  <div>
-                    <strong>Message:</strong> {log.message}
-                  </div>
-              </div>
-            ))
-          )}
-        </div>
-        <div className="space-x-2">
-          <button
-            className="text-xs bg-podverse-surface px-2 py-1 rounded hover:bg-podverse-highlight text-podverse-accent"
-            onClick={() => handleCopyLogs(feed.logs ?? [])}
-            disabled={!feed.logs || feed.logs.length === 0}
-          >
-            Copy Log
-          </button>
-          <button
-            className="text-xs bg-podverse-surface px-2 py-1 rounded hover:bg-podverse-highlight text-podverse-accent"
-            onClick={() => handleDownloadLogs(feed.logs ?? [], feed.id.toString())}
-            disabled={!feed.logs || feed.logs.length === 0}
-          >
-            Download Log
-          </button>
-        </div>
+        {/* Toolbar for bulk actions, add, sort, filter */}
+        <FeedToolBar
+          feeds={feeds}
+          onSortChange={handleSortChange}
+          onOrderChange={handleOrderChange}
+          onFilterChange={handleFilterChange}
+          selectedFeeds={selectedFeeds}
+          setSelectedFeeds={setSelectedFeeds}
+          onBulkReparse={handleBulkReparse}
+          onBulkUpdateStatus={handleBulkUpdateStatus}
+          isBulkReparseLoading={isBulkReparseLoading}
+        />
+        <FeedTable
+          feeds={feeds}
+          expandedFeedId={expandedFeedId}
+          toggleExpand={toggleExpand}
+          onNotify={(n) =>
+            setNotifies((prev) => [
+              ...prev,
+              { ...n, id: crypto.randomUUID() },
+            ])
+          }
+          selectedFeeds={selectedFeeds}
+          setSelectedFeeds={setSelectedFeeds}
+        />
+
+        {/* Infinite scroll loader indicator */}
+        {loading && (
+          <div className="text-center py-4 text-podverse-muted">Loading more feeds...</div>
+        )}
+        {!hasMore && (
+          <div className="text-center py-4 text-podverse-muted">No more feeds to load.</div>
+        )}
       </div>
-    </td>
-  </tr>
-                  )}
-                </React.Fragment>
-              ))}
-              {filteredFeeds.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="text-center text-podverse-muted py-4"
-                  >
-                    No feeds found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
     </AdminLayout>
   );
 }

@@ -1,0 +1,158 @@
+type: object
+required:
+  - data
+  - meta
+properties:
+  data:
+    type: array
+    description: Array of channel objects for the requested feed IDs
+    items:
+      type: object
+      required:
+        - id
+        - id_text
+        - title
+        - feed_id
+        - podcast_index_id
+        - medium_id
+        - has_podcast_index_value
+        - has_value_time_splits
+        - categories
+        - medium
+      properties:
+        id:
+          type: integer
+          description: Unique numeric ID for the channel
+          example: 1
+
+        id_text:
+          type: string
+          maxLength: 64
+          description: Public-facing short ID for URLs
+          example: "1130284ogiop7h"
+
+        slug:
+          type: string
+          maxLength: 100
+          nullable: true
+          description: URL-friendly slug derived from title
+          example: "learn-away-travel"
+
+        feed_id:
+          type: integer
+          description: ID of the associated RSS feed
+          example: 1
+
+        podcast_index_id:
+          type: integer
+          description: External Podcast Index identifier
+          example: 43368
+
+        podcast_guid:
+          type: string
+          format: uuid
+          nullable: true
+          description: "Podcast GUID from the RSS feed"
+          example: "9be5f1d6-8406-4fdc-8ed0-bfde2e7b3023"
+
+        title:
+          type: string
+          maxLength: 255
+          description: Title of the podcast or media channel
+          example: "Light."
+
+        sortable_title:
+          type: string
+          maxLength: 255
+          nullable: true
+          description: Lowercased, normalized version of title for sorting
+          example: "stage"
+
+        medium_id:
+          type: integer
+          description: Foreign key to the `medium` table
+          example: 17
+
+        has_podcast_index_value:
+          type: boolean
+          description: Indicates if channel uses Podcast Index's value tag data
+          example: false
+
+        has_value_time_splits:
+          type: boolean
+          description: Indicates whether channel items use value time split logic
+          example: true
+
+        categories:
+          type: array
+          description: Categories associated with this channel
+          items:
+            type: object
+            required:
+              - id
+              - display_name
+              - mapping_key
+            properties:
+              id:
+                type: integer
+                description: Category ID
+                example: 215
+              display_name:
+                type: string
+                description: Human-readable category name
+                example: "Wrestling"
+              mapping_key:
+                type: string
+                description: Internal category mapping key
+                example: "wrestling"
+                
+        medium:
+          type: object
+          nullable: true
+          required:
+            - value
+          properties:
+            value:
+              type: string
+              description: |
+                Medium type value indicating the content format:
+                - `podcast`: Traditional audio podcast
+                - `music`: Music content
+                - `blogL`: Blog-style content
+                - `publisherL`: Publisher content
+                - `course`: Educational course content
+                - `film`: Video/film content
+                - `mixed`: Mixed media content
+              example: "blogL"
+
+  meta:
+    type: object
+    required:
+      - total
+      - requested_feed_ids
+      - found_feed_ids
+      - missing_feed_ids
+    properties:
+      total:
+        type: integer
+        description: Number of channels found for the requested feed IDs
+        minimum: 0
+        example: 3
+      requested_feed_ids:
+        type: array
+        description: List of feed IDs that were requested
+        items:
+          type: integer
+        example: [1, 2, 3]
+      found_feed_ids:
+        type: array
+        description: List of feed IDs for which channels were found
+        items:
+          type: integer
+        example: [1, 2, 3]
+      missing_feed_ids:
+        type: array
+        description: List of feed IDs for which no channels were found
+        items:
+          type: integer
+        example: [] 

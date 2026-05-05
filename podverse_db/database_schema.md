@@ -213,5 +213,19 @@
 | month_1_count | INT NOT |
 | all_time_count | INT NOT |
 
+### **Table: `export_logs`**
+| Field | Type |
+|-------|------|
+| id | SERIAL PRIMARY |
+| admin_email | varchar_normal NOT |
+| source | TEXT NOT |
+| filters | JSONB |
+| status | TEXT NOT |
+| file_path | TEXT |
+| created_at | server_time_with_default NOT |
+| completed_at | server_time |
+| error_message | TEXT |
+| format | TEXT NOT |
+
 ---
 

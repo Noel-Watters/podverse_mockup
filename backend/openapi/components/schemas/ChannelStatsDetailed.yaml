@@ -1,0 +1,234 @@
+type: object
+properties:
+  data:
+    type: object
+    required:
+      - id
+      - title
+      - channel_id
+    properties:
+      # Core channel information
+      id:
+        type: integer
+        description: Channel ID
+        example: 100
+      id_text:
+        type: string
+        description: Text-based channel identifier
+        example: "113108bdf9ibrk"
+      slug:
+        type: string
+        description: Channel URL slug
+        example: "traditional-a"
+      title:
+        type: string
+        description: Channel title
+        example: "Both along call."
+      sortable_title:
+        type: string
+        description: Title for sorting purposes
+        example: "man"
+      
+      # Podcast metadata
+      podcast_guid:
+        type: string
+        format: uuid
+        description: Podcast GUID
+        example: "02e5d394-0730-4fa3-838f-a57c95d02c3e"
+      podcast_index_id:
+        type: integer
+        description: Podcast Index ID
+        example: 73545
+      medium_id:
+        type: integer
+        description: Medium type ID
+        example: 9
+      has_podcast_index_value:
+        type: boolean
+        description: Whether channel has podcast index value
+        example: false
+      has_value_time_splits:
+        type: boolean
+        description: Whether channel has value time splits
+        example: false
+      
+      # Feed relationship
+      feed_id:
+        type: integer
+        description: Associated feed ID
+        example: 100
+      feed_url:
+        type: string
+        format: uri
+        description: RSS feed URL
+        example: "https://parker-richardson.com/under-girl-draw-18d62d/rss"
+      
+      # Related objects
+      medium:
+        type: object
+        properties:
+          value:
+            type: string
+            description: Medium type
+            example: "course"
+      
+      categories:
+        type: array
+        description: Channel categories
+        items:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 183
+            display_name:
+              type: string
+              example: "Islam"
+            mapping_key:
+              type: string
+              example: "islam"
+            parent_id:
+              type: integer
+              example: 123
+            slug:
+              type: string
+              example: "islam"
+      
+      feed:
+        type: object
+        description: Complete feed information with recent logs
+        properties:
+          id:
+            type: integer
+            example: 100
+          url:
+            type: string
+            format: uri
+            example: "https://parker-richardson.com/under-girl-draw-18d62d/rss"
+          container_id:
+            type: string
+            example: "2145893038"
+          flag_status:
+            type: string
+            example: "active"
+          is_parsing:
+            type: boolean
+            example: false
+          parsing_priority:
+            type: integer
+            example: 0
+          last_parsed_file_hash:
+            type: string
+            example: "f567a29f6318c8bae80eb58b94bf4765"
+          created_at:
+            type: string
+            format: date-time
+            example: "2025-07-25T03:57:13.025060"
+          updated_at:
+            type: string
+            format: date-time
+            example: "2025-07-25T04:26:13.025062"
+          channel_title:
+            type: string
+            example: "Both along call."
+          channel_podcast_index_id:
+            type: integer
+            example: 73545
+          recent_logs:
+            type: array
+            description: Recent parsing logs
+            items:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 214
+                feed_id:
+                  type: integer
+                  example: 100
+                started_at:
+                  type: string
+                  format: date-time
+                  example: "2025-07-25T04:24:13.024940"
+                finished_at:
+                  type: string
+                  format: date-time
+                  example: "2025-07-25T04:32:13.024940"
+                http_status:
+                  type: integer
+                  example: 200
+                is_success:
+                  type: boolean
+                  example: true
+                parse_error_message:
+                  type: string
+                  example: "Feed successfully parsed. 3 new items added, 1 item updated."
+                parse_errors:
+                  type: integer
+                  example: 0
+                parsed_by:
+                  type: string
+                  example: "auth0|admin2"
+      
+      items:
+        type: array
+        description: Channel items/episodes
+        items:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 200
+            id_text:
+              type: string
+              example: "113372axvsthjg"
+            channel_id:
+              type: integer
+              example: 100
+            title:
+              type: string
+              example: "Which forward party machine wife inside."
+            slug:
+              type: string
+              example: "air-finish-open-ten"
+            guid:
+              type: string
+              example: "https://macdonald.net/categories/categorylogin.html"
+            guid_enclosure_url:
+              type: string
+              example: "http://hunt.com/"
+            pub_date:
+              type: string
+              format: date-time
+              example: "2024-12-16T14:23:03.383386+00:00"
+            item_flag_status_id:
+              type: integer
+              example: 1
+            flag_status:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                status:
+                  type: string
+                  example: "active"
+                created_at:
+                  type: string
+                  format: date-time
+                  example: "2025-07-25T04:16:27.006613"
+                updated_at:
+                  type: string
+                  format: date-time
+                  example: "2025-07-25T04:16:27.006613"
+      
+      stats:
+        type: array
+        description: Aggregated channel statistics
+        items:
+          $ref: "./StatsAggregatedChannel.yaml"
+      
+      raw_event_count:
+        type: integer
+        description: Raw event count for the specified time range (computed field)
+        example: 1250 

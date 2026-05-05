@@ -1,20 +1,10 @@
+# openapi/components/schemas/Error.yaml
+
 type: object
 properties:
   error:
     type: string
     description: Error message
-    example: "Invalid request parameters"
-  code:
-    type: string
-    description: Error code for programmatic handling
-    example: "INVALID_PARAMETERS"
-  details:
-    type: object
-    description: Additional error details
-    additionalProperties: true
-    example:
-      field: "rss_url"
-      reason: "Invalid URL format"
+    example: "Rate limit exceeded"
 required:
-  - error
-  - code 
+  - error 

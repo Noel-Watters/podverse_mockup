@@ -1,0 +1,7 @@
+name: source
+in: query
+required: false
+schema:
+  type: string
+  enum: [channels, feeds]
+description: Filter by source of exported data. 

@@ -1,8 +1,10 @@
 from flask import jsonify
+
+from app.utils.audit_decorators import audit_admin_access
 from . import item_bp
 from app.blueprints.item.controller import list_items, get_item_by_id
 from app.utils.auth import requires_auth
-from app.utils.logger import get_logger, log_request, log_request_start, log_request_end
+from app.utils.request_logger import get_logger, log_request, log_request_start, log_request_end
 from app.utils.error_exceptions import ValidationError, NotFoundError, DatabaseError
 from app.extensions import limiter
 
@@ -33,7 +35,7 @@ def get_all_items():
 
 @item_bp.route('/<int:item_id>', methods=['GET'])
 @limiter.limit("60 per minute")
-#@requires_auth
+@audit_admin_access(action="GET_ITEM_BY_ID", resource="item")
 def get_single_item(item_id):
     try:
         log_request(logger, 'GET', f'/items/{item_id}')

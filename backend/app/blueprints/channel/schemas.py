@@ -1,7 +1,7 @@
 # app/blueprints/channel/schemas.py
 
 from app.extensions import ma, fields, validate
-from app.models.channel import Channel, StatsTrackEventChannel
+from app.models.channel import Channel
 
 class ChannelSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
@@ -28,24 +28,25 @@ class ChannelSchema(ma.SQLAlchemyAutoSchema):
                 'id': cc.category.id,
                 'display_name': cc.category.display_name,
                 'mapping_key': cc.category.mapping_key
-                } #ChannelCategory (cc
+                } #ChannelCategory (cc)
                for cc in obj.categories if cc.category 
             ] if obj.categories else []
     
     def get_medium(self, obj):
         """Extract medium data from the medium relationship"""
         return {'value': obj.medium.value} if obj.medium else None
+    
+channels_schema = ChannelSchema(many=True)
 
 
-# Detailed schema for individual channel endpoint with nested relationships
 class ChannelDetailSchema(ma.SQLAlchemyAutoSchema):
+    """ Detailed schema for individual channel endpoint with nested relationships"""
     class Meta:
         model = Channel
         load_instance = False # read only
         include_fk = True
         include_relationships = False
         
-    # Include nested objects
     categories = fields.Method("get_categories")
     medium = fields.Method("get_medium")
     feed_url = fields.Method("get_feed_url")
@@ -71,19 +72,7 @@ class ChannelDetailSchema(ma.SQLAlchemyAutoSchema):
         """Extract feed URL from the feed relationship"""
         return obj.feed.url if obj.feed else None
         
-channel_schema = ChannelSchema()
-channels_schema = ChannelSchema(many=True)
 channel_detail_schema = ChannelDetailSchema()
-
-
-class StatsTrackEventChannelSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = StatsTrackEventChannel
-        load_instance = True
-        include_fk = True
-        
-stats_track_event_channel_schema = StatsTrackEventChannelSchema()
-stats_track_event_channels_schema = StatsTrackEventChannelSchema(many=True)
         
 
 class ChannelExportSchema(ma.SQLAlchemyAutoSchema):
@@ -91,7 +80,7 @@ class ChannelExportSchema(ma.SQLAlchemyAutoSchema):
            model = Channel
            load_instance = False
            include_fk = True
-           include_relationships = False  # prevents full nested dumping
+           include_relationships = False
 
     # Include nested objects - instead of reading the model attribute we calculte the fields value for flatten export data
     medium_name = fields.Function(lambda obj: obj.medium.value if obj.medium else None)

@@ -1,242 +1,222 @@
 /stats/channels:
   get:
-    summary: Retrieve aggregated channel statistics
+    summary: Retrieve aggregated channel statistics  
     description: |
-      Returns aggregated stats for channels such as total listens or views.
-      Sorted by highest monthly count (month_current_count DESC).
-      Supports optional filtering by time window (daily, weekly, monthly) and search by channel title or ID.
-      Data is sourced from the `channel` and `stats_aggregated_channel` tables.
+      Returns aggregated statistics for channels with rich filtering and customizable view options.
+      Provides comprehensive analytics data across multiple time periods with flexible response formats.
+      
+      **Data Sources**: 
+      - Primary table: `stats_aggregated_channel` (precomputed statistics)
+      - Joined table: `channel` (for search and channel metadata)
+      
+      **View Modes** (Controls response fields):
+      - `daily`: Returns only daily count fields (day_current_count through day_8_count)
+      - `weekly`: Returns only weekly count fields (week_current_count through week_4_count)  
+      - `monthly`: Returns all fields including monthly and all-time counts (default)
+      - `all_time`: Same as monthly, returns complete aggregated data
+      
+      **Search Capabilities**: 
+      - Searches across channel titles using case-insensitive pattern matching
+      - Exact match filtering by channel ID or multiple channel IDs
+      
+      **Sorting Options**: 
+      - `channel_id`: Sort by channel identifier (default)
+      - `day_current_count`: Sort by current day statistics
+      - `week_current_count`: Sort by current week statistics  
+      - `month_current_count`: Sort by current month statistics
+      - `all_time_count`: Sort by all-time totals
+      
+      **Advanced Filtering**: 
+      - Range filters for all time periods (daily, weekly, monthly, all-time counts)
+      - Multiple channel ID filtering for batch analytics
+      - Count-based filtering (min/max values for different periods)
+      
+      **Response Structure**:
+      - Returns different field sets based on `view` parameter
+      - Consistent pagination metadata with total counts
+      - Optimized for analytics dashboards and reporting
+      
+      **Use Cases**:
+      - Analytics dashboard data feeds
+      - Channel performance comparisons
+      - Time-series analysis across different periods
+      - Bulk channel statistics for reporting
+      
+      **Rate Limiting**: 100 requests per minute
+
     tags:
       - Statistics
     security:
       - Auth0Bearer: []
     parameters:
-      - $ref: "../components/parameters/query/time_filter.yaml"
-      - $ref: "../components/parameters/query/limit.yaml"
-      - $ref: "../components/parameters/query/offset.yaml"
-      - $ref: "../components/parameters/query/search.yaml"
+      - $ref: "../components/parameters/query/view.yaml"
+      - $ref: "../components/parameters/query/page.yaml"
+      - $ref: "../components/parameters/query/search.yaml" 
+      - $ref: "../components/parameters/query/sort_by.yaml"
+      - $ref: "../components/parameters/query/sort_order.yaml"
+      - $ref: "../components/parameters/query/id_filter.yaml"
+      - name: channel_ids
+        in: query
+        schema:
+          type: string
+        description: Filter by multiple channel IDs (comma-separated)
+      # Count range filtering 
+      - name: min_daily_total
+        in: query
+        schema:
+          type: integer
+        description: Minimum daily total count
+      - name: max_daily_total
+        in: query
+        schema:
+          type: integer
+        description: Maximum daily total count
+      - name: min_weekly_total
+        in: query
+        schema:
+          type: integer
+        description: Minimum weekly total count
+      - name: max_weekly_total
+        in: query
+        schema:
+          type: integer
+        description: Maximum weekly total count
+      - name: min_all_time
+        in: query
+        schema:
+          type: integer
+        description: Minimum all-time count
+      - name: max_all_time
+        in: query
+        schema:
+          type: integer
+        description: Maximum all-time count
+      # Specific period filtering
+      - name: min_current_day
+        in: query
+        schema:
+          type: integer
+        description: Minimum current day count
+      - name: max_current_day
+        in: query
+        schema:
+          type: integer
+        description: Maximum current day count
+      - name: min_current_week
+        in: query
+        schema:
+          type: integer
+        description: Minimum current week count
+      - name: max_current_week
+        in: query
+        schema:
+          type: integer
+        description: Maximum current week count
+      - name: min_current_month
+        in: query
+        schema:
+          type: integer
+        description: Minimum current month count
+      - name: max_current_month
+        in: query
+        schema:
+          type: integer
+        description: Maximum current month count
     responses:
       '200':
-        description: Aggregated channel statistics returned
+        description: Channel statistics retrieved successfully
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                data:
-                  type: array
-                  items:
-                    $ref: "../components/schemas/StatsChannel.yaml"
-                meta:
-                  type: object
-                  properties:
-                    total:
-                      type: integer
-                    limit:
-                      type: integer
+              $ref: "../components/schemas/StatsChannelsResponse.yaml"
+      '400':
+        $ref: "../components/responses/BadRequest.yaml"
       '401':
         $ref: "../components/responses/Unauthorized.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
       '500':
         $ref: "../components/responses/InternalServerError.yaml"
 
 /stats/channels/{id}:
   get:
-    summary: Retrieve detail stats for a specific channel
+    summary: Retrieve detailed statistics for a specific channel
     description: |
-      Returns detailed statistics, such as total listens or views, and metadata for a specific channel.
-      Includes basic channel info, aggregated stats, and raw event count within an optional time window.
-      Data comes from `stats_aggregated_channel` and `channel` tables.
-    tags:
-      - Statistics
-    security:
-      - Auth0Bearer: []
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: integer
-      - name: start
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-      - name: end
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-    responses:
-      '200':
-        description: Channel detail statistics returned
-        content:
-          application/json:
-            schema:
-              $ref: "../components/schemas/ChannelDetails.yaml"
-      '404':
-        $ref: "../components/responses/NotFound.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
-      '500':
-        $ref: "../components/responses/InternalServerError.yaml"
-
-/stats/channels/{id}/events:
-  get:
-    summary: Retrieve real-time event counts for a channel
-    description: |
-      Returns real-time event tracking data for a specific channel within a time window.
-      Events include listens, shares, follows, etc.
-      Data is sourced from the `stats_track_event_channel` table.
-      Results can be filtered by time range and aggregated by different intervals.
-    tags:
-      - Statistics
-    security:
-      - Auth0Bearer: []
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: integer
-      - name: start
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date-time
-          description: Start of the time window (ISO 8601)
-      - name: end
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date-time
-          description: End of the time window (ISO 8601)
-      - name: interval
-        in: query
-        required: false
-        schema:
-          type: string
-          enum: [hour, day, week, month]
-          default: day
-          description: Time interval for aggregating events
-    responses:
-      '200':
-        description: Channel event counts returned
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                data:
-                  type: array
-                  items:
-                    $ref: "../components/schemas/StatsTrackEventChannel.yaml"
-                meta:
-                  type: object
-                  properties:
-                    total_events:
-                      type: integer
-                      description: Total number of events in the time window
-                    start:
-                      type: string
-                      format: date-time
-                    end:
-                      type: string
-                      format: date-time
-      '404':
-        $ref: "../components/responses/NotFound.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
-      '500':
-        $ref: "../components/responses/InternalServerError.yaml"
-
-/stats/channels/export:
-  get:
-    summary: Export channel statistics data
-    description: |
-      Exports aggregated channel statistics in CSV or JSON format.
-      Includes metrics like total listens, shares, follows, etc.
-      Supports filtering by time range and aggregation intervals.
+      Returns comprehensive detailed statistics and information for a specific channel.
+      Includes complete channel metadata, associated feed information, items, and aggregated statistics.
       
-      This endpoint is useful for:
-      - Analytics dashboards
-      - Publisher reporting
-      - Channel performance analysis
-      - Trend identification
+      **Data Sources**:
+      - Primary table: `channel` (channel metadata and relationships)
+      - Related tables: `stats_aggregated_channel`, `feed`, `item`, `category`, `medium`
+      - Event data: `stats_track_event_channel` (for raw event counting)
+      
+      **Response Includes**:
+      - **Complete Channel Info**: ID, title, slug, podcast metadata, medium type
+      - **Feed Information**: Associated RSS feed with parsing status and recent logs
+      - **Categories**: All categories assigned to the channel with hierarchy
+      - **Items**: Channel's episodes/items with flag status information
+      - **Aggregated Statistics**: Full stats breakdown across all time periods
+      - **Raw Event Count**: Computed event count for specified time range (if provided)
+      
+      **Optional Time Range Filtering**:
+      - Use `start` and `end` parameters to filter raw event count calculation
+      - Time range only affects the `raw_event_count` field, not aggregated stats
+      - Accepts ISO 8601 datetime format (e.g., "2024-01-01T00:00:00")
+      
+      **Use Cases**:
+      - Detailed channel analytics dashboards
+      - Channel management and monitoring
+      - Content analysis with episode listings
+      - Performance tracking with feed parsing history
+      
+      **Rate Limiting**: 100 requests per minute
     tags:
-      - Statistics
+      - Statistics  
     security:
       - Auth0Bearer: []
     parameters:
-      - name: format
-        in: query
+      - name: id
+        in: path
         required: true
         schema:
-          type: string
-          enum: [csv, json]
-          default: csv
-      - name: start_date
+          type: integer
+          minimum: 1
+        description: Channel ID to retrieve detailed statistics for
+      - name: start
         in: query
         required: false
         schema:
           type: string
-          format: date
-        description: Start date for stats aggregation
-      - name: end_date
+          format: date-time
+        description: |
+          Start date for raw event count calculation (ISO 8601 format).
+          Only affects raw_event_count field, not aggregated statistics.
+        example: "2024-01-01T00:00:00"
+      - name: end
         in: query
         required: false
         schema:
           type: string
-          format: date
-        description: End date for stats aggregation
-      - name: interval
-        in: query
-        required: false
-        schema:
-          type: string
-          enum: [day, week, month]
-          default: day
-        description: Time interval for aggregation
+          format: date-time
+        description: |
+          End date for raw event count calculation (ISO 8601 format).
+          Only affects raw_event_count field, not aggregated statistics.
+        example: "2024-12-31T23:59:59"
     responses:
       '200':
-        description: Channel statistics export file
+        description: Detailed channel statistics retrieved successfully
         content:
-          text/csv:
-            schema:
-              type: string
-              description: CSV format (when format=csv)
           application/json:
             schema:
-              type: object
-              properties:
-                data:
-                  type: array
-                  items:
-                    $ref: "../components/schemas/StatsAggregatedChannel.yaml"
-                meta:
-                  type: object
-                  properties:
-                    total:
-                      type: integer
-                    filters:
-                      type: object
-                      properties:
-                        interval:
-                          type: string
-                        date_range:
-                          type: object
-                          properties:
-                            start:
-                              type: string
-                              format: date
-                            end:
-                              type: string
-                              format: date
+              $ref: "../components/schemas/ChannelStatsDetailed.yaml"
+      '400':
+        $ref: "../components/responses/BadRequest.yaml"
       '401':
         $ref: "../components/responses/Unauthorized.yaml"
+      '404':
+        $ref: "../components/responses/NotFound.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
       '500':
         $ref: "../components/responses/InternalServerError.yaml"
 
@@ -244,218 +224,127 @@
   get:
     summary: Retrieve aggregated item (episode) statistics
     description: |
-      Returns aggregated stats for items (podcast episodes).
-      Sorted by highest monthly count (month_current_count DESC).
-      Supports optional filtering by time window and search by item title or ID.
-      Data is sourced from the `item`, `stats_aggregated_item` tables. 
-    tags:
-      - Statistics
-    security:
-      - Auth0Bearer: []
-    parameters:
-      - $ref: "../components/parameters/query/time_filter.yaml"
-      - $ref: "../components/parameters/query/limit.yaml"
-      - $ref: "../components/parameters/query/offset.yaml"
-      - $ref: "../components/parameters/query/search.yaml"
-    responses:
-      '200':
-        description: Aggregated item statistics returned
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                data:
-                  type: array
-                  items:
-                    $ref: "../components/schemas/StatsItem.yaml"
-                meta:
-                  type: object
-                  properties:
-                    total:
-                      type: integer
-                    limit:
-                      type: integer
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
-      '500':
-        $ref: "../components/responses/InternalServerError.yaml"
-
-/stats/items/{id}:
-  get:
-    summary: Retrieve detail stats for a specific item
-    description: |
-      Returns detailed statistics and metadata for a specific item.
-      Includes basic item info, aggregated stats, and raw event count within an optional time window.
-      Data is sourced from the `item`, `stats_aggregated_item`, and `stats_track_event_item` tables.
-    tags:
-      - Statistics
-    security:
-      - Auth0Bearer: []
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: integer
-      - name: start
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-      - name: end
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date-time
-    responses:
-      '200':
-        description: Item detail statistics returned
-        content:
-          application/json:
-            schema:
-               $ref: "../components/schemas/Item.yaml"
-      '404':
-        $ref: "../components/responses/NotFound.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
-      '500':
-        $ref: "../components/responses/InternalServerError.yaml"
-
-/stats/items/{id}/events:
-  get:
-    summary: Retrieve real-time event counts for an item
-    description: |
-      Returns real-time event tracking data for a specific item (episode) within a time window.
-      Events include listens, shares, bookmarks, etc.
-      Data is sourced from the `stats_track_event_item` table.
-      Results can be filtered by time range and aggregated by different intervals.
-    tags:
-      - Statistics
-    security:
-      - Auth0Bearer: []
-    parameters:
-      - name: id
-        in: path
-        required: true
-        schema:
-          type: integer
-      - name: start
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date-time
-          description: Start of the time window (ISO 8601)
-      - name: end
-        in: query
-        required: true
-        schema:
-          type: string
-          format: date-time
-          description: End of the time window (ISO 8601)
-      - name: interval
-        in: query
-        required: false
-        schema:
-          type: string
-          enum: [hour, day, week, month]
-          default: day
-          description: Time interval for aggregating events
-    responses:
-      '200':
-        description: Item event counts returned
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                data:
-                  type: array
-                  items:
-                    $ref: "../components/schemas/StatsTrackEventItem.yaml"
-                meta:
-                  type: object
-                  properties:
-                    total_events:
-                      type: integer
-                      description: Total number of events in the time window
-                    start:
-                      type: string
-                      format: date-time
-                    end:
-                      type: string
-                      format: date-time
-      '404':
-        $ref: "../components/responses/NotFound.yaml"
-      '401':
-        $ref: "../components/responses/Unauthorized.yaml"
-      '500':
-        $ref: "../components/responses/InternalServerError.yaml"
-
-/stats/items/export:
-  get:
-    summary: Export item statistics data
-    description: |
-      Exports aggregated item (episode) statistics in CSV or JSON format.
-      Includes metrics like listens, shares, bookmarks, etc.
-      Supports filtering by time range and aggregation intervals.
+      Returns aggregated statistics for podcast items/episodes with filtering and view options.
+      Provides analytics data across multiple time periods for content performance analysis.
       
-      This endpoint is useful for:
+      **Data Sources**: 
+      - Primary table: `stats_aggregated_item` (precomputed item statistics)
+      - Joined table: `item` (for search and item metadata)
+      
+      **View Modes** (Controls response fields):
+      - `daily`: Returns only daily count fields (day_current_count through day_8_count)
+      - `weekly`: Returns only weekly count fields (week_current_count through week_4_count)  
+      - `monthly`: Returns all fields including monthly and all-time counts (default)
+      - `all_time`: Same as monthly, returns complete aggregated data
+      
+      **Search Capabilities**: 
+      - Searches across item titles using case-insensitive pattern matching
+      - Exact match filtering by item ID or multiple item IDs
+      
+      **Sorting Options**: 
+      - `item_id`: Sort by item identifier (default)
+      - `day_current_count`: Sort by current day statistics
+      - `week_current_count`: Sort by current week statistics  
+      - `month_current_count`: Sort by current month statistics
+      - `all_time_count`: Sort by all-time totals
+      
+      **Advanced Filtering**: 
+      - Range filters for all time periods (daily, weekly, monthly, all-time counts)
+      - Multiple item ID filtering for batch analytics
+      - Count-based filtering (min/max values for different periods)
+      
+      **Use Cases**:
       - Episode performance analysis
-      - Content strategy planning
-      - Listener engagement tracking
-      - Trend analysis
+      - Content analytics and trending identification
+      - Time-series analysis for item engagement
+      - Bulk item statistics for reporting
+      
+      **Rate Limiting**: 100 requests per minute
+      **Authentication**: Requires Auth0 Bearer token
+      
+      **Note**: This endpoint may have implementation issues that need resolution.
+
     tags:
       - Statistics
     security:
       - Auth0Bearer: []
     parameters:
-      - name: format
+      - $ref: "../components/parameters/query/view.yaml"
+      - $ref: "../components/parameters/query/page.yaml"
+      - $ref: "../components/parameters/query/search.yaml" 
+      - $ref: "../components/parameters/query/sort_by.yaml"
+      - $ref: "../components/parameters/query/sort_order.yaml"
+      - $ref: "../components/parameters/query/id_filter.yaml"
+      - name: item_ids
         in: query
-        required: true
         schema:
           type: string
-          enum: [csv, json]
-          default: csv
-      - name: start_date
+        description: Filter by multiple item IDs (comma-separated)
+      # Count range filtering (similar to channels)
+      - name: min_daily_total
         in: query
-        required: false
-        schema:
-          type: string
-          format: date
-        description: Start date for stats aggregation
-      - name: end_date
-        in: query
-        required: false
-        schema:
-          type: string
-          format: date
-        description: End date for stats aggregation
-      - name: interval
-        in: query
-        required: false
-        schema:
-          type: string
-          enum: [day, week, month]
-          default: day
-        description: Time interval for aggregation
-      - name: channel_id
-        in: query
-        required: false
         schema:
           type: integer
-        description: Filter items by channel ID
+        description: Minimum daily total count
+      - name: max_daily_total
+        in: query
+        schema:
+          type: integer
+        description: Maximum daily total count
+      - name: min_weekly_total
+        in: query
+        schema:
+          type: integer
+        description: Minimum weekly total count
+      - name: max_weekly_total
+        in: query
+        schema:
+          type: integer
+        description: Maximum weekly total count
+      - name: min_all_time
+        in: query
+        schema:
+          type: integer
+        description: Minimum all-time count
+      - name: max_all_time
+        in: query
+        schema:
+          type: integer
+        description: Maximum all-time count
+      - name: min_current_day
+        in: query
+        schema:
+          type: integer
+        description: Minimum current day count
+      - name: max_current_day
+        in: query
+        schema:
+          type: integer
+        description: Maximum current day count
+      - name: min_current_week
+        in: query
+        schema:
+          type: integer
+        description: Minimum current week count
+      - name: max_current_week
+        in: query
+        schema:
+          type: integer
+        description: Maximum current week count
+      - name: min_current_month
+        in: query
+        schema:
+          type: integer
+        description: Minimum current month count
+      - name: max_current_month
+        in: query
+        schema:
+          type: integer
+        description: Maximum current month count
     responses:
       '200':
-        description: Item statistics export file
+        description: Item statistics retrieved successfully
         content:
-          text/csv:
-            schema:
-              type: string
-              description: CSV format (when format=csv)
           application/json:
             schema:
               type: object
@@ -467,25 +356,106 @@
                 meta:
                   type: object
                   properties:
+                    page:
+                      type: integer
+                      example: 1
+                    limit:
+                      type: integer
+                      example: 100
                     total:
                       type: integer
-                    filters:
-                      type: object
-                      properties:
-                        channel_id:
-                          type: integer
-                        interval:
-                          type: string
-                        date_range:
-                          type: object
-                          properties:
-                            start:
-                              type: string
-                              format: date
-                            end:
-                              type: string
-                              format: date
+                      example: 500
+                    view:
+                      type: string
+                      enum: [daily, weekly, monthly, all_time]
+                      example: "monthly"
+      '400':
+        $ref: "../components/responses/BadRequest.yaml"
       '401':
         $ref: "../components/responses/Unauthorized.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
+      '500':
+        $ref: "../components/responses/InternalServerError.yaml"
+
+/stats/items/{id}:
+  get:
+    summary: Retrieve detailed statistics for a specific item
+    description: |
+      Returns detailed information and statistics for a specific podcast item/episode.
+      Includes basic item metadata and computed raw event count for the specified time range.
+      
+      **Data Sources**:
+      - Primary table: `item` (item metadata)
+      - Event data: `stats_track_event_item` (for raw event counting)
+      
+      **Response Includes**:
+      - **Basic Item Info**: ID, title, GUID, publication date, slug
+      - **Channel Relationship**: Channel ID and reference
+      - **Statistics**: Aggregated statistics array (when available)
+      - **Events**: Tracking events array (when available)
+      - **Raw Event Count**: Computed event count for specified time range (if provided)
+      
+      **Optional Time Range Filtering**:
+      - Use `start` and `end` parameters to filter raw event count calculation
+      - Accepts ISO 8601 datetime format (e.g., "2024-01-01T00:00:00")
+      
+      **Use Cases**:
+      - Individual episode performance analysis
+      - Content engagement tracking
+      - Detailed item analytics for specific episodes
+      
+      **Rate Limiting**: 100 requests per minute
+
+    tags:
+      - Statistics
+    security:
+      - Auth0Bearer: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Item ID to retrieve detailed statistics for
+      - name: start
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+        description: |
+          Start date for raw event count calculation (ISO 8601 format).
+          Filters events based on created_at timestamp.
+        example: "2024-01-01T00:00:00"
+      - name: end
+        in: query
+        required: false
+        schema:
+          type: string
+          format: date-time
+        description: |
+          End date for raw event count calculation (ISO 8601 format).
+          Filters events based on created_at timestamp.
+        example: "2024-12-31T23:59:59"
+    responses:
+      '200':
+        description: Detailed item statistics retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/schemas/ItemStatsDetailed.yaml"
+      '400':
+        $ref: "../components/responses/BadRequest.yaml"
+      '401':
+        $ref: "../components/responses/Unauthorized.yaml"
+      '404':
+        $ref: "../components/responses/NotFound.yaml"
+      '429':
+        $ref: "../components/responses/RateLimit.yaml"
       '500':
         $ref: "../components/responses/InternalServerError.yaml"

@@ -1,0 +1,26 @@
+type: object
+properties:
+  data:
+    type: array
+    description: Array of item objects
+    items:
+      $ref: "./Item.yaml"
+  meta:
+    type: object
+    required:
+      - total
+      - limit  
+      - offset
+    properties:
+      total:
+        type: integer
+        description: Total number of items matching the query
+        example: 250
+      limit:
+        type: integer
+        description: Number of items per page
+        example: 3
+      offset:
+        type: integer
+        description: Number of items skipped (calculated as (page-1) * limit)
+        example: 0 

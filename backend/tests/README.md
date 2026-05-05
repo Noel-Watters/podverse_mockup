@@ -58,9 +58,10 @@ pytest
 
 ### Specific Categories
 ```bash
-pytest tests/unit  # Run unit tests
-pytest tests/integration  # Run integration tests
-pytest tests/e2e  # Run e2e tests
+cd backend
+   python -m pytest tests/unit  # Run unit tests
+   pytest tests/integration  # Run integration tests
+   pytest tests/e2e  # Run e2e tests
 ```
 
 ### With Markers
@@ -98,3 +99,9 @@ pytest -m e2e  # Run tests marked as e2e
    - Use appropriate markers 
 
 NOTE: Best way to write test is edge cases, extreme case (maximum/unusual conditions), minimum case (smallest/simplest input), middle case (typical/normal usage)
+
+What needs to be done later:
+- Integration tests with real database (when Docker works)
+- Performance tests (load testing)
+- Security tests (penetration testing)
+- End-to-end tests (full user flows)

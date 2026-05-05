@@ -1,4 +1,5 @@
 # backend/app/blueprints/stats/services.py
+
 from typing import List, Optional, Dict, Any
 from sqlalchemy import asc, desc, func
 from sqlalchemy.orm import joinedload
@@ -7,7 +8,7 @@ from app.models.stats import StatsAggregatedChannel, StatsAggregatedItem, StatsT
 from app.models.channel import Channel
 from app.models.item import Item
 from app.blueprints.stats.schemas import (
-    channel_details_schema, 
+    channel_details_with_stats_schema, 
     channel_daily_stats_only_schema, 
     channel_weekly_stats_only_schema, 
     stats_channel_schema_many, 
@@ -18,48 +19,9 @@ from app.blueprints.stats.schemas import (
 )
 from app.extensions import db
 from app.utils.error_exceptions import NotFoundError, DatabaseError, ValidationError
-from app.utils.logger import get_logger, log_database_operation
+from app.utils.request_logger import get_logger, log_database_operation
 
 logger = get_logger(__name__)
-
-# class BaseFilterBuilder:
-#     def __init__(self, query, model_class):
-#         self.query = query
-#         self.model_class = model_class
-    
-#     def apply_sorting(self, sort_by, sort_order='desc'):
-#         """
-#         Generic sorting that works with any model
-        
-#         Args:
-#             sort_by: Field name to sort by
-#             sort_order: 'asc' or 'desc'
-#             allowed_fields: List of allowed field names for security
-#         """
-        
-#         # Check if the field exists on the model
-#         if hasattr(self.model_class, sort_by):
-#             column = getattr(self.model_class, sort_by)
-            
-#             if sort_order.lower() == 'desc':
-#                 self.query = self.query.order_by(desc(column))
-#             else:
-#                 self.query = self.query.order_by(asc(column))
-#         else:
-#             raise ValueError(f"Field '{sort_by}' does not exist on {self.model_class.__name__}")
-        
-#         return self
-    
-#     def paginate(self, page, per_page):
-#         """Generic pagination"""
-#         return self.query.paginate(
-#             page=page,
-#             per_page=per_page,
-#             error_out=False
-#         )
-    
-#     def get_query(self):
-#         return self.query
 
 def get_channel_stats(filters: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -133,6 +95,10 @@ def get_channel_stats_detail(channel_id: int, start: Optional[datetime] = None,
         channel = (
             db.session.query(Channel)
             .options(joinedload(Channel.stats))
+            .options(joinedload(Channel.items))
+            .options(joinedload(Channel.feed))
+            .options(joinedload(Channel.categories))
+            .options(joinedload(Channel.medium))
             .filter(Channel.id == channel_id)
             .first()
         )
@@ -160,7 +126,7 @@ def get_channel_stats_detail(channel_id: int, start: Optional[datetime] = None,
             f"channel_id={channel_id} start={start or 'none'} end={end or 'none'}"
         )
 
-        return channel_details_schema.dump(channel)
+        return channel_details_with_stats_schema.dump(channel)
 
     except Exception as e:
         logger.error(f"Error retrieving detailed stats for channel {channel_id}: {str(e)}")
